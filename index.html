@@ -488,7 +488,15 @@
     await OneSignal.init({
       appId: "90c2ab9b-c948-4b4d-8f1e-56326f9b7aea"
     });
+window.__OS = OneSignal;
+try{
+  OneSignal.User.PushSubscription.addEventListener("change", function(){
+    window.__schedulePushSync && window.__schedulePushSync();
   });
+  window.__schedulePushSync && window.__schedulePushSync();
+}catch(e){}
+  });
+
 </script>
 </head>
 <body>
@@ -767,6 +775,36 @@
 
     let notifyEnabled = (localStorage.getItem(LS_NOTI) === '1');
     let soundEnabled  = (localStorage.getItem(LS_SOUND) === '1');
+
+// ===== OneSignal 구독ID -> Firebase 저장 =====
+function syncPushSubToFirebase(){
+  try{
+    if (!window.__OS) return;
+    if (!myUid) return;
+
+    const subId = window.__OS.User.PushSubscription.id || '';
+    const optedIn = (window.__OS.User.PushSubscription.optedIn === true);
+
+    // 아직 구독이 없으면 저장하지 않음
+    if (!optedIn || !subId) return;
+
+    const onesignalId = window.__OS.User.onesignalId || null;
+
+    db.ref('pushSubs/' + myUid + '/' + subId).set({
+      onesignalId,
+      nick: myNick || '',
+      updatedAt: SV.TIMESTAMP
+    }).catch(()=>{});
+  }catch(e){}
+}
+
+let __pushSyncTimer = null;
+function schedulePushSync(){
+  if (__pushSyncTimer) clearTimeout(__pushSyncTimer);
+  __pushSyncTimer = setTimeout(syncPushSubToFirebase, 300);
+}
+window.__schedulePushSync = schedulePushSync;
+
 
     // 추가: 내 말풍선 흰색 모드
     let myBubbleWhite = (localStorage.getItem(LS_MY_BUBBLE_WHITE) === '1');
@@ -1565,6 +1603,10 @@
       }
 
       roomId = rid;
+db.ref('roomMembers/' + roomId + '/' + myUid).set({
+  nick: myNick,
+  joinedAt: SV.TIMESTAMP
+}).catch(()=>{});
       roomName = info.roomName;
       ownerUid = info.ownerUid;
       ownerNick = info.ownerNick;
@@ -1753,7 +1795,7 @@
 
       try{
         const cred = await firebase.auth().signInAnonymously();
-        myUid = (cred && cred.user && cred.user.uid) ? cred.user.uid : (firebase.auth().currentUser ? firebase.auth().currentUser.uid : '');
+        myUid = (cred && cred.user && cred.user.uid) ? cred.user.uid : (firebase.auth().currentUser ? firebase.auth().currentUser.uid : '');schedulePushSync();
       }catch(e){
         alert('Firebase 인증 실패: ' + (e && e.message ? e.message : ''));
         return;
