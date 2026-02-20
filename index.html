@@ -1587,17 +1587,24 @@ window.__schedulePushSync = schedulePushSync;
         afterSeq = Math.max(afterSeq, msg.seq || 0);
         mergeServerMessage(msg);
 
-        if (msg.senderId !== myUid){
-          if (shouldNotifyNow()){
-            bumpUnread();
-            notifyNewMessage(msg);
-            playBeep();
-          } else {
-            if (document.hasFocus() && !document.hidden && isNearBottom()){
-              clearUnread();
-            }
-          }
-        }
+if (msg.senderId !== myUid) {
+  // 백그라운드(잠금/다른 앱)에서는 페이지 JS가 멈춰서
+  // 로컬 알림/비프는 신뢰하면 안 됩니다. → OneSignal 푸시가 담당.
+  if (document.hidden || !document.hasFocus()) {
+    bumpUnread(); // 안 읽은 카운트/제목 표시만(원하면 유지)
+  } else {
+    // 화면을 보고 있을 때만 로컬 효과(소리 등)
+    if (shouldNotifyNow()) {
+      bumpUnread();
+      playBeep(); // 화면 보고 있을 때만
+      // notifyNewMessage(msg); // 필요 없으면 끄는 것을 권장(중복 방지)
+    } else {
+      if (document.hasFocus() && !document.hidden && isNearBottom()) {
+        clearUnread();
+      }
+    }
+  }
+}
 
         scrollToBottom(false);
         markReadNow();
@@ -1881,4 +1888,5 @@ db.ref('roomMembers/' + roomId + '/' + myUid).set({
   </script>
 </body>
 </html>
+
 
