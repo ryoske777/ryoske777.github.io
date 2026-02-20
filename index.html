@@ -1,0 +1,1776 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover, shrink-to-fit=no" />
+  <title>Chat</title>
+  <style>
+    :root{
+      --bg:#f3f4f6;
+      --card:#ffffff;
+      --text:#111827;
+      --muted:#6b7280;
+      --line:#e5e7eb;
+
+      /* 기본(상대/내 말풍선) */
+      --me:#374151;
+      --meText:#ffffff;
+
+      --other:#ffffff;
+      --otherText:#111827;
+
+      --accent:#22c55e;
+      --danger:#ef4444;
+
+      --safeB: env(safe-area-inset-bottom, 0px);
+      --safeT: env(safe-area-inset-top, 0px);
+      --kb: 0px;
+      --composerH: 64px;
+
+      --typingH: 34px;
+
+      --shadow: 0 10px 30px rgba(0,0,0,0.06);
+      --shadow2: 0 14px 40px rgba(0,0,0,0.12);
+    }
+
+    *{ box-sizing:border-box; }
+    html, body{
+      height:100%;
+      margin:0;
+      background:var(--bg);
+      color:var(--text);
+      font-family:-apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", Arial, sans-serif;
+      overflow:hidden;
+    }
+
+    button, .clickable{
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      cursor: pointer;
+      transition: transform .08s ease, box-shadow .18s ease, filter .18s ease, background .18s ease, border-color .18s ease;
+    }
+    button:active, .clickable:active{ transform: translateY(1px) scale(0.99); }
+    button:focus-visible{
+      outline: 3px solid rgba(34,197,94,0.35);
+      outline-offset: 2px;
+    }
+
+    .app{
+      height:100vh;
+      height:100dvh;
+      display:flex;
+      flex-direction:column;
+      padding-top: var(--safeT);
+    }
+
+    header{
+      position:sticky;
+      top:0;
+      z-index:10;
+      padding: 12px 14px 10px 14px;
+      border-bottom:1px solid var(--line);
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(12px);
+    }
+
+    .headTop{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .title{
+      font-size:16px;
+      font-weight:800;
+      margin:0;
+      line-height:1.2;
+    }
+    .sub{
+      margin-top:6px;
+      font-size:12px;
+      color:var(--muted);
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border:1px solid var(--line);
+      background:#fff;
+      font-size:12px;
+      color:var(--muted);
+    }
+
+    .menuWrap{
+      position:relative;
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    .menuBtn{
+      width:40px;
+      height:40px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      background:#fff;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:22px;
+      line-height:1;
+      user-select:none;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+    }
+    .menuBtn:hover{ filter: brightness(0.98); }
+    .menu{
+      position:absolute;
+      right:0;
+      top:46px;
+      min-width: 280px;
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: var(--shadow2);
+      overflow:hidden;
+      display:none;
+    }
+    .menu.open{ display:block; }
+    .menu button{
+      width:100%;
+      padding: 12px 12px;
+      border:0;
+      background:#fff;
+      text-align:left;
+      font-size:14px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+    }
+    .menu button:hover{ background:#f8fafc; }
+    .menu button:active{ background:#f3f4f6; }
+    .menu .hint{
+      font-size:12px;
+      color:var(--muted);
+      padding:10px 12px;
+      border-top:1px solid var(--line);
+      line-height:1.35;
+      white-space:pre-wrap;
+    }
+
+    .home{
+      flex:1;
+      overflow:auto;
+      padding: 16px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .homeCard{
+      width:100%;
+      max-width: 720px;
+      margin: 0 auto;
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius: 18px;
+      padding: 16px;
+      box-shadow: var(--shadow);
+    }
+    .homeTitle{
+      font-weight:900;
+      font-size:18px;
+      margin:0 0 10px 0;
+    }
+    .sectionTitle{
+      font-size:12px;
+      color:var(--muted);
+      font-weight:800;
+      margin: 14px 0 8px 0;
+    }
+    .field{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      margin: 10px 0;
+    }
+    .field label{
+      font-size:12px;
+      color:var(--muted);
+    }
+    .field input{
+      height:46px;
+      border-radius: 14px;
+      border:1px solid var(--line);
+      padding: 0 12px;
+      font-size:16px;
+      outline:none;
+      transition: box-shadow .18s ease, border-color .18s ease;
+    }
+    .field input:focus{
+      border-color: rgba(34,197,94,0.6);
+      box-shadow: 0 0 0 4px rgba(34,197,94,0.12);
+    }
+    .rowBtns{
+      display:flex;
+      gap:10px;
+      margin-top: 10px;
+    }
+    .primaryBtn{
+      flex:1;
+      height:46px;
+      border-radius: 14px;
+      border:0;
+      background:#111827;
+      color:#fff;
+      font-size:15px;
+      font-weight:900;
+      box-shadow: 0 10px 18px rgba(17,24,39,0.14);
+    }
+    .primaryBtn:hover{ filter: brightness(1.03); }
+    .ghostBtn{
+      flex:1;
+      height:46px;
+      border-radius: 14px;
+      border:1px solid var(--line);
+      background:#fff;
+      color:#111827;
+      font-size:15px;
+      font-weight:800;
+    }
+    .ghostBtn:hover{ background:#f8fafc; }
+
+    .roomList{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .roomItem{
+      border:1px solid var(--line);
+      border-radius: 16px;
+      padding: 12px;
+      background:#fff;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.04);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+    .roomItem:hover{ background:#f8fafc; }
+    .roomLeft{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      min-width:0;
+    }
+    .roomName{
+      font-weight:900;
+      font-size:15px;
+      display:flex;
+      align-items:center;
+      gap:8px;
+      min-width:0;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .roomMeta{
+      font-size:12px;
+      color:var(--muted);
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    .roomRight{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      flex-shrink:0;
+    }
+    .chip{
+      border:1px solid var(--line);
+      background:#fff;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size:12px;
+      color:var(--muted);
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+    }
+
+    .log{
+      flex:1;
+      overflow:auto;
+      padding: 12px 12px calc(var(--composerH) + var(--typingH) + var(--kb) + var(--safeB) + 12px) 12px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .msg{
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+      margin: 10px 0;
+      width:100%;
+    }
+    .row{
+      display:flex;
+      gap:8px;
+      width:100%;
+    }
+    .row.me{ justify-content:flex-end; }
+    .row.other{ justify-content:flex-start; }
+
+    .bubble{
+      max-width: 82%;
+      padding: 12px 12px;
+      border-radius: 16px;
+      border:1px solid var(--line);
+      background: var(--other);
+      color: var(--otherText);
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size:16px;
+      line-height:1.35;
+    }
+    .row.me .bubble{
+    background: var(--me);
+    color: var(--meText);
+    border-color: transparent;
+    border-bottom-right-radius: 6px;
+    box-shadow: none;
+    background-image: none;
+    }
+    .row.other .bubble{
+      border-bottom-left-radius: 6px;
+    }
+
+    .meta{
+      font-size:11px;
+      color:var(--muted);
+      display:flex;
+      gap:8px;
+      align-items:center;
+    }
+    .meta.me{ justify-content:flex-end; }
+    .badgePending{ opacity:0.78; }
+    .badgeFail{ color: var(--danger); font-weight:900; cursor:pointer; }
+
+    /* 읽음 표시 */
+    .readBadge{
+      font-weight:900;
+      opacity:0.85;
+    }
+
+    /* 입력창 바로 위 typing bar */
+    .typingBar{
+      position:fixed;
+      left:0;
+      right:0;
+      bottom: calc(var(--composerH) + var(--kb) + var(--safeB));
+      height: var(--typingH);
+      display:none;
+      align-items:center;
+      padding: 0 12px;
+      font-size:12px;
+      color:var(--muted);
+      background: rgba(255,255,255,0.95);
+      backdrop-filter: blur(12px);
+      border-top:1px solid var(--line);
+      z-index:19;
+    }
+
+    .composer{
+      position:fixed;
+      left:0;
+      right:0;
+      bottom: calc(var(--kb) + var(--safeB));
+      height: var(--composerH);
+      padding: 10px 12px;
+      border-top:1px solid var(--line);
+      background: rgba(255,255,255,0.95);
+      backdrop-filter: blur(12px);
+      display:flex;
+      gap:10px;
+      align-items:center;
+      z-index:20;
+    }
+
+    .emojiBtn{
+      width:48px;
+      height:48px;
+      border-radius: 14px;
+      border:1px solid var(--line);
+      background: #fff;
+      font-size:22px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      user-select:none;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+    }
+    .emojiBtn:hover{ filter: brightness(0.98); }
+
+    .inputWrap{
+      flex:1;
+      height:48px;
+      border-radius: 14px;
+      border:1px solid var(--line);
+      background:#fff;
+      display:flex;
+      align-items:center;
+      padding: 0 12px;
+    }
+    input[type="text"]{
+      width:100%;
+      border:0;
+      outline:none;
+      font-size:16px;
+      background:transparent;
+    }
+
+    .sendBtn{
+      width:64px;
+      height:48px;
+      border-radius: 14px;
+      border:0;
+      background:#111827;
+      color:#fff;
+      font-size:15px;
+      font-weight:900;
+      box-shadow: 0 10px 18px rgba(17,24,39,0.14);
+    }
+    .sendBtn:disabled{ opacity:0.45; box-shadow:none; }
+
+    .emojiPanel{
+      position:fixed;
+      left:12px;
+      right:12px;
+      bottom: calc(var(--composerH) + var(--kb) + var(--safeB) + 10px);
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius: 16px;
+      padding: 10px;
+      box-shadow: var(--shadow);
+      display:none;
+      z-index:30;
+    }
+    .emojiPanel.open{ display:block; }
+    .emojiGrid{
+      display:grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap:8px;
+    }
+    .emoji{
+      height:38px;
+      border-radius: 10px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:22px;
+      user-select:none;
+      border:1px solid transparent;
+    }
+    .emoji:hover{ background:#f8fafc; }
+    .emoji:active{ border-color: var(--line); }
+
+    @media (max-width: 420px){
+      .bubble{ max-width: 88%; }
+      .emojiGrid{ grid-template-columns: repeat(7, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <div class="app" id="app">
+    <header id="header" style="display:none;">
+      <div class="headTop">
+        <div>
+          <div class="title" id="roomTitle">채팅방</div>
+          <div class="sub" id="roomSub"></div>
+        </div>
+
+        <div class="menuWrap">
+          <div class="menuBtn clickable" id="menuBtn">…</div>
+          <div class="menu" id="menu">
+            <button id="mEnableNoti"><span>알림 켜기</span><span id="mEnableNotiState">›</span></button>
+            <button id="mSound"><span>소리(삐) 켜기</span><span id="mSoundState">›</span></button>
+
+            <!-- 추가: 내 말풍선 색상 토글 -->
+            <button id="mMyBubbleWhite"><span>내 말풍선 흰색(상대와 동일)</span><span id="mMyBubbleWhiteState">›</span></button>
+
+            <button id="mNick"><span>닉네임 변경</span><span>›</span></button>
+            <button id="mRoomName"><span>방 이름 변경(방장)</span><span>›</span></button>
+            <button id="mLeave"><span>나가기</span><span>›</span></button>
+            <div class="hint" id="menuHint"></div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="home" id="home">
+      <div class="homeCard">
+        <div class="homeTitle">대기실</div>
+
+        <div class="field">
+          <label>내 닉네임</label>
+          <input id="homeNick" type="text" placeholder="예: 송대호" />
+        </div>
+
+        <div class="sectionTitle">방 만들기</div>
+        <div class="field">
+          <label>방 이름</label>
+          <input id="homeRoomName" type="text" placeholder="예: 테스트방" />
+        </div>
+
+        <div class="rowBtns">
+          <button class="primaryBtn" id="btnCreate">방 만들기</button>
+          <button class="ghostBtn" id="btnRefresh">새로고침</button>
+        </div>
+
+        <div class="sectionTitle">채팅방 목록</div>
+        <div class="roomList" id="roomList"></div>
+
+        <div class="rowBtns">
+          <button class="ghostBtn" id="btnJoin">참여하기</button>
+        </div>
+
+        <div class="sectionTitle">안내</div>
+        <div class="roomMeta">
+          <span class="pill">누구나 편하게 대화할 수 있는 채팅방입니다.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="typingBar" id="typingBar" aria-hidden="true"></div>
+
+    <div class="log" id="log" style="display:none;"></div>
+
+    <div class="emojiPanel" id="emojiPanel" aria-hidden="true">
+      <div class="emojiGrid" id="emojiGrid"></div>
+    </div>
+
+    <div class="composer" id="composer" style="display:none;">
+      <div class="emojiBtn clickable" id="emojiBtn">😊</div>
+      <div class="inputWrap">
+        <input id="input" type="text" autocomplete="off" placeholder="메시지를 입력하세요" />
+      </div>
+      <button class="sendBtn" id="send" disabled>전송</button>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
+
+  <script>
+    const SERVICE_URL  = <?= JSON.stringify(serviceUrl) ?>;
+    const INIT_ROOM_ID = <?= JSON.stringify(roomId) ?>;
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyC6iyCkpqtaWgFXlJZiogn2SgfIz9j1I4M",
+      authDomain: "messenger-222df.firebaseapp.com",
+      databaseURL: "https://messenger-222df-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "messenger-222df",
+      storageBucket: "messenger-222df.firebasestorage.app",
+      messagingSenderId: "694962613962",
+      appId: "1:694962613962:web:764e45b00345a8a27f4e33",
+      measurementId: "G-18XS6BY9GK"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const SV = firebase.database.ServerValue;
+
+    const NAV_URL = location.origin + location.pathname;
+
+    const LS_NICK   = 'chat_nick_fb_v1';
+    const LS_NOTI   = 'chat_notify_enabled_v1';
+    const LS_SOUND  = 'chat_beep_enabled_v1';
+
+    // 추가: 내 말풍선 흰색 토글 저장키
+    const LS_MY_BUBBLE_WHITE = 'chat_my_bubble_white_v1';
+
+    // 기본(원래) 내 말풍선 색상 백업(복원용)
+    const DEFAULT_ME_BG   = '#374151';
+    const DEFAULT_ME_TEXT = '#ffffff';
+
+    // 상대(기본) 말풍선 색상
+    const DEFAULT_OTHER_BG   = '#ffffff';
+    const DEFAULT_OTHER_TEXT = '#111827';
+
+    function uuid(){
+      if (crypto && crypto.randomUUID) return crypto.randomUUID();
+      return 'u' + Date.now() + '_' + Math.random().toString(16).slice(2);
+    }
+    function escapeHtml(s){
+      return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+    function fmt(ts){
+      try{
+        return new Intl.DateTimeFormat('ko-KR', { month:'numeric', day:'numeric', hour:'numeric', minute:'2-digit' }).format(new Date(ts));
+      }catch(e){
+        return new Date(ts).toLocaleString();
+      }
+    }
+
+    function isInIframe(){
+      try{ return window.top !== window.self; }catch(e){ return true; }
+    }
+    function isIOS(){
+      const ua = navigator.userAgent || '';
+      const iOS = /iPhone|iPad|iPod/i.test(ua);
+      const iPadOS13 = (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      return iOS || iPadOS13;
+    }
+    function isStandalonePWA(){
+      return (window.navigator.standalone === true) || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+    }
+
+    // UI refs
+    const header = document.getElementById('header');
+    const roomTitle = document.getElementById('roomTitle');
+    const roomSub = document.getElementById('roomSub');
+
+    const menuBtn = document.getElementById('menuBtn');
+    const menu = document.getElementById('menu');
+    const menuHint = document.getElementById('menuHint');
+
+    const mEnableNoti = document.getElementById('mEnableNoti');
+    const mEnableNotiState = document.getElementById('mEnableNotiState');
+    const mSound = document.getElementById('mSound');
+    const mSoundState = document.getElementById('mSoundState');
+
+    // 추가: 내 말풍선 흰색 토글 메뉴
+    const mMyBubbleWhite = document.getElementById('mMyBubbleWhite');
+    const mMyBubbleWhiteState = document.getElementById('mMyBubbleWhiteState');
+
+    const mNick = document.getElementById('mNick');
+    const mRoomName = document.getElementById('mRoomName');
+    const mLeave = document.getElementById('mLeave');
+
+    const home = document.getElementById('home');
+    const homeNick = document.getElementById('homeNick');
+    const homeRoomName = document.getElementById('homeRoomName');
+
+    const btnCreate = document.getElementById('btnCreate');
+    const btnRefresh = document.getElementById('btnRefresh');
+    const btnJoin = document.getElementById('btnJoin');
+    const roomList = document.getElementById('roomList');
+
+    const logEl = document.getElementById('log');
+    const composer = document.getElementById('composer');
+    const inputEl = document.getElementById('input');
+    const sendBtn = document.getElementById('send');
+
+    const emojiBtn = document.getElementById('emojiBtn');
+    const emojiPanel = document.getElementById('emojiPanel');
+    const emojiGrid = document.getElementById('emojiGrid');
+
+    const typingBar = document.getElementById('typingBar');
+
+    const EMOJIS = ['😀','😄','😊','😍','😘','😎','🥹','😂','😭','😡','👍','👏','🙏','🔥','🎉','💯','❤️','✨','⭐','✅','❌','⚡','🍀','☕','🍜','🎮','📌','📝'];
+    function buildEmoji(){
+      emojiGrid.innerHTML = '';
+      EMOJIS.forEach(e => {
+        const d = document.createElement('div');
+        d.className = 'emoji clickable';
+        d.textContent = e;
+        d.addEventListener('click', () => {
+          inputEl.value = (inputEl.value || '') + e;
+          onInput();
+          inputEl.focus();
+          markTypingActivity();
+        });
+        emojiGrid.appendChild(d);
+      });
+    }
+    buildEmoji();
+
+    function updateKeyboardInset(){
+      if (!window.visualViewport) return;
+      const vv = window.visualViewport;
+      const kb = Math.max(0, (window.innerHeight - vv.height - vv.offsetTop));
+      document.documentElement.style.setProperty('--kb', kb + 'px');
+    }
+    if (window.visualViewport){
+      window.visualViewport.addEventListener('resize', updateKeyboardInset);
+      window.visualViewport.addEventListener('scroll', updateKeyboardInset);
+      updateKeyboardInset();
+    }
+
+    function closeMenu(){ menu.classList.remove('open'); }
+    menuBtn.addEventListener('click', () => menu.classList.toggle('open'));
+    document.addEventListener('click', (e) => {
+      if (menuBtn.contains(e.target)) return;
+      if (menu.contains(e.target)) return;
+      closeMenu();
+    });
+
+    emojiBtn.addEventListener('click', () => {
+      emojiPanel.classList.toggle('open');
+      emojiPanel.setAttribute('aria-hidden', emojiPanel.classList.contains('open') ? 'false' : 'true');
+    });
+    document.addEventListener('click', (e) => {
+      if (emojiBtn.contains(e.target)) return;
+      if (emojiPanel.contains(e.target)) return;
+      emojiPanel.classList.remove('open');
+      emojiPanel.setAttribute('aria-hidden', 'true');
+    });
+
+    // auth + state
+    let myUid = '';
+    let myNick = (localStorage.getItem(LS_NICK) || '').trim();
+
+    let roomId = '';
+    let roomName = '';
+    let ownerUid = '';
+    let ownerNick = '';
+    let isOwner = false;
+
+    // presence
+    let presenceTimer = null;
+    let presenceRef = null;
+
+    // typing
+    let typingKeepAliveTimer = null;
+    let typingWatchRef = null;
+    let lastTypeAt = 0;
+    let typingOn = false;
+
+    // reads (읽음)
+    let readsWatchRef = null;
+    let readsCache = {};
+    let readsMarkTimer = null;
+    let readsScrollTimer = null;
+
+    // messages
+    let msgUnsub = null;
+    let afterSeq = 0;
+    const seen = new Map(); // messageId -> { seq, metaEl, senderId }
+    const pending = new Map();
+
+    // ---- 알림/소리/타이틀 ----
+    const TITLE_BASE = 'Chat';
+    let unread = 0;
+    let titleBlinkTimer = null;
+
+    let notifyEnabled = (localStorage.getItem(LS_NOTI) === '1');
+    let soundEnabled  = (localStorage.getItem(LS_SOUND) === '1');
+
+    // 추가: 내 말풍선 흰색 모드
+    let myBubbleWhite = (localStorage.getItem(LS_MY_BUBBLE_WHITE) === '1');
+
+    function applyMyBubbleTheme(){
+      if (myBubbleWhite){
+        // 내 말풍선을 상대와 동일하게(흰색) 맞춤
+        document.documentElement.style.setProperty('--me', DEFAULT_OTHER_BG);
+        document.documentElement.style.setProperty('--meText', DEFAULT_OTHER_TEXT);
+      } else {
+        // 기본값(원래 상태) 복원
+        document.documentElement.style.setProperty('--me', DEFAULT_ME_BG);
+        document.documentElement.style.setProperty('--meText', DEFAULT_ME_TEXT);
+      }
+    }
+    applyMyBubbleTheme();
+
+    // iOS 오디오 unlock
+    let audioCtx = null;
+    let audioReady = false;
+    const BEEP_WAV =
+      "data:audio/wav;base64," +
+      "UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=";
+    const beepAudio = new Audio(BEEP_WAV);
+    beepAudio.preload = 'auto';
+    beepAudio.playsInline = true;
+
+    async function unlockAudioHard(){
+      try{
+        if (!audioCtx){
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state !== 'running'){
+          await audioCtx.resume();
+        }
+        audioReady = true;
+      }catch(e){
+        audioReady = false;
+      }
+
+      try{
+        beepAudio.currentTime = 0;
+        await beepAudio.play();
+        beepAudio.pause();
+        beepAudio.currentTime = 0;
+      }catch(e){}
+    }
+
+    function playBeep(){
+      if (!soundEnabled) return;
+
+      if (audioCtx && audioReady){
+        try{
+          const o = audioCtx.createOscillator();
+          const g = audioCtx.createGain();
+          o.type = 'sine';
+          o.frequency.value = 880;
+          g.gain.value = 0.0001;
+          o.connect(g);
+          g.connect(audioCtx.destination);
+
+          const now = audioCtx.currentTime;
+          g.gain.setValueAtTime(0.0001, now);
+          g.gain.exponentialRampToValueAtTime(0.15, now + 0.01);
+          g.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+          o.start(now);
+          o.stop(now + 0.2);
+          return;
+        }catch(e){}
+      }
+
+      try{
+        const a = new Audio(BEEP_WAV);
+        a.playsInline = true;
+        a.currentTime = 0;
+        a.play().catch(()=>{});
+      }catch(e){}
+    }
+
+    function startTitleBlink(){
+      if (titleBlinkTimer) return;
+      let flip = false;
+      titleBlinkTimer = setInterval(() => {
+        flip = !flip;
+        if (unread <= 0){
+          stopTitleBlink();
+          return;
+        }
+        document.title = flip ? `(${unread}) 새 메시지` : TITLE_BASE;
+      }, 900);
+    }
+    function stopTitleBlink(){
+      if (titleBlinkTimer){
+        clearInterval(titleBlinkTimer);
+        titleBlinkTimer = null;
+      }
+      document.title = TITLE_BASE;
+    }
+    function bumpUnread(){
+      unread = Math.min(999, unread + 1);
+      startTitleBlink();
+      setHeader();
+    }
+    function clearUnread(){
+      unread = 0;
+      stopTitleBlink();
+      setHeader();
+    }
+
+    function shouldNotifyNow(){
+      return (document.hidden || !document.hasFocus() || !isNearBottom());
+    }
+
+    function notifyNewMessage(msg){
+      try{
+        if (!notifyEnabled) return;
+        if (!('Notification' in window)) return;
+        if (Notification.permission !== 'granted') return;
+
+        const body = `${msg.senderNick || '상대'}: ${String(msg.text || '').slice(0, 140)}`;
+        const n = new Notification(roomName || '채팅', {
+          body,
+          tag: (roomId ? ('room_' + roomId) : undefined),
+          renotify: true
+        });
+        n.onclick = () => { try{ window.focus(); }catch(e){} };
+      }catch(e){}
+    }
+
+    function showOpenNewTabGuide(){
+      const url = location.href;
+      menuHint.innerHTML =
+        (menuHint.textContent ? escapeHtml(menuHint.textContent) + "\n\n" : "") +
+        `알림 설정을 위해 새 탭으로 여세요:\n` +
+        `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">새 탭으로 열기</a>`;
+    }
+
+    async function enableNotificationsFromUserGesture(){
+      if (isIOS() && !isStandalonePWA()){
+        alert('iPhone Safari(브라우저)에서는 시스템 알림이 지원되지 않습니다.\n(홈 화면에 추가(PWA) 형태에서는 가능할 수 있습니다.)');
+        return;
+      }
+
+      if (!('Notification' in window)){
+        alert('이 브라우저는 시스템 알림을 지원하지 않습니다.');
+        return;
+      }
+
+      if (isInIframe()){
+        showOpenNewTabGuide();
+        alert('현재 페이지가 임베드(iframe)로 열려 있어 알림 권한 요청이 차단될 수 있습니다.\n메뉴 하단 안내에 생긴 "새 탭으로 열기" 링크로 열린 탭에서 다시 시도해 주세요.');
+        return;
+      }
+
+      try{
+        const perm = await Notification.requestPermission();
+        if (perm === 'granted'){
+          notifyEnabled = true;
+          localStorage.setItem(LS_NOTI, '1');
+          await unlockAudioHard();
+          updateMenuStates();
+          alert('알림이 켜졌습니다.');
+        } else if (perm === 'denied'){
+          notifyEnabled = false;
+          localStorage.setItem(LS_NOTI, '0');
+          updateMenuStates();
+          alert('알림이 차단되어 있습니다.\n브라우저 사이트 설정에서 알림을 "허용"으로 바꿔 주세요.');
+        } else {
+          notifyEnabled = false;
+          localStorage.setItem(LS_NOTI, '0');
+          updateMenuStates();
+          alert('알림 권한이 허용되지 않았습니다.');
+        }
+      }catch(e){
+        alert('알림 설정에 실패했습니다.');
+      }
+    }
+
+    async function toggleSoundFromUserGesture(){
+      soundEnabled = !soundEnabled;
+      localStorage.setItem(LS_SOUND, soundEnabled ? '1' : '0');
+
+      if (soundEnabled){
+        await unlockAudioHard();
+        playBeep();
+      }
+
+      updateMenuStates();
+
+      if (soundEnabled && isIOS()){
+        alert('iPhone에서 소리가 안 나면:\n- 무음 모드(사일런스 스위치) 해제\n- 미디어 볼륨 올림\n- 집중 모드/사파리 음소거 상태 확인\n이 조건은 코드로 강제할 수 없습니다.');
+      }
+    }
+
+    // 추가: 내 말풍선 흰색 토글
+    function toggleMyBubbleWhite(){
+      myBubbleWhite = !myBubbleWhite;
+      localStorage.setItem(LS_MY_BUBBLE_WHITE, myBubbleWhite ? '1' : '0');
+      applyMyBubbleTheme();
+      updateMenuStates();
+    }
+
+    function updateMenuStates(){
+      const supported = ('Notification' in window);
+      const iosNoNoti = isIOS() && !isStandalonePWA();
+
+      let notiText = '꺼짐';
+      if (iosNoNoti) {
+        notiText = '미지원';
+      } else if (!supported) {
+        notiText = '미지원';
+      } else {
+        const perm = Notification.permission;
+        if (perm === 'denied') notiText = '차단됨';
+        else if (perm === 'granted' && notifyEnabled) notiText = '켜짐';
+        else if (perm === 'granted' && !notifyEnabled) notiText = '꺼짐';
+        else if (perm === 'default') notiText = '요청 필요';
+      }
+      mEnableNotiState.textContent = notiText;
+      mSoundState.textContent = soundEnabled ? '켜짐' : '꺼짐';
+
+      // 추가: 내 말풍선 흰색 상태 표시
+      mMyBubbleWhiteState.textContent = myBubbleWhite ? '켜짐' : '꺼짐';
+
+      const hints = [];
+      hints.push(`현재 도메인: ${location.hostname}`);
+      if (iosNoNoti){
+        hints.push('iPhone Safari(브라우저)에서는 시스템 알림 미지원(홈 화면 추가 PWA 필요)');
+      }
+      if (!iosNoNoti && isInIframe()){
+        hints.push('임베드(iframe) 상태: 알림 권한 요청 차단 가능 → "새 탭으로 열기" 필요');
+      }
+      const base = (isOwner ? '방장 권한: 방 이름 변경 가능' : '방장만 방 이름 변경 가능');
+      menuHint.innerHTML = escapeHtml(base + (hints.length ? '\n' + hints.join('\n') : ''));
+    }
+
+    mEnableNoti.addEventListener('click', async () => {
+      closeMenu();
+      await enableNotificationsFromUserGesture();
+    });
+
+    mSound.addEventListener('click', async () => {
+      closeMenu();
+      await toggleSoundFromUserGesture();
+    });
+
+    // 추가: 내 말풍선 흰색 버튼
+    mMyBubbleWhite.addEventListener('click', () => {
+      closeMenu();
+      toggleMyBubbleWhite();
+    });
+
+    // ---- 채팅 로직 ----
+    function setNick(nick){
+      myNick = String(nick || '').trim();
+      if (!myNick) return false;
+      localStorage.setItem(LS_NICK, myNick);
+      return true;
+    }
+
+    let onlineNicksCache = [];
+    function setHeader(onlineNicks){
+      if (Array.isArray(onlineNicks)) onlineNicksCache = onlineNicks;
+
+      roomTitle.textContent = roomName || '채팅방';
+      const onlineText = (onlineNicksCache && onlineNicksCache.length) ? onlineNicksCache.join(', ') : '없음';
+      const unreadPill = unread > 0 ? `<span class="pill">새 메시지 ${unread}개</span>` : '';
+
+      roomSub.innerHTML = `
+        <span class="pill">내 닉네임: ${escapeHtml(myNick)}</span>
+        <span class="pill">온라인: ${escapeHtml(onlineText)}</span>
+        ${unreadPill}
+      `;
+
+      updateMenuStates();
+    }
+
+    function isNearBottom(){
+      const gap = logEl.scrollHeight - (logEl.scrollTop + logEl.clientHeight);
+      return gap < 140;
+    }
+    function scrollToBottom(force){
+      if (!force && !isNearBottom()) return;
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function showTypingBar(text){
+      if (!text){
+        typingBar.style.display = 'none';
+        typingBar.textContent = '';
+        typingBar.setAttribute('aria-hidden', 'true');
+        return;
+      }
+      typingBar.style.display = 'flex';
+      typingBar.textContent = text;
+      typingBar.setAttribute('aria-hidden', 'false');
+    }
+
+    function renderMessage(m, opt){
+      if (seen.has(m.messageId)) return;
+
+      const wrap = document.createElement('div');
+      wrap.className = 'msg';
+
+      const row = document.createElement('div');
+      row.className = 'row ' + (m.senderId === myUid ? 'me' : 'other');
+
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble';
+      bubble.innerHTML = escapeHtml(m.text);
+
+      row.appendChild(bubble);
+      wrap.appendChild(row);
+
+      const meta = document.createElement('div');
+      meta.className = 'meta ' + (m.senderId === myUid ? 'me' : '');
+
+      const who = document.createElement('span');
+      who.textContent = m.senderNick || '';
+
+      const time = document.createElement('span');
+      time.textContent = fmt(m.ts || Date.now());
+
+      meta.appendChild(who);
+      meta.appendChild(time);
+
+      if (m.senderId === myUid){
+        if (opt && opt.pending){
+          const b = document.createElement('span');
+          b.className = 'badgePending';
+          b.textContent = '전송 중';
+          meta.appendChild(b);
+        }
+      }
+
+      wrap.appendChild(meta);
+      logEl.appendChild(wrap);
+
+      seen.set(m.messageId, { seq: Number(m.seq || 0), metaEl: meta, senderId: m.senderId });
+    }
+
+    function updateBadges(){
+      for (const [mid, obj] of seen.entries()){
+        const meta = obj.metaEl;
+        if (!meta) continue;
+
+        Array.from(meta.querySelectorAll('.badgePending, .badgeFail')).forEach(n => n.remove());
+
+        if (obj.senderId !== myUid) continue;
+
+        if (pending.has(mid)) {
+          const p = pending.get(mid);
+          const age = Date.now() - p.createdAt;
+          if (age > 12000) {
+            const b = document.createElement('span');
+            b.className = 'badgeFail';
+            b.textContent = '전송 실패(재시도)';
+            b.addEventListener('click', () => retrySend(mid));
+            meta.appendChild(b);
+          } else {
+            const b = document.createElement('span');
+            b.className = 'badgePending';
+            b.textContent = '전송 중';
+            meta.appendChild(b);
+          }
+        }
+      }
+    }
+
+    function updateReadBadges(){
+      const otherUids = Object.keys(readsCache || {}).filter(uid => uid !== myUid);
+      const totalOthers = otherUids.length;
+
+      for (const [mid, obj] of seen.entries()){
+        if (obj.senderId !== myUid) continue;
+        const meta = obj.metaEl;
+        if (!meta) continue;
+
+        Array.from(meta.querySelectorAll('.readBadge')).forEach(n => n.remove());
+
+        const seq = Number(obj.seq || 0);
+        if (!seq) continue;
+        if (pending.has(mid)) continue;
+
+        let readers = 0;
+        for (const uid of otherUids){
+          const lastRead = Number((readsCache[uid] && readsCache[uid].lastReadSeq) || 0);
+          if (lastRead >= seq) readers += 1;
+        }
+
+        const badge = document.createElement('span');
+        badge.className = 'readBadge';
+
+        if (totalOthers <= 1){
+          badge.textContent = (readers >= 1) ? '읽음' : '안읽음';
+        } else {
+          badge.textContent = `읽음 ${readers}/${totalOthers}`;
+        }
+
+        meta.appendChild(badge);
+      }
+    }
+
+    function mergeServerMessage(m){
+      if (!seen.has(m.messageId)){
+        renderMessage(m, {pending:false});
+      }
+      if (pending.has(m.messageId)) pending.delete(m.messageId);
+
+      const obj = seen.get(m.messageId);
+      if (obj) obj.seq = Number(m.seq || obj.seq || 0);
+
+      updateBadges();
+      updateReadBadges();
+    }
+
+    async function refreshRooms(){
+      roomList.innerHTML = '';
+      try{
+        const snap = await db.ref('rooms').orderByChild('updatedAt').limitToLast(50).once('value');
+        const v = snap.val() || {};
+        const items = Object.keys(v).map(id => ({ roomId:id, ...v[id] }));
+        items.sort((a,b)=> (b.updatedAt||0) - (a.updatedAt||0));
+
+        if (items.length === 0){
+          const d = document.createElement('div');
+          d.className = 'roomMeta';
+          d.textContent = '생성된 방이 없습니다. 방을 만들어 주세요.';
+          roomList.appendChild(d);
+          return;
+        }
+
+        items.forEach(r=>{
+          const item = document.createElement('div');
+          item.className = 'roomItem clickable';
+
+          const left = document.createElement('div');
+          left.className = 'roomLeft';
+
+          const name = document.createElement('div');
+          name.className = 'roomName';
+          name.innerHTML = `<span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(r.roomName || '채팅방')}</span>`;
+
+          const meta = document.createElement('div');
+          meta.className = 'roomMeta';
+          meta.textContent = `방장: ${r.ownerNick || '미확정'} · 최근 활동: ${r.updatedAt ? fmt(r.updatedAt) : '없음'}`;
+
+          left.appendChild(name);
+          left.appendChild(meta);
+
+          const right = document.createElement('div');
+          right.className = 'roomRight';
+          const chip = document.createElement('div');
+          chip.className = 'chip';
+          chip.textContent = '입장';
+          right.appendChild(chip);
+
+          item.appendChild(left);
+          item.appendChild(right);
+
+          item.addEventListener('click', async () => {
+            await joinRoomFlow(r.roomId);
+          });
+
+          roomList.appendChild(item);
+        });
+      }catch(e){
+        const d = document.createElement('div');
+        d.className = 'roomMeta';
+        d.textContent = '방 목록을 불러오지 못했습니다. (권한/규칙 확인 필요)';
+        roomList.appendChild(d);
+      }
+    }
+
+    btnRefresh.addEventListener('click', () => refreshRooms());
+
+    btnCreate.addEventListener('click', async () => {
+      const nick = homeNick.value.trim();
+      if (!setNick(nick)) { alert('닉네임을 입력해 주세요.'); return; }
+
+      const rn = homeRoomName.value.trim() || '새 채팅방';
+      if (!myUid) { alert('로그인 상태를 확인 중입니다. 잠시 후 다시 시도해 주세요.'); return; }
+
+      const newRoomId = uuid();
+      const now = Date.now();
+
+      const roomObj = {
+        roomName: rn.slice(0, 60),
+        ownerUid: myUid,
+        ownerNick: myNick,
+        createdAt: now,
+        updatedAt: now,
+        lastSeq: 0,
+        lastMsgTs: 0
+      };
+
+      try{
+        await db.ref('rooms/' + newRoomId).set(roomObj);
+        history.pushState({}, '', NAV_URL + '?roomId=' + encodeURIComponent(newRoomId));
+        await enterRoomLocal(newRoomId);
+      }catch(e){
+        alert('방 생성 실패: ' + (e && e.message ? e.message : ''));
+      }
+    });
+
+    btnJoin.addEventListener('click', async () => {
+      alert('방 목록에서 입장해 주세요.');
+    });
+
+    async function joinRoomFlow(rid){
+      rid = String(rid||'').trim();
+      if (!rid) return;
+      if (!myNick){
+        const nick = homeNick.value.trim();
+        if (!setNick(nick)) { alert('닉네임을 입력해 주세요.'); return; }
+      }
+      if (!myUid){ alert('로그인 상태를 확인 중입니다. 잠시 후 다시 시도해 주세요.'); return; }
+
+      try{
+        const snap = await db.ref('rooms/' + rid).once('value');
+        if (!snap.exists()){ alert('방을 찾을 수 없습니다.'); return; }
+
+        history.pushState({}, '', NAV_URL + '?roomId=' + encodeURIComponent(rid));
+        await enterRoomLocal(rid);
+      }catch(e){
+        alert('입장 실패: ' + (e && e.message ? e.message : ''));
+      }
+    }
+
+    function stopPresence(){
+      try{
+        if (presenceTimer) clearInterval(presenceTimer);
+        presenceTimer = null;
+        if (presenceRef) presenceRef.onDisconnect().cancel();
+        presenceRef = null;
+      }catch(e){}
+    }
+
+    function startPresence(rid){
+      stopPresence();
+
+      presenceRef = db.ref('presence/' + rid + '/' + myUid);
+      const obj = { nick: myNick, lastActive: SV.TIMESTAMP };
+      presenceRef.onDisconnect().remove();
+      presenceRef.set(obj);
+
+      presenceTimer = setInterval(() => {
+        presenceRef.update({ nick: myNick, lastActive: SV.TIMESTAMP });
+      }, 25000);
+
+      db.ref('presence/' + rid).orderByChild('lastActive').limitToLast(30).on('value', snap => {
+        const v = snap.val() || {};
+        const now = Date.now();
+        const online = [];
+        Object.keys(v).forEach(uid => {
+          const p = v[uid] || {};
+          const ts = Number(p.lastActive || 0);
+          if (ts && (now - ts) <= 70000){
+            if (p.nick) online.push(String(p.nick));
+          }
+        });
+        const uniq = [];
+        const s = new Set();
+        for (const n of online){
+          const t = String(n||'').trim();
+          if (!t) continue;
+          if (s.has(t)) continue;
+          s.add(t);
+          uniq.push(t);
+        }
+        setHeader(uniq.slice(0, 12));
+      });
+    }
+
+    function stopTyping(){
+      try{
+        if (roomId && myUid){
+          db.ref('typing/' + roomId + '/' + myUid).remove().catch(()=>{});
+        }
+        if (typingWatchRef){
+          typingWatchRef.off();
+          typingWatchRef = null;
+        }
+        if (typingKeepAliveTimer) clearInterval(typingKeepAliveTimer);
+        typingKeepAliveTimer = null;
+
+        typingOn = false;
+        lastTypeAt = 0;
+
+        showTypingBar('');
+      }catch(e){}
+    }
+
+    function markTypingActivity(){
+      lastTypeAt = Date.now();
+    }
+
+    function startTyping(rid){
+      stopTyping();
+
+      typingWatchRef = db.ref('typing/' + rid);
+      typingWatchRef.on('value', snap => {
+        const v = snap.val() || {};
+        const now = Date.now();
+        let best = null;
+
+        Object.keys(v).forEach(uid => {
+          if (uid === myUid) return;
+          const t = v[uid] || {};
+          const until = Number(t.until || 0);
+          if (until > now){
+            if (!best || until > best.until) best = { nick: String(t.nick||''), until };
+          }
+        });
+
+        if (best && best.nick){
+          showTypingBar(best.nick + ' 님이 입력 중입니다');
+        } else {
+          showTypingBar('');
+        }
+      });
+
+      const myTypingRef = db.ref('typing/' + rid + '/' + myUid);
+      myTypingRef.onDisconnect().remove();
+
+      typingKeepAliveTimer = setInterval(() => {
+        if (!roomId) return;
+
+        const focused = (document.activeElement === inputEl);
+        const hasText = inputEl.value.trim().length > 0;
+        const activeRecently = (Date.now() - lastTypeAt) <= 4500;
+        const should = focused && hasText && activeRecently;
+
+        if (should){
+          myTypingRef.set({ nick: myNick, until: Date.now() + 5500 });
+          typingOn = true;
+        } else if (typingOn){
+          myTypingRef.remove();
+          typingOn = false;
+        }
+      }, 2000);
+
+      inputEl.addEventListener('input', markTypingActivity);
+      inputEl.addEventListener('focus', markTypingActivity);
+      inputEl.addEventListener('blur', () => {
+        try{ myTypingRef.remove(); }catch(e){}
+        typingOn = false;
+      });
+
+      window.addEventListener('beforeunload', () => {
+        try{ myTypingRef.remove(); }catch(e){}
+      });
+    }
+
+    // ===== 읽음(reads) =====
+    function stopReads(){
+      try{
+        if (readsWatchRef){
+          readsWatchRef.off();
+          readsWatchRef = null;
+        }
+        if (readsMarkTimer) clearInterval(readsMarkTimer);
+        readsMarkTimer = null;
+
+        if (readsScrollTimer) clearTimeout(readsScrollTimer);
+        readsScrollTimer = null;
+
+        readsCache = {};
+      }catch(e){}
+    }
+
+    function canMarkRead(){
+      if (!roomId) return false;
+      if (document.hidden) return false;
+      if (!document.hasFocus()) return false;
+      if (logEl.style.display === 'none') return false;
+      if (!isNearBottom()) return false;
+      return true;
+    }
+
+    function markReadNow(){
+      if (!canMarkRead()) return;
+      const seq = Number(afterSeq || 0);
+      if (!seq) return;
+
+      const ref = db.ref('reads/' + roomId + '/' + myUid);
+      ref.set({
+        nick: myNick,
+        lastReadSeq: seq,
+        ts: SV.TIMESTAMP
+      }).catch(()=>{});
+    }
+
+    function startReads(rid){
+      stopReads();
+
+      readsWatchRef = db.ref('reads/' + rid);
+      readsWatchRef.on('value', snap => {
+        readsCache = snap.val() || {};
+        updateReadBadges();
+      });
+
+      readsMarkTimer = setInterval(() => {
+        markReadNow();
+      }, 2000);
+
+      logEl.addEventListener('scroll', () => {
+        if (readsScrollTimer) clearTimeout(readsScrollTimer);
+        readsScrollTimer = setTimeout(() => markReadNow(), 120);
+      });
+
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) markReadNow();
+      });
+      window.addEventListener('focus', () => markReadNow());
+    }
+
+    function stopMessages(){
+      try{
+        if (msgUnsub){
+          msgUnsub.off();
+          msgUnsub = null;
+        }
+      }catch(e){}
+    }
+
+    function subscribeMessages(rid, startSeq){
+      stopMessages();
+
+      logEl.innerHTML = '';
+      seen.clear();
+      pending.clear();
+      afterSeq = Number(startSeq || 0);
+
+      const ref = db.ref('messages/' + rid).orderByChild('seq').startAt(afterSeq + 1);
+      msgUnsub = ref;
+
+      ref.on('child_added', snap => {
+        const m = snap.val();
+        if (!m) return;
+
+        const msg = {
+          roomId: rid,
+          messageId: String(m.messageId || snap.key || ''),
+          senderId: String(m.senderId || ''),
+          senderNick: String(m.senderNick || ''),
+          text: String(m.text || ''),
+          ts: Number(m.ts || 0),
+          seq: Number(m.seq || 0)
+        };
+
+        afterSeq = Math.max(afterSeq, msg.seq || 0);
+        mergeServerMessage(msg);
+
+        if (msg.senderId !== myUid){
+          if (shouldNotifyNow()){
+            bumpUnread();
+            notifyNewMessage(msg);
+            playBeep();
+          } else {
+            if (document.hasFocus() && !document.hidden && isNearBottom()){
+              clearUnread();
+            }
+          }
+        }
+
+        scrollToBottom(false);
+        markReadNow();
+      });
+    }
+
+    async function loadRoomInfo(rid){
+      const snap = await db.ref('rooms/' + rid).once('value');
+      if (!snap.exists()) return null;
+      const r = snap.val() || {};
+      return {
+        roomId: rid,
+        roomName: String(r.roomName || ''),
+        ownerUid: String(r.ownerUid || ''),
+        ownerNick: String(r.ownerNick || ''),
+        lastSeq: Number(r.lastSeq || 0),
+        updatedAt: Number(r.updatedAt || 0)
+      };
+    }
+
+    async function enterRoomLocal(rid){
+      stopMessages();
+      stopPresence();
+      stopTyping();
+      stopReads();
+
+      const info = await loadRoomInfo(rid);
+      if (!info){
+        showHome();
+        return;
+      }
+
+      roomId = rid;
+      roomName = info.roomName;
+      ownerUid = info.ownerUid;
+      ownerNick = info.ownerNick;
+      isOwner = (ownerUid && ownerUid === myUid);
+
+      clearUnread();
+
+      showChat();
+      setHeader([]);
+      startPresence(roomId);
+      startTyping(roomId);
+      startReads(roomId);
+
+      subscribeMessages(roomId, 0);
+    }
+
+    function showChat(){
+      home.style.display = 'none';
+      header.style.display = 'block';
+      logEl.style.display = 'block';
+      composer.style.display = 'flex';
+      inputEl.focus();
+    }
+
+    function showHome(){
+      stopMessages();
+      stopPresence();
+      stopTyping();
+      stopReads();
+      clearUnread();
+
+      header.style.display = 'none';
+      logEl.style.display = 'none';
+      composer.style.display = 'none';
+      showTypingBar('');
+      home.style.display = 'block';
+      refreshRooms();
+    }
+
+    mLeave.addEventListener('click', () => {
+      closeMenu();
+      history.pushState({}, '', NAV_URL);
+      roomId = '';
+      showHome();
+    });
+
+    mNick.addEventListener('click', async () => {
+      closeMenu();
+      const next = prompt('새 닉네임을 입력해 주세요.', myNick || '');
+      if (!next) return;
+      if (!setNick(next)) return;
+
+      homeNick.value = myNick;
+      if (roomId){
+        try{
+          db.ref('presence/' + roomId + '/' + myUid).update({ nick: myNick, lastActive: SV.TIMESTAMP });
+          db.ref('typing/' + roomId + '/' + myUid).update({ nick: myNick }).catch(()=>{});
+          db.ref('reads/' + roomId + '/' + myUid).update({ nick: myNick }).catch(()=>{});
+        }catch(e){}
+      }
+      setHeader([]);
+    });
+
+    mRoomName.addEventListener('click', async () => {
+      closeMenu();
+      if (!roomId) return;
+      if (!isOwner){
+        alert('방장만 방 이름을 변경할 수 있습니다.');
+        return;
+      }
+      const next = prompt('새 방 이름을 입력해 주세요.', roomName || '');
+      if (!next) return;
+
+      const newName = String(next).trim().slice(0, 60);
+      if (!newName) return;
+
+      try{
+        await db.ref('rooms/' + roomId).update({ roomName: newName, updatedAt: SV.TIMESTAMP });
+        roomName = newName;
+        setHeader([]);
+        alert('방 이름을 변경했습니다.');
+      }catch(e){
+        alert('변경 실패: ' + (e && e.message ? e.message : ''));
+      }
+    });
+
+    function onInput(){
+      sendBtn.disabled = !inputEl.value.trim();
+      if (roomId) markTypingActivity();
+    }
+    inputEl.addEventListener('input', onInput);
+
+    function msgId(){
+      if (crypto && crypto.randomUUID) return crypto.randomUUID();
+      return 'm' + Date.now() + '_' + Math.random().toString(16).slice(2);
+    }
+
+    async function sendToFirebase(mid, text){
+      if (!roomId) return;
+
+      const roomRef = db.ref('rooms/' + roomId + '/lastSeq');
+      try{
+        const tx = await roomRef.transaction(cur => (Number(cur || 0) + 1));
+        const seq = Number((tx && tx.snapshot && tx.snapshot.val()) || 0);
+
+        const msg = {
+          messageId: mid,
+          senderId: myUid,
+          senderNick: myNick,
+          text: String(text || '').slice(0, 4000),
+          ts: SV.TIMESTAMP,
+          seq: seq
+        };
+
+        await db.ref('messages/' + roomId).push(msg);
+        await db.ref('rooms/' + roomId).update({ updatedAt: SV.TIMESTAMP, lastMsgTs: SV.TIMESTAMP });
+      }catch(e){
+        updateBadges();
+      }
+    }
+
+    function retrySend(mid){
+      const p = pending.get(mid);
+      if (!p) return;
+      p.createdAt = Date.now();
+      pending.set(mid, p);
+      updateBadges();
+      sendToFirebase(mid, p.text);
+    }
+
+    function send(){
+      const text = inputEl.value;
+      if (!text.trim()) return;
+      if (!roomId) return;
+
+      const mid = msgId();
+
+      const local = {
+        roomId,
+        messageId: mid,
+        senderId: myUid,
+        senderNick: myNick,
+        text: text,
+        ts: Date.now(),
+        seq: 0
+      };
+
+      renderMessage(local, {pending:true});
+      scrollToBottom(true);
+
+      pending.set(mid, { text, createdAt: Date.now() });
+      updateBadges();
+
+      inputEl.value = '';
+      onInput();
+
+      try{ db.ref('typing/' + roomId + '/' + myUid).remove(); }catch(e){}
+      typingOn = false;
+
+      sendToFirebase(mid, text);
+    }
+
+    function safeFocusInput(){
+      try{ inputEl.focus({ preventScroll:true }); }
+      catch(e){ try{ inputEl.focus(); }catch(e2){} }
+    }
+
+    sendBtn.addEventListener('pointerdown', async (e) => {
+      e.preventDefault();
+      if (soundEnabled) { await unlockAudioHard(); }
+      send();
+      safeFocusInput();
+    });
+
+    inputEl.addEventListener('keydown', async (e) => {
+      if (e.key === 'Enter'){
+        e.preventDefault();
+        if (soundEnabled) { await unlockAudioHard(); }
+        send();
+        safeFocusInput();
+      }
+    });
+
+    async function init(){
+      if (myNick) homeNick.value = myNick;
+
+      try{
+        const cred = await firebase.auth().signInAnonymously();
+        myUid = (cred && cred.user && cred.user.uid) ? cred.user.uid : (firebase.auth().currentUser ? firebase.auth().currentUser.uid : '');
+      }catch(e){
+        alert('Firebase 인증 실패: ' + (e && e.message ? e.message : ''));
+        return;
+      }
+
+      // 초기 메뉴 상태/테마 반영
+      applyMyBubbleTheme();
+      updateMenuStates();
+
+      if (INIT_ROOM_ID){
+        if (!myNick){
+          showHome();
+          return;
+        }
+        const rid = String(INIT_ROOM_ID||'').trim();
+        if (!rid){
+          showHome();
+          return;
+        }
+        await enterRoomLocal(rid);
+        return;
+      }
+
+      showHome();
+    }
+
+    init();
+  </script>
+</body>
+</html>
