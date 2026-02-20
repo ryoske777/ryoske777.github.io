@@ -585,6 +585,9 @@ try{
     const SERVICE_URL = location.href;
     const INIT_ROOM_ID = new URLSearchParams(location.search).get('roomId') || '';
 
+    const PUSH_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbwlHLWiKMMbzlpXQCUdz-9fP5iX_1iVhbnxG-JLoCAgQc8FZCnCbKOoZl9Xj7NwtMjK/exec";
+    const PUSH_SECRET = "rY8pK3nQ2Vx7mA1sZ9dH6tL4cW0eU5iG";
+
     const firebaseConfig = {
       apiKey: "AIzaSyC6iyCkpqtaWgFXlJZiogn2SgfIz9j1I4M",
       authDomain: "messenger-222df.firebaseapp.com",
@@ -617,6 +620,31 @@ try{
     const DEFAULT_OTHER_BG   = '#ffffff';
     const DEFAULT_OTHER_TEXT = '#111827';
 
+    function pushToSubscriptions(subscriptionIds, title, body, roomId){
+  try{
+    if (!PUSH_WEBHOOK_URL) return;
+    if (!Array.isArray(subscriptionIds) || subscriptionIds.length === 0) return;
+
+    const url = NAV_URL + '?roomId=' + encodeURIComponent(roomId);
+
+    const payload = {
+      secret: PUSH_SECRET,
+      include_subscription_ids: subscriptionIds.slice(0, 20000),
+      title: String(title || 'Chat'),
+      body: String(body || 'New message'),
+      url
+    };
+
+    // CORS 때문에 응답은 신경 쓰지 않고 "발사"만 합니다.
+    fetch(PUSH_WEBHOOK_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    }).catch(()=>{});
+  }catch(e){}
+}
+    
     function uuid(){
       if (crypto && crypto.randomUUID) return crypto.randomUUID();
       return 'u' + Date.now() + '_' + Math.random().toString(16).slice(2);
@@ -1705,28 +1733,55 @@ db.ref('roomMembers/' + roomId + '/' + myUid).set({
     }
 
     async function sendToFirebase(mid, text){
-      if (!roomId) return;
+  if (!roomId) return;
 
-      const roomRef = db.ref('rooms/' + roomId + '/lastSeq');
-      try{
-        const tx = await roomRef.transaction(cur => (Number(cur || 0) + 1));
-        const seq = Number((tx && tx.snapshot && tx.snapshot.val()) || 0);
+  const roomRef = db.ref('rooms/' + roomId + '/lastSeq');
+  try{
+    const tx = await roomRef.transaction(cur => (Number(cur || 0) + 1));
+    const seq = Number((tx && tx.snapshot && tx.snapshot.val()) || 0);
 
-        const msg = {
-          messageId: mid,
-          senderId: myUid,
-          senderNick: myNick,
-          text: String(text || '').slice(0, 4000),
-          ts: SV.TIMESTAMP,
-          seq: seq
-        };
+    const msg = {
+      messageId: mid,
+      senderId: myUid,
+      senderNick: myNick,
+      text: String(text || '').slice(0, 4000),
+      ts: SV.TIMESTAMP,
+      seq: seq
+    };
 
-        await db.ref('messages/' + roomId).push(msg);
-        await db.ref('rooms/' + roomId).update({ updatedAt: SV.TIMESTAMP, lastMsgTs: SV.TIMESTAMP });
-      }catch(e){
-        updateBadges();
+    await db.ref('messages/' + roomId).push(msg);
+    await db.ref('rooms/' + roomId).update({ updatedAt: SV.TIMESTAMP, lastMsgTs: SV.TIMESTAMP });
+
+    // ✅ 추가: 상대(방 멤버)에게 푸시 보내기
+    try{
+      const membersSnap = await db.ref('roomMembers/' + roomId).once('value');
+      const members = membersSnap.val() || {};
+      const otherUids = Object.keys(members).filter(uid => uid !== myUid);
+
+      if (otherUids.length){
+        const subsSnaps = await Promise.all(
+          otherUids.map(uid => db.ref('pushSubs/' + uid).once('value'))
+        );
+
+        let subIds = [];
+        subsSnaps.forEach(s => {
+          const v = s.val() || {};
+          subIds.push(...Object.keys(v));
+        });
+
+        subIds = Array.from(new Set(subIds));
+
+        if (subIds.length){
+          const title = roomName || 'Chat';
+          const body = String(text || '').slice(0, 120);
+          pushToSubscriptions(subIds, title, body, roomId);
+        }
       }
-    }
+    }catch(e){}
+  }catch(e){
+    updateBadges();
+  }
+}
 
     function retrySend(mid){
       const p = pending.get(mid);
@@ -1826,3 +1881,4 @@ db.ref('roomMembers/' + roomId + '/' + myUid).set({
   </script>
 </body>
 </html>
+
