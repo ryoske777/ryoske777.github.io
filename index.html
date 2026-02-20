@@ -574,8 +574,8 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
 
   <script>
-    const SERVICE_URL  = <?= JSON.stringify(serviceUrl) ?>;
-    const INIT_ROOM_ID = <?= JSON.stringify(roomId) ?>;
+    const SERVICE_URL = location.href;
+    const INIT_ROOM_ID = new URLSearchParams(location.search).get('roomId') || '';
 
     const firebaseConfig = {
       apiKey: "AIzaSyC6iyCkpqtaWgFXlJZiogn2SgfIz9j1I4M",
