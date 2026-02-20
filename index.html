@@ -1599,8 +1599,7 @@ if (msg.senderId !== myUid) {
       playBeep(); // 화면 보고 있을 때만
       // notifyNewMessage(msg); // 필요 없으면 끄는 것을 권장(중복 방지)
     } else {
-      if (document.hasFocus() && !document.hidden && isNearBottom()) {
-        clearUnread();
+      if (isNearBottom()) clearUnread();
       }
     }
   }
@@ -1888,5 +1887,6 @@ db.ref('roomMembers/' + roomId + '/' + myUid).set({
   </script>
 </body>
 </html>
+
 
 
