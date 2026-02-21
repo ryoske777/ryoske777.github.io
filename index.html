@@ -585,18 +585,18 @@ try{
     const SERVICE_URL = location.href;
     const INIT_ROOM_ID = new URLSearchParams(location.search).get('roomId') || '';
 
-    const PUSH_WEBHOOK_URL = \"https://script.google.com/macros/s/AKfycbyyEYvCwwTsmlaQwKIUsA00gHbBVNpGiHr_hRUGREUCgcquHH5lY3SHcBTlKU_v6Lqz/exec";
-    const PUSH_SECRET = \"ryo1234";
+    const PUSH_WEBHOOK_URL = "<REDACTED_WEBHOOK_URL>";
+    const PUSH_SECRET = "<REDACTED_PUSH_SECRET>";
 
     const firebaseConfig = {
-      apiKey: \"<REDACTED_APIKEY>\",
-      authDomain: \"<REDACTED_AUTHDOMAIN>\",
-      databaseURL: \"<REDACTED_DATABASEURL>\",
-      projectId: \"<REDACTED_PROJECTID>\",
-      storageBucket: \"<REDACTED_STORAGEBUCKET>\",
-      messagingSenderId: \"<REDACTED_MESSAGINGSENDERID>\",
-      appId: \"<REDACTED_APPID>\",
-      measurementId: \"<REDACTED_MEASUREMENTID>\"
+      apiKey: "<REDACTED_FIREBASE_APIKEY>",
+      authDomain: "messenger-222df.firebaseapp.com",
+      databaseURL: "https://messenger-222df-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "messenger-222df",
+      storageBucket: "messenger-222df.firebasestorage.app",
+      messagingSenderId: "694962613962",
+      appId: "1:694962613962:web:764e45b00345a8a27f4e33",
+      measurementId: "G-18XS6BY9GK"
     };
 
     firebase.initializeApp(firebaseConfig);
@@ -916,6 +916,11 @@ window.__schedulePushSync = schedulePushSync;
       if (titleBlinkTimer) return;
       let flip = false;
       titleBlinkTimer = setInterval(() => {
+        // 포그라운드(탭이 활성)로 돌아오면 타이틀 깜빡임 즉시 중단
+        if (!document.hidden && document.hasFocus()){
+          stopTitleBlink();
+          return;
+        }
         flip = !flip;
         if (unread <= 0){
           stopTitleBlink();
@@ -933,7 +938,12 @@ window.__schedulePushSync = schedulePushSync;
     }
     function bumpUnread(){
       unread = Math.min(999, unread + 1);
-      startTitleBlink();
+      // 탭이 비활성일 때만 타이틀 깜빡임(활성 탭에서는 깜빡이지 않음)
+      if (document.hidden || !document.hasFocus()){
+        startTitleBlink();
+      } else {
+        stopTitleBlink();
+      }
       setHeader();
     }
     function clearUnread(){
@@ -941,6 +951,19 @@ window.__schedulePushSync = schedulePushSync;
       stopTitleBlink();
       setHeader();
     }
+
+    // 포커스/가시성 복귀 시 타이틀/미확인 카운트 정리(크롬 타이틀 깜빡임 방지)
+    window.addEventListener('focus', () => {
+      try{ if (roomId) clearUnread(); }catch(e){}
+    });
+    document.addEventListener('visibilitychange', () => {
+      try{
+        if (!document.hidden && roomId){
+          clearUnread();
+        }
+      }catch(e){}
+    });
+
 
     function shouldNotifyNow(){
       return (document.hidden || !document.hasFocus() || !isNearBottom());
@@ -994,6 +1017,15 @@ window.__schedulePushSync = schedulePushSync;
           localStorage.setItem(LS_NOTI, '1');
           await unlockAudioHard();
           updateMenuStates();
+
+          // OneSignal 웹푸시 구독(Subscription)까지 확실히 opt-in
+          try{
+            if (window.__OS && window.__OS.User && window.__OS.User.PushSubscription){
+              window.__OS.User.PushSubscription.optIn();
+              window.__schedulePushSync && window.__schedulePushSync();
+            }
+          }catch(e){}
+
           alert('알림이 켜졌습니다.');
         } else if (perm === 'denied'){
           notifyEnabled = false;
@@ -1090,6 +1122,10 @@ window.__schedulePushSync = schedulePushSync;
       myNick = String(nick || '').trim();
       if (!myNick) return false;
       localStorage.setItem(LS_NICK, myNick);
+
+      // 닉네임이 바뀌면 pushSubs에도 반영되도록 동기화 예약
+      try{ window.__schedulePushSync && window.__schedulePushSync(); }catch(e){}
+
       return true;
     }
 
@@ -1366,12 +1402,18 @@ window.__schedulePushSync = schedulePushSync;
       try{
         if (presenceTimer) clearInterval(presenceTimer);
         presenceTimer = null;
-        if (presenceRef) presenceRef.onDisconnect().cancel();
+
+        if (presenceRef){
+          // 현재 방에서 나갈 때 온라인 표시가 남지 않도록 즉시 제거 시도
+          try{ presenceRef.remove().catch(()=>{}); }catch(e){}
+          try{ presenceRef.onDisconnect().cancel(); }catch(e){}
+        }
         presenceRef = null;
       }catch(e){}
     }
 
-    function startPresence(rid){
+
+function startPresence(rid){
       stopPresence();
 
       presenceRef = db.ref('presence/' + rid + '/' + myUid);
@@ -1379,18 +1421,20 @@ window.__schedulePushSync = schedulePushSync;
       const obj = {
         nick: myNick,
         lastActive: SV.TIMESTAMP,
-        vis: document.visibilityState // visible 또는 hidden
+        vis: document.visibilityState // visible | hidden
       };
 
       presenceRef.onDisconnect().remove();
       presenceRef.set(obj);
 
       presenceTimer = setInterval(() => {
-        presenceRef.update({
-          nick: myNick,
-          lastActive: SV.TIMESTAMP,
-          vis: document.visibilityState
-        });
+        try{
+          presenceRef.update({
+            nick: myNick,
+            lastActive: SV.TIMESTAMP,
+            vis: document.visibilityState
+          });
+        }catch(e){}
       }, 25000);
 
       db.ref('presence/' + rid).orderByChild('lastActive').limitToLast(30).on('value', snap => {
@@ -1409,35 +1453,13 @@ window.__schedulePushSync = schedulePushSync;
         for (const n of online){
           const t = String(n||'').trim();
           if (!t) continue;
-          if (!s.has(t)){ s.add(t); uniq.push(t); }
+          if (s.has(t)) continue;
+          s.add(t);
+          uniq.push(t);
         }
-        onlineUsersEl.textContent = uniq.join(', ');
-        setHeader();
+        setHeader(uniq.slice(0, 12));
       });
     }
-
-    // presence vis 즉시 갱신(포그라운드/백그라운드 전환 시)
-    document.addEventListener('visibilitychange', () => {
-      try{
-        if (presenceRef){
-          presenceRef.update({
-            vis: document.visibilityState,
-            lastActive: SV.TIMESTAMP,
-            nick: myNick
-          });
-        }
-      }catch(e){}
-    });
-
-    // 포커스 복귀 시(PC 크롬 등) unread/타이틀 정리
-    window.addEventListener('focus', () => {
-      try{
-        if (roomId){
-          clearUnread();
-        }
-      }catch(e){}
-    });
-
 
     function stopTyping(){
       try{
@@ -1519,6 +1541,20 @@ window.__schedulePushSync = schedulePushSync;
       });
     }
 
+
+    // presence vis 즉시 갱신(포그라운드/백그라운드 전환 시)
+    document.addEventListener('visibilitychange', () => {
+      try{
+        if (presenceRef){
+          presenceRef.update({
+            vis: document.visibilityState,
+            lastActive: SV.TIMESTAMP,
+            nick: myNick
+          });
+        }
+      }catch(e){}
+    });
+
     // ===== 읽음(reads) =====
     function stopReads(){
       try{
@@ -1573,11 +1609,11 @@ window.__schedulePushSync = schedulePushSync;
 
       logEl.addEventListener('scroll', () => {
         if (readsScrollTimer) clearTimeout(readsScrollTimer);
-        readsScrollTimer = setTimeout(() => { markReadNow(); if (isNearBottom()) clearUnread(); }, 120);
+        readsScrollTimer = setTimeout(() => { markReadNow(); if (canMarkRead()) clearUnread(); }, 120);
       });
 
       document.addEventListener('visibilitychange', () => {
-        if (!document.hidden){ markReadNow(); clearUnread(); }
+        if (!document.hidden) markReadNow();
       });
       window.addEventListener('focus', () => markReadNow());
     }
@@ -1599,20 +1635,6 @@ window.__schedulePushSync = schedulePushSync;
       pending.clear();
       afterSeq = Number(startSeq || 0);
 
-      // 초기 로딩(기존 메시지 덩어리)에서는 unread/타이틀 깜빡임을 올리지 않도록 처리
-      let catchupTargetSeq = null;
-      let catchupDone = false;
-
-      db.ref('rooms/' + rid + '/lastSeq').once('value').then(s => {
-        catchupTargetSeq = Number(s.val() || 0);
-        if (catchupTargetSeq <= afterSeq){
-          catchupDone = true;
-          if (!document.hidden && document.hasFocus()){
-            clearUnread();
-          }
-        }
-      }).catch(()=>{});
-
       const ref = db.ref('messages/' + rid).orderByChild('seq').startAt(afterSeq + 1);
       msgUnsub = ref;
 
@@ -1633,38 +1655,18 @@ window.__schedulePushSync = schedulePushSync;
         afterSeq = Math.max(afterSeq, msg.seq || 0);
         mergeServerMessage(msg);
 
-        const fromOther = (msg.senderId !== myUid);
-
-        // catchup 단계(기존 메시지 로딩)에서는, 화면이 보이는 상태라면 unread를 올리지 않음
-        const isCatchupMsg = (!catchupDone && catchupTargetSeq != null && msg.seq <= catchupTargetSeq);
-
-        if (fromOther){
-          if (isCatchupMsg){
-            // 화면이 보이는 상태라면 무시(타이틀 깜빡임 방지)
-            if (document.hidden || !document.hasFocus()){
-              bumpUnread();
-            }
-          } else {
-            if (document.hidden || !document.hasFocus()) {
-              bumpUnread();
-            } else {
-              if (shouldNotifyNow()) {
-                bumpUnread();
-                playBeep();
-              } else {
-                clearUnread();
-              }
-            }
-          }
-        }
-
-        // catchup 완료 시점에 화면이 보이면 unread/타이틀 정리
-        if (!catchupDone && catchupTargetSeq != null && afterSeq >= catchupTargetSeq){
-          catchupDone = true;
-          if (!document.hidden && document.hasFocus()){
-            clearUnread();
-          }
-        }
+if (msg.senderId !== myUid) {
+  if (document.hidden || !document.hasFocus()) {
+    bumpUnread();
+  } else {
+    if (shouldNotifyNow()) {
+      bumpUnread();
+      playBeep();
+    } else {
+      if (isNearBottom()) clearUnread();
+    }
+  }
+}
 
         scrollToBottom(false);
         markReadNow();
@@ -1799,74 +1801,77 @@ db.ref('roomMembers/' + roomId + '/' + myUid).set({
       return 'm' + Date.now() + '_' + Math.random().toString(16).slice(2);
     }
 
-    async async function sendToFirebase(mid, text){
-      if (!roomId) return;
+    async function collectOtherSubscriptionIds(rid){
+  try{
+    const membersSnap = await db.ref('roomMembers/' + rid).once('value');
+    const members = membersSnap.val() || {};
+    let otherUids = Object.keys(members).filter(uid => uid !== myUid);
 
-      const roomRef = db.ref('rooms/' + roomId + '/lastSeq');
-      try{
-        const tx = await roomRef.transaction(cur => (Number(cur || 0) + 1));
-        const seq = Number((tx && tx.snapshot && tx.snapshot.val()) || 0);
+    if (!otherUids.length) return [];
 
-        const msg = {
-          messageId: mid,
-          senderId: myUid,
-          senderNick: myNick,
-          text: String(text || '').slice(0, 4000),
-          ts: SV.TIMESTAMP,
-          seq: seq
-        };
+    // 채팅방을 "보고 있는(visible)" 상대는 푸시 발송 대상에서 제외
+    try{
+      const presSnap = await db.ref('presence/' + rid).once('value');
+      const pres = presSnap.val() || {};
+      const now = Date.now();
+      const ACTIVE_MS = 35000; // presence 25초 갱신 + 여유
 
-        await db.ref('messages/' + roomId).push(msg);
-        await db.ref('rooms/' + roomId).update({ updatedAt: SV.TIMESTAMP, lastMsgTs: SV.TIMESTAMP });
+      otherUids = otherUids.filter(uid => {
+        const p = pres[uid] || {};
+        const ts = Number(p.lastActive || 0);
+        const vis = String(p.vis || '');
+        const activeVisible = (vis === 'visible') && ts && ((now - ts) <= ACTIVE_MS);
+        return !activeVisible;
+      });
 
-        // 상대(방 멤버)에게 푸시 보내기
-        try{
-          const membersSnap = await db.ref('roomMembers/' + roomId).once('value');
-          const members = membersSnap.val() || {};
-          let otherUids = Object.keys(members).filter(uid => uid !== myUid);
+      if (!otherUids.length) return [];
+    }catch(e){}
 
-          if (otherUids.length){
-            // 방을 "보고 있는(visible)" 상대는 푸시 제외
-            try{
-              const presSnap = await db.ref('presence/' + roomId).once('value');
-              const pres = presSnap.val() || {};
-              const now = Date.now();
-              const ACTIVE_MS = 35000; // 25초 갱신 + 여유
+    const subsSnaps = await Promise.all(
+      otherUids.map(uid => db.ref('pushSubs/' + uid).once('value'))
+    );
 
-              otherUids = otherUids.filter(uid => {
-                const p = pres[uid] || {};
-                const ts = Number(p.lastActive || 0);
-                const vis = String(p.vis || '');
-                const isViewingRoom = (vis === 'visible') && ts && (now - ts) <= ACTIVE_MS;
-                return !isViewingRoom;
-              });
-            }catch(e){}
+    const ids = subsSnaps
+      .flatMap(s => Object.keys(s.val() || {}))
+      .filter(Boolean);
 
-            if (otherUids.length){
-              const subsSnaps = await Promise.all(
-                otherUids.map(uid => db.ref('pushSubs/' + uid).once('value'))
-              );
+    return Array.from(new Set(ids));
+  }catch(e){
+    return [];
+  }
+}
 
-              let subIds = subsSnaps
-                .flatMap(s => Object.keys(s.val() || {}))
-                .filter(Boolean);
+async function sendToFirebase(mid, text){
+  if (!roomId) return;
 
-              subIds = Array.from(new Set(subIds));
+  const roomRef = db.ref('rooms/' + roomId + '/lastSeq');
 
-              if (subIds.length){
-                const title = roomName || 'Chat';
-                const body = String(text || '').slice(0, 120);
-                pushToSubscriptions(subIds, title, body, roomId);
-              }
-            }
-          }
-        }catch(e){}
+  try{
+    const tx = await roomRef.transaction(cur => (Number(cur || 0) + 1));
+    const seq = Number((tx && tx.snapshot && tx.snapshot.val()) || 0);
 
-        updateBadges();
-      }catch(e){
-        updateBadges();
+    const msg = {
+      messageId: mid,
+      senderId: myUid,
+      senderNick: myNick,
+      text: String(text || '').slice(0, 4000),
+      ts: SV.TIMESTAMP,
+      seq: seq
+    };
+
+    await db.ref('messages/' + roomId).push(msg);
+    await db.ref('rooms/' + roomId).update({ updatedAt: SV.TIMESTAMP, lastMsgTs: SV.TIMESTAMP });
+
+    // 상대에게 OneSignal 웹푸시 발송(잠금/백그라운드 포함)
+    try{
+      const subIds = await collectOtherSubscriptionIds(roomId);
+      if (subIds.length){
+        const title = roomName || 'Chat';
+        const body = String(text || '').slice(0, 120);
+        pushToSubscriptions(subIds, title, body, roomId);
       }
     }catch(e){}
+
   }catch(e){
     updateBadges();
   }
