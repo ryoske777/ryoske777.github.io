@@ -25,6 +25,7 @@
       --danger:#ef4444;
 
       --safeB: env(safe-area-inset-bottom, 0px);
+      --safeBComp: var(--safeB); /* 키보드 열릴 때 입력바용 하단 여백 보정 */
       --safeT: env(safe-area-inset-top, 0px);
       --kb: 0px;
       --composerH: 64px;
@@ -305,7 +306,7 @@
     .log{
       flex:1;
       overflow:auto;
-      padding: 12px 12px calc(var(--composerH) + var(--typingH) + var(--kb) + var(--safeB) + 12px) 12px;
+      padding: 12px 12px calc(var(--composerH) + var(--typingH) + var(--kb) + var(--safeBComp) + 12px) 12px;
       -webkit-overflow-scrolling: touch;
     }
 
@@ -370,7 +371,7 @@
       position:fixed;
       left:0;
       right:0;
-      bottom: calc(var(--composerH) + var(--kb) + var(--safeB));
+      bottom: calc(var(--composerH) + var(--kb) + var(--safeBComp));
       height: var(--typingH);
       display:none;
       align-items:center;
@@ -387,7 +388,7 @@
       position:fixed;
       left:0;
       right:0;
-      bottom: calc(var(--kb) + var(--safeB));
+      bottom: calc(var(--kb) + var(--safeBComp));
       height: var(--composerH);
       padding: 10px 12px;
       border-top:1px solid var(--line);
@@ -449,7 +450,7 @@
       position:fixed;
       left:12px;
       right:12px;
-      bottom: calc(var(--composerH) + var(--kb) + var(--safeB) + 10px);
+      bottom: calc(var(--composerH) + var(--kb) + var(--safeBComp) + 10px);
       background:#fff;
       border:1px solid var(--line);
       border-radius: 16px;
@@ -1014,12 +1015,23 @@ try{
       if (!window.visualViewport) return;
       const vv = window.visualViewport;
       const kb = Math.max(0, (window.innerHeight - vv.height - vv.offsetTop));
+
       document.documentElement.style.setProperty('--kb', kb + 'px');
+
+      // iOS Safari에서 키보드가 열렸을 때 safe-area(bottom)를 같이 더하면
+      // 입력바와 키보드 사이가 과하게 벌어지는 경우가 있어 입력바용 safe-area를 0으로 보정
+      const keyboardOpen = kb > 80;
+      document.documentElement.style.setProperty(
+        '--safeBComp',
+        keyboardOpen ? '0px' : 'env(safe-area-inset-bottom, 0px)'
+      );
     }
     if (window.visualViewport){
       window.visualViewport.addEventListener('resize', updateKeyboardInset);
       window.visualViewport.addEventListener('scroll', updateKeyboardInset);
       updateKeyboardInset();
+    }else{
+      document.documentElement.style.setProperty('--safeBComp', 'env(safe-area-inset-bottom, 0px)');
     }
 
     function closeMenu(){ menu.classList.remove('open'); }
@@ -2348,10 +2360,3 @@ async function sendToFirebase(mid, text){
   </script>
 </body>
 </html>
-
-
-
-
-
-
-
