@@ -996,11 +996,36 @@ try{
         const d = document.createElement('div');
         d.className = 'emoji clickable';
         d.textContent = e;
-        d.addEventListener('click', () => {
+        // iOS Safari: 이모지 터치 시 input blur로 키보드가 닫히는 현상 방지
+        let emojiTouchHandled = false;
+        const insertEmojiAndKeepKeyboard = () => {
           inputEl.value = (inputEl.value || '') + e;
           onInput();
-          inputEl.focus();
+          try{
+            inputEl.focus({ preventScroll: true });
+            const end = (inputEl.value || '').length;
+            inputEl.setSelectionRange(end, end);
+          }catch(_){
+            try{ inputEl.focus(); }catch(__){}
+          }
           markTypingActivity();
+        };
+        d.addEventListener('touchstart', (ev) => {
+          ev.preventDefault();
+          emojiTouchHandled = false;
+        }, { passive: false });
+        d.addEventListener('touchend', (ev) => {
+          ev.preventDefault();
+          emojiTouchHandled = true;
+          insertEmojiAndKeepKeyboard();
+        }, { passive: false });
+        d.addEventListener('mousedown', (ev) => {
+          ev.preventDefault();
+        });
+        d.addEventListener('click', (ev) => {
+          ev.preventDefault();
+          if (emojiTouchHandled){ emojiTouchHandled = false; return; }
+          insertEmojiAndKeepKeyboard();
         });
         emojiGrid.appendChild(d);
       });
@@ -1079,9 +1104,38 @@ try{
       closeMenu();
     });
 
-    emojiBtn.addEventListener('click', () => {
+    // iOS Safari: 이모지 버튼 터치 시 input blur(키보드 닫힘) 방지
+    let emojiBtnTouchHandled = false;
+    const toggleEmojiPanelKeepKeyboard = () => {
       emojiPanel.classList.toggle('open');
-      emojiPanel.setAttribute('aria-hidden', emojiPanel.classList.contains('open') ? 'false' : 'true');
+      const isOpen = emojiPanel.classList.contains('open');
+      emojiPanel.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+      // 패널 토글 후에도 입력창 포커스를 유지해 키보드가 내려가지 않게 처리
+      try{
+        inputEl.focus({ preventScroll: true });
+        const end = (inputEl.value || '').length;
+        inputEl.setSelectionRange(end, end);
+      }catch(_){
+        try{ inputEl.focus(); }catch(__){}
+      }
+      if (isOpen) markTypingActivity();
+    };
+    emojiBtn.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      emojiBtnTouchHandled = false;
+    }, { passive: false });
+    emojiBtn.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      emojiBtnTouchHandled = true;
+      toggleEmojiPanelKeepKeyboard();
+    }, { passive: false });
+    emojiBtn.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+    });
+    emojiBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (emojiBtnTouchHandled){ emojiBtnTouchHandled = false; return; }
+      toggleEmojiPanelKeepKeyboard();
     });
     document.addEventListener('click', (e) => {
       if (emojiBtn.contains(e.target)) return;
