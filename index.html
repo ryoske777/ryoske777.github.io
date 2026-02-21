@@ -585,8 +585,8 @@ try{
     const SERVICE_URL = location.href;
     const INIT_ROOM_ID = new URLSearchParams(location.search).get('roomId') || '';
 
-    const PUSH_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbwlHLWiKMMbzlpXQCUdz-9fP5iX_1iVhbnxG-JLoCAgQc8FZCnCbKOoZl9Xj7NwtMjK/exec";
-    const PUSH_SECRET = "ryo1234";
+    const PUSH_WEBHOOK_URL = "<REDACTED>";
+    const PUSH_SECRET = "<REDACTED>";
 
     const firebaseConfig = {
       apiKey: "AIzaSyC6iyCkpqtaWgFXlJZiogn2SgfIz9j1I4M",
@@ -1895,6 +1895,7 @@ db.ref('roomMembers/' + roomId + '/' + myUid).set({
   </script>
 </body>
 </html>
+
 
 
 
