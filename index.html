@@ -481,6 +481,63 @@
       .bubble{ max-width: 88%; }
       .emojiGrid{ grid-template-columns: repeat(7, 1fr); }
     }
+    /* ===== 비밀번호 모달 ===== */
+    .modalOverlay{
+      position:fixed;
+      inset:0;
+      background: rgba(0,0,0,0.45);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:16px;
+      z-index:50;
+    }
+    .modalOverlay.open{ display:flex; }
+    .modalCard{
+      width:100%;
+      max-width:420px;
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: var(--shadow2);
+      padding: 14px;
+    }
+    .modalTitle{
+      font-size:16px;
+      font-weight:900;
+      margin: 4px 0 8px 0;
+    }
+    .modalBody{
+      font-size:13px;
+      color:var(--muted);
+      line-height:1.45;
+      margin-bottom:10px;
+      white-space:pre-wrap;
+    }
+    .modalCard input{
+      width:100%;
+      height:46px;
+      border-radius: 14px;
+      border:1px solid var(--line);
+      padding: 0 12px;
+      font-size:16px;
+      outline:none;
+      transition: box-shadow .18s ease, border-color .18s ease;
+    }
+    .modalCard input:focus{
+      border-color: rgba(34,197,94,0.6);
+      box-shadow: 0 0 0 4px rgba(34,197,94,0.12);
+    }
+    .modalBtnsRow{
+      display:flex;
+      gap:10px;
+      margin-top:10px;
+    }
+    .modalBtnsRow .primaryBtn,
+    .modalBtnsRow .ghostBtn{
+      flex:1;
+    }
+
   </style>
 <script>
   window.OneSignalDeferred = window.OneSignalDeferred || [];
@@ -519,6 +576,7 @@ try{
 
             <button id="mNick"><span>닉네임 변경</span><span>›</span></button>
             <button id="mRoomName"><span>방 이름 변경(방장)</span><span>›</span></button>
+            <button id="mRoomPass"><span>비밀번호 설정/변경(방장)</span><span>›</span></button>
             <button id="mLeave"><span>나가기</span><span>›</span></button>
             <div class="hint" id="menuHint"></div>
           </div>
@@ -539,6 +597,17 @@ try{
         <div class="field">
           <label>방 이름</label>
           <input id="homeRoomName" type="text" placeholder="예: 테스트방" />
+        </div>
+
+        <div class="field">
+          <label style="display:flex;align-items:center;gap:8px;">
+            <input id="homeUsePass" type="checkbox" style="width:18px;height:18px;" />
+            비밀번호 사용(선택)
+          </label>
+        </div>
+        <div class="field" id="homePassField" style="display:none;">
+          <label>방 비밀번호</label>
+          <input id="homeRoomPass" type="password" placeholder="예: 1234" />
         </div>
 
         <div class="rowBtns">
@@ -577,6 +646,23 @@ try{
     </div>
   </div>
 
+    <!-- ===== 비밀번호 모달 ===== -->
+    <div class="modalOverlay" id="passModal" aria-hidden="true">
+      <div class="modalCard" role="dialog" aria-modal="true" aria-labelledby="passModalTitle">
+        <div class="modalTitle" id="passModalTitle">비밀번호</div>
+        <div class="modalBody" id="passModalBody"></div>
+        <input id="passModalInput" type="password" autocomplete="off" placeholder="비밀번호" />
+        <div class="modalBtnsRow">
+          <button class="primaryBtn" id="passModalOk">확인</button>
+          <button class="ghostBtn" id="passModalCancel">취소</button>
+        </div>
+        <div class="modalBtnsRow" id="passModalOwnerRow" style="display:none;">
+          <button class="ghostBtn" id="passModalRemove">비밀번호 제거</button>
+        </div>
+      </div>
+    </div>
+
+
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
@@ -585,11 +671,11 @@ try{
     const SERVICE_URL = location.href;
     const INIT_ROOM_ID = new URLSearchParams(location.search).get('roomId') || '';
 
-    const PUSH_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbyyEYvCwwTsmlaQwKIUsA00gHbBVNpGiHr_hRUGREUCgcquHH5lY3SHcBTlKU_v6Lqz/exec";
-    const PUSH_SECRET = "ryo1234";
+    const PUSH_WEBHOOK_URL = "<REDACTED_WEBHOOK_URL>";
+    const PUSH_SECRET = "<REDACTED_PUSH_SECRET>";
 
     const firebaseConfig = {
-      apiKey: "AIzaSyC6iyCkpqtaWgFXlJZiogn2SgfIz9j1I4M",
+      apiKey: "<REDACTED_FIREBASE_APIKEY>",
       authDomain: "messenger-222df.firebaseapp.com",
       databaseURL: "https://messenger-222df-default-rtdb.asia-southeast1.firebasedatabase.app",
       projectId: "messenger-222df",
@@ -608,6 +694,7 @@ try{
     const LS_NICK   = 'chat_nick_fb_v1';
     const LS_NOTI   = 'chat_notify_enabled_v1';
     const LS_SOUND  = 'chat_beep_enabled_v1';
+    const LS_ROOM_AUTH_PREFIX = 'chat_room_auth_v1_';
 
     // 추가: 내 말풍선 흰색 토글 저장키
     const LS_MY_BUBBLE_WHITE = 'chat_my_bubble_white_v1';
@@ -660,6 +747,169 @@ try{
       }
     }
 
+
+    // ===== 비밀번호방(선택) =====
+    function _jsonParseSafe(s){
+      try{ return JSON.parse(s); }catch(e){ return null; }
+    }
+    function roomAuthKey(rid){
+      return LS_ROOM_AUTH_PREFIX + String(rid || '');
+    }
+    function getRoomAuth(rid){
+      return _jsonParseSafe(localStorage.getItem(roomAuthKey(rid)) || '');
+    }
+    function setRoomAuth(rid, obj){
+      try{ localStorage.setItem(roomAuthKey(rid), JSON.stringify(obj || {})); }catch(e){}
+    }
+    function clearRoomAuth(rid){
+      try{ localStorage.removeItem(roomAuthKey(rid)); }catch(e){}
+    }
+
+    function _bytesToHex(u8){
+      return Array.from(u8).map(b => b.toString(16).padStart(2,'0')).join('');
+    }
+    function randomSaltHex(len){
+      try{
+        const u = new Uint8Array(len || 16);
+        (crypto && crypto.getRandomValues) ? crypto.getRandomValues(u) : u.forEach((_,i)=>u[i]=Math.floor(Math.random()*256));
+        return _bytesToHex(u);
+      }catch(e){
+        return String(Math.random()).slice(2) + String(Date.now());
+      }
+    }
+    async function sha256Hex(str){
+      if (!(crypto && crypto.subtle && crypto.subtle.digest)){
+        throw new Error('이 브라우저는 필요한 암호화 기능(crypto.subtle)을 지원하지 않습니다.');
+      }
+      const enc = new TextEncoder();
+      const buf = await crypto.subtle.digest('SHA-256', enc.encode(String(str || '')));
+      return _bytesToHex(new Uint8Array(buf));
+    }
+    async function makeRoomPassHash(pass, salt){
+      return await sha256Hex('roompass|' + String(pass || '') + '|' + String(salt || ''));
+    }
+
+    // 모달(비밀번호 입력/설정)
+    let __passModalResolve = null;
+    function closePassModal(result){
+      try{
+        if (!__passModalResolve) return;
+        passModal.classList.remove('open');
+        passModal.setAttribute('aria-hidden', 'true');
+        passModalOwnerRow.style.display = 'none';
+        try{ passModalInput.value = ''; }catch(e){}
+        const r = __passModalResolve;
+        __passModalResolve = null;
+        r(result);
+      }catch(e){
+        try{
+          const r = __passModalResolve;
+          __passModalResolve = null;
+          r && r(null);
+        }catch(e2){}
+      }
+    }
+    function openPassModal(opts){
+      const o = opts || {};
+      return new Promise(resolve => {
+        __passModalResolve = resolve;
+        passModalTitle.textContent = String(o.title || '비밀번호');
+        passModalBody.textContent = String(o.body || '');
+        passModalInput.placeholder = String(o.placeholder || '비밀번호');
+        passModalOk.textContent = String(o.okText || '확인');
+        passModalOwnerRow.style.display = o.showRemove ? 'flex' : 'none';
+        passModalRemove.textContent = String(o.removeText || '비밀번호 제거');
+        passModal.classList.add('open');
+        passModal.setAttribute('aria-hidden', 'false');
+        setTimeout(() => { try{ passModalInput.focus(); }catch(e){} }, 50);
+      });
+    }
+    function setupPassModal(){
+      try{
+        if (!passModal) return;
+        passModalCancel.addEventListener('click', () => closePassModal(null));
+        passModalOk.addEventListener('click', () => closePassModal({ action:'ok', value: (passModalInput.value || '') }));
+        passModalRemove.addEventListener('click', () => closePassModal({ action:'remove' }));
+        passModal.addEventListener('click', (e) => { if (e.target === passModal) closePassModal(null); });
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape' && passModal.classList.contains('open')) closePassModal(null);
+        });
+      }catch(e){}
+    }
+
+    async function ensureRoomAccess(info){
+      try{
+        if (!info || !info.passEnabled) return true;
+        const rid = String(info.roomId || '');
+        const ver = Number(info.passVer || 0);
+        const salt = String(info.passSalt || '');
+        const passHash = String(info.passHash || '');
+        if (!rid || !passHash) return true;
+
+        const saved = getRoomAuth(rid);
+        if (saved && saved.ver === ver && saved.hash === passHash) return true;
+
+        for (let i=0; i<3; i++){
+          const res = await openPassModal({
+            mode: 'verify',
+            title: '비밀번호 입력',
+            body: '이 방은 비밀번호가 필요합니다.',
+            okText: '입장',
+            showRemove: false
+          });
+          if (!res) return false;
+          const pass = String(res.value || '').trim();
+          if (!pass){
+            alert('비밀번호를 입력해 주세요.');
+            continue;
+          }
+          const calc = await makeRoomPassHash(pass, salt);
+          if (calc === passHash){
+            setRoomAuth(rid, { ver: ver, hash: passHash, at: Date.now() });
+            return true;
+          }
+          alert('비밀번호가 올바르지 않습니다.');
+        }
+        return false;
+      }catch(e){
+        alert('비밀번호 확인 중 오류가 발생했습니다.');
+        return false;
+      }
+    }
+
+    async function setRoomPassword(rid, pass){
+      const salt = randomSaltHex(16);
+      const hash = await makeRoomPassHash(String(pass || ''), salt);
+      const verRef = db.ref('rooms/' + rid + '/passVer');
+      const tx = await verRef.transaction(cur => (Number(cur || 0) + 1));
+      const newVer = Number((tx && tx.snapshot && tx.snapshot.val()) || 1);
+      await db.ref('rooms/' + rid).update({
+        passEnabled: true,
+        passSalt: salt,
+        passHash: hash,
+        passVer: newVer,
+        updatedAt: SV.TIMESTAMP
+      });
+      setRoomAuth(rid, { ver: newVer, hash: hash, at: Date.now() });
+      return { ver: newVer, hash };
+    }
+
+    async function removeRoomPassword(rid){
+      const verRef = db.ref('rooms/' + rid + '/passVer');
+      const tx = await verRef.transaction(cur => (Number(cur || 0) + 1));
+      const newVer = Number((tx && tx.snapshot && tx.snapshot.val()) || 1);
+      await db.ref('rooms/' + rid).update({
+        passEnabled: false,
+        passSalt: null,
+        passHash: null,
+        passVer: newVer,
+        updatedAt: SV.TIMESTAMP
+      });
+      clearRoomAuth(rid);
+      return { ver: newVer };
+    }
+
+
     function isInIframe(){
       try{ return window.top !== window.self; }catch(e){ return true; }
     }
@@ -693,11 +943,15 @@ try{
 
     const mNick = document.getElementById('mNick');
     const mRoomName = document.getElementById('mRoomName');
+    const mRoomPass = document.getElementById('mRoomPass');
     const mLeave = document.getElementById('mLeave');
 
     const home = document.getElementById('home');
     const homeNick = document.getElementById('homeNick');
     const homeRoomName = document.getElementById('homeRoomName');
+    const homeUsePass = document.getElementById('homeUsePass');
+    const homePassField = document.getElementById('homePassField');
+    const homeRoomPass = document.getElementById('homeRoomPass');
 
     const btnCreate = document.getElementById('btnCreate');
     const btnRefresh = document.getElementById('btnRefresh');
@@ -714,6 +968,17 @@ try{
     const emojiGrid = document.getElementById('emojiGrid');
 
     const typingBar = document.getElementById('typingBar');
+
+    // 비밀번호 모달
+    const passModal = document.getElementById('passModal');
+    const passModalTitle = document.getElementById('passModalTitle');
+    const passModalBody = document.getElementById('passModalBody');
+    const passModalInput = document.getElementById('passModalInput');
+    const passModalOk = document.getElementById('passModalOk');
+    const passModalCancel = document.getElementById('passModalCancel');
+    const passModalOwnerRow = document.getElementById('passModalOwnerRow');
+    const passModalRemove = document.getElementById('passModalRemove');
+    setupPassModal();
 
     const EMOJIS = ['😀','😄','😊','😍','😘','😎','🥹','😂','😭','😡','👍','👏','🙏','🔥','🎉','💯','❤️','✨','⭐','✅','❌','⚡','🍀','☕','🍜','🎮','📌','📝'];
     function buildEmoji(){
@@ -732,6 +997,18 @@ try{
       });
     }
     buildEmoji();
+    
+    // 방 만들기: 비밀번호 입력 UI 토글
+    if (homeUsePass){
+      const syncHomePassUI = () => {
+        const on = !!homeUsePass.checked;
+        if (homePassField) homePassField.style.display = on ? 'block' : 'none';
+        if (!on && homeRoomPass) homeRoomPass.value = '';
+      };
+      homeUsePass.addEventListener('change', syncHomePassUI);
+      syncHomePassUI();
+    }
+
 
     function updateKeyboardInset(){
       if (!window.visualViewport) return;
@@ -1097,7 +1374,7 @@ window.__schedulePushSync = schedulePushSync;
       if (!iosNoNoti && isInIframe()){
         hints.push('임베드(iframe) 상태: 알림 권한 요청 차단 가능 → "새 탭으로 열기" 필요');
       }
-      const base = (isOwner ? '방장 권한: 방 이름 변경 가능' : '방장만 방 이름 변경 가능');
+      const base = (isOwner ? '방장 권한: 방 이름/비밀번호 변경 가능' : '방장만 방 이름/비밀번호 변경 가능');
       menuHint.innerHTML = escapeHtml(base + (hints.length ? '\n' + hints.join('\n') : ''));
     }
 
@@ -1310,11 +1587,12 @@ window.__schedulePushSync = schedulePushSync;
 
           const name = document.createElement('div');
           name.className = 'roomName';
-          name.innerHTML = `<span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(r.roomName || '채팅방')}</span>`;
+          const lock = (r.passEnabled === true) ? '🔒 ' : '';
+          name.innerHTML = `<span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${lock}${escapeHtml(r.roomName || '채팅방')}</span>`;
 
           const meta = document.createElement('div');
           meta.className = 'roomMeta';
-          meta.textContent = `방장: ${r.ownerNick || '미확정'} · 최근 활동: ${r.updatedAt ? fmt(r.updatedAt) : '없음'}`;
+          meta.textContent = `방장: ${r.ownerNick || '미확정'} · 비밀번호: ${(r.passEnabled===true)?'있음':'없음'} · 최근 활동: ${r.updatedAt ? fmt(r.updatedAt) : '없음'}`;
 
           left.appendChild(name);
           left.appendChild(meta);
@@ -1355,6 +1633,26 @@ window.__schedulePushSync = schedulePushSync;
       const newRoomId = uuid();
       const now = Date.now();
 
+      // 비밀번호(선택)
+      let passEnabled = false;
+      let passSalt = '';
+      let passHash = '';
+      let passVer = 0;
+
+      if (homeUsePass && homeUsePass.checked){
+        const pw = String(homeRoomPass ? homeRoomPass.value : '').trim();
+        if (!pw){ alert('비밀번호를 입력해 주세요.'); return; }
+        try{
+          passEnabled = true;
+          passSalt = randomSaltHex(16);
+          passHash = await makeRoomPassHash(pw, passSalt);
+          passVer = 1;
+        }catch(e){
+          alert('비밀번호 설정에 실패했습니다.');
+          return;
+        }
+      }
+
       const roomObj = {
         roomName: rn.slice(0, 60),
         ownerUid: myUid,
@@ -1362,11 +1660,18 @@ window.__schedulePushSync = schedulePushSync;
         createdAt: now,
         updatedAt: now,
         lastSeq: 0,
-        lastMsgTs: 0
+        lastMsgTs: 0,
+        passEnabled: passEnabled,
+        passSalt: passEnabled ? passSalt : null,
+        passHash: passEnabled ? passHash : null,
+        passVer: passEnabled ? passVer : 0
       };
 
       try{
         await db.ref('rooms/' + newRoomId).set(roomObj);
+        if (roomObj.passEnabled && roomObj.passHash){
+          setRoomAuth(newRoomId, { ver: roomObj.passVer || 1, hash: roomObj.passHash, at: Date.now() });
+        }
         history.pushState({}, '', NAV_URL + '?roomId=' + encodeURIComponent(newRoomId));
         await enterRoomLocal(newRoomId);
       }catch(e){
@@ -1388,11 +1693,16 @@ window.__schedulePushSync = schedulePushSync;
       if (!myUid){ alert('로그인 상태를 확인 중입니다. 잠시 후 다시 시도해 주세요.'); return; }
 
       try{
-        const snap = await db.ref('rooms/' + rid).once('value');
-        if (!snap.exists()){ alert('방을 찾을 수 없습니다.'); return; }
+        const info = await loadRoomInfo(rid);
+        if (!info){ alert('방을 찾을 수 없습니다.'); return; }
+
+        // 비밀번호 확인(필요 시) — 확인 전에는 URL을 바꾸지 않습니다.
+        const ok = await ensureRoomAccess(info);
+        if (!ok) return;
+        info._accessOk = true;
 
         history.pushState({}, '', NAV_URL + '?roomId=' + encodeURIComponent(rid));
-        await enterRoomLocal(rid);
+        await enterRoomLocal(rid, info);
       }catch(e){
         alert('입장 실패: ' + (e && e.message ? e.message : ''));
       }
@@ -1683,31 +1993,46 @@ if (msg.senderId !== myUid) {
         ownerUid: String(r.ownerUid || ''),
         ownerNick: String(r.ownerNick || ''),
         lastSeq: Number(r.lastSeq || 0),
-        updatedAt: Number(r.updatedAt || 0)
+        updatedAt: Number(r.updatedAt || 0),
+        passEnabled: (r.passEnabled === true),
+        passVer: Number(r.passVer || 0),
+        passSalt: String(r.passSalt || ''),
+        passHash: String(r.passHash || '')
       };
     }
 
-    async function enterRoomLocal(rid){
+    async function enterRoomLocal(rid, infoOpt){
       stopMessages();
       stopPresence();
       stopTyping();
       stopReads();
 
-      const info = await loadRoomInfo(rid);
+      const info = infoOpt || await loadRoomInfo(rid);
       if (!info){
         showHome();
         return;
       }
 
-      roomId = rid;
-db.ref('roomMembers/' + roomId + '/' + myUid).set({
-  nick: myNick,
-  joinedAt: SV.TIMESTAMP
-}).catch(()=>{});
+      // 비밀번호 확인(필요 시)
+      const ok = (info && info._accessOk === true) ? true : await ensureRoomAccess(info);
+      if (!ok){
+        try{ history.pushState({}, '', NAV_URL); }catch(e){}
+        roomId = '';
+        showHome();
+        return;
+      }
+
+      roomId = String(rid || '');
       roomName = info.roomName;
       ownerUid = info.ownerUid;
       ownerNick = info.ownerNick;
       isOwner = (ownerUid && ownerUid === myUid);
+
+      // 멤버 등록(비밀번호 확인 후)
+      db.ref('roomMembers/' + roomId + '/' + myUid).set({
+        nick: myNick,
+        joinedAt: SV.TIMESTAMP
+      }).catch(()=>{});
 
       clearUnread();
 
@@ -1787,6 +2112,54 @@ db.ref('roomMembers/' + roomId + '/' + myUid).set({
         alert('방 이름을 변경했습니다.');
       }catch(e){
         alert('변경 실패: ' + (e && e.message ? e.message : ''));
+      }
+    });
+
+    mRoomPass.addEventListener('click', async () => {
+      closeMenu();
+      if (!roomId) return;
+      if (!isOwner){
+        alert('방장만 비밀번호를 변경할 수 있습니다.');
+        return;
+      }
+
+      const info = await loadRoomInfo(roomId);
+      if (!info){
+        alert('방 정보를 불러오지 못했습니다.');
+        return;
+      }
+
+      const bodyLines = [];
+      bodyLines.push(info.passEnabled ? '현재: 비밀번호 있음' : '현재: 비밀번호 없음');
+      bodyLines.push('');
+      bodyLines.push('새 비밀번호를 입력하면 설정/변경됩니다.');
+      bodyLines.push('비밀번호 제거를 누르면 비밀번호 없이 입장할 수 있게 됩니다.');
+
+      const res = await openPassModal({
+        mode: 'owner',
+        title: '비밀번호 설정/변경',
+        body: bodyLines.join('\n'),
+        okText: '저장',
+        showRemove: true,
+        removeText: '비밀번호 제거'
+      });
+      if (!res) return;
+
+      try{
+        if (res.action === 'remove'){
+          await removeRoomPassword(roomId);
+          alert('비밀번호를 제거했습니다.');
+        } else if (res.action === 'ok'){
+          const pw = String(res.value || '').trim();
+          if (!pw){
+            alert('비밀번호를 입력해 주세요.');
+            return;
+          }
+          await setRoomPassword(roomId, pw);
+          alert('비밀번호를 설정했습니다.');
+        }
+      }catch(e){
+        alert('처리 실패: ' + (e && e.message ? e.message : ''));
       }
     });
 
