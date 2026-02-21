@@ -1754,21 +1754,34 @@ db.ref('roomMembers/' + roomId + '/' + myUid).set({
     await db.ref('rooms/' + roomId).update({ updatedAt: SV.TIMESTAMP, lastMsgTs: SV.TIMESTAMP });
 
     // ✅ 추가: 상대(방 멤버)에게 푸시 보내기
-    try{
-      const membersSnap = await db.ref('roomMembers/' + roomId).once('value');
-      const members = membersSnap.val() || {};
-      const otherUids = Object.keys(members).filter(uid => uid !== myUid);
+    try {
+  const membersSnap = await db.ref('roomMembers/' + roomId).once('value');
+  const members = membersSnap.val() || {};
+  const otherUids = Object.keys(members).filter(uid => uid !== myUid);
 
-      if (otherUids.length){
-        const subsSnaps = await Promise.all(
-          otherUids.map(uid => db.ref('pushSubs/' + uid).once('value'))
-        );
+  // 상대가 있을 때만 상대의 OneSignal subscription_id 목록을 모읍니다.
+  let subIds = [];
 
-        let subIds = [];
-        subsSnaps.forEach(s => {
-          const v = s.val() || {};
-          subIds.push(...Object.keys(v));
-        });
+  if (otherUids.length) {
+    const subsSnaps = await Promise.all(
+      otherUids.map(uid => db.ref('pushSubs/' + uid).once('value'))
+    );
+
+    // pushSubs/{uid}/{subscription_id} 구조이므로 "키 목록"이 곧 subscription_id 입니다.
+    subIds = subsSnaps
+      .flatMap(s => Object.keys(s.val() || {}))
+      .filter(Boolean);
+
+    // 중복 제거(같은 구독 ID가 여러 경로로 들어오는 경우 방지)
+    subIds = Array.from(new Set(subIds));
+  }
+
+  // 여기서 subIds 배열을 Apps Script로 보내는 payload에 include_subscription_ids로 넣으면 됩니다.
+  // (다음 단계에서 그 부분을 정확히 어디에 넣을지 이어서 안내드리겠습니다.)
+
+} catch (e) {
+  // 기존 catch 로직 유지
+}
 
         subIds = Array.from(new Set(subIds));
 
@@ -1882,6 +1895,7 @@ db.ref('roomMembers/' + roomId + '/' + myUid).set({
   </script>
 </body>
 </html>
+
 
 
 
