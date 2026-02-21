@@ -25,7 +25,6 @@
       --danger:#ef4444;
 
       --safeB: env(safe-area-inset-bottom, 0px);
-      --safeBComp: var(--safeB); /* 키보드 열릴 때 입력바용 하단 여백 보정 */
       --safeT: env(safe-area-inset-top, 0px);
       --kb: 0px;
       --composerH: 64px;
@@ -371,7 +370,7 @@
       position:fixed;
       left:0;
       right:0;
-      bottom: calc(var(--composerH) + var(--safeB));
+      bottom: calc(var(--composerH) + var(--kb) + var(--safeBComp));
       height: var(--typingH);
       display:none;
       align-items:center;
@@ -388,7 +387,7 @@
       position:fixed;
       left:0;
       right:0;
-      bottom: var(--safeB);
+      bottom: calc(var(--kb) + var(--safeBComp));
       height: var(--composerH);
       padding: 10px 12px;
       border-top:1px solid var(--line);
@@ -450,7 +449,7 @@
       position:fixed;
       left:12px;
       right:12px;
-      bottom: calc(var(--composerH) + var(--safeB) + 10px);
+      bottom: calc(var(--composerH) + var(--kb) + var(--safeBComp) + 10px);
       background:#fff;
       border:1px solid var(--line);
       border-radius: 16px;
@@ -672,11 +671,11 @@ try{
     const SERVICE_URL = location.href;
     const INIT_ROOM_ID = new URLSearchParams(location.search).get('roomId') || '';
 
-    const PUSH_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbyyEYvCwwTsmlaQwKIUsA00gHbBVNpGiHr_hRUGREUCgcquHH5lY3SHcBTlKU_v6Lqz/exec";
-    const PUSH_SECRET = "ryo1234";
+    const PUSH_WEBHOOK_URL = "나만의키";
+    const PUSH_SECRET = "나만의키";
 
     const firebaseConfig = {
-      apiKey: "AIzaSyC6iyCkpqtaWgFXlJZiogn2SgfIz9j1I4M",
+      apiKey: "나만의키",
       authDomain: "messenger-222df.firebaseapp.com",
       databaseURL: "https://messenger-222df-default-rtdb.asia-southeast1.firebasedatabase.app",
       projectId: "messenger-222df",
@@ -1012,20 +1011,28 @@ try{
 
 
     function updateKeyboardInset(){
-      if (!window.visualViewport) return;
+      const root = document.documentElement;
+      if (!window.visualViewport){
+        root.style.setProperty('--kb', '0px');
+        root.style.setProperty('--safeBComp', 'env(safe-area-inset-bottom, 0px)');
+        return;
+      }
+
       const vv = window.visualViewport;
-      const kb = Math.max(0, (window.innerHeight - vv.height - vv.offsetTop));
+      const kb = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
+      root.style.setProperty('--kb', kb + 'px');
 
-      document.documentElement.style.setProperty('--kb', kb + 'px');
-
-      // iOS Safari에서 키보드가 열렸을 때 safe-area(bottom)를 같이 더하면
-      // 입력바와 키보드 사이가 과하게 벌어지는 경우가 있어 입력바용 safe-area를 0으로 보정
+      // iOS Safari/PWA에서 키보드가 열린 상태에서 safe-area(bottom)를 더하면
+      // 입력바가 공중에 뜬 것처럼 보일 수 있어 입력바용 safe-area를 제거
       const keyboardOpen = kb > 80;
-      document.documentElement.style.setProperty(
-        '--safeBComp',
-        keyboardOpen ? '0px' : 'env(safe-area-inset-bottom, 0px)'
-      );
+      root.style.setProperty('--safeBComp', keyboardOpen ? '0px' : 'env(safe-area-inset-bottom, 0px)');
     }
+
+    function refreshKeyboardInsetSoon(){
+      updateKeyboardInset();
+      [40, 90, 160, 260, 420].forEach(ms => setTimeout(updateKeyboardInset, ms));
+    }
+
     if (window.visualViewport){
       window.visualViewport.addEventListener('resize', updateKeyboardInset);
       window.visualViewport.addEventListener('scroll', updateKeyboardInset);
@@ -1033,6 +1040,9 @@ try{
     }else{
       document.documentElement.style.setProperty('--safeBComp', 'env(safe-area-inset-bottom, 0px)');
     }
+
+    window.addEventListener('resize', () => setTimeout(updateKeyboardInset, 0));
+    window.addEventListener('orientationchange', () => setTimeout(updateKeyboardInset, 250));
 
     function closeMenu(){ menu.classList.remove('open'); }
     menuBtn.addEventListener('click', () => menu.classList.toggle('open'));
@@ -1052,6 +1062,9 @@ try{
       emojiPanel.classList.remove('open');
       emojiPanel.setAttribute('aria-hidden', 'true');
     });
+
+    inputEl.addEventListener('touchstart', () => { setTimeout(refreshKeyboardInsetSoon, 0); }, { passive:true });
+    inputEl.addEventListener('click', () => { setTimeout(refreshKeyboardInsetSoon, 0); });
 
     // auth + state
     let myUid = '';
@@ -1852,10 +1865,15 @@ function startPresence(rid){
       }, 2000);
 
       inputEl.addEventListener('input', markTypingActivity);
-      inputEl.addEventListener('focus', markTypingActivity);
+      inputEl.addEventListener('focus', () => {
+        markTypingActivity();
+        refreshKeyboardInsetSoon();
+      });
       inputEl.addEventListener('blur', () => {
         try{ myTypingRef.remove(); }catch(e){}
         typingOn = false;
+        setTimeout(updateKeyboardInset, 0);
+        setTimeout(updateKeyboardInset, 120);
       });
 
       window.addEventListener('beforeunload', () => {
