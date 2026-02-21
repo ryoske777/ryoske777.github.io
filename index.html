@@ -25,8 +25,11 @@
       --danger:#ef4444;
 
       --safeB: env(safe-area-inset-bottom, 0px);
+      --safeBComp: var(--safeB); /* 키보드 열릴 때 입력바용 하단 여백 보정 */
       --safeT: env(safe-area-inset-top, 0px);
       --kb: 0px;
+      --kbFix: 40px; /* iOS 키보드 보조바 보정값 (기기별 36에서 48px 사이 조절) */
+      --appH: 100dvh; /* JS에서 visualViewport 기준 px로 갱신 */
       --composerH: 64px;
 
       --typingH: 34px;
@@ -60,8 +63,11 @@
     .app{
       height:100vh;
       height:100dvh;
+      height: var(--appH, 100dvh);
       display:flex;
       flex-direction:column;
+      min-height:0;
+      overflow:hidden;
       padding-top: var(--safeT);
     }
 
@@ -166,6 +172,7 @@
 
     .home{
       flex:1;
+      min-height:0;
       overflow:auto;
       padding: 16px;
       -webkit-overflow-scrolling: touch;
@@ -304,8 +311,9 @@
 
     .log{
       flex:1;
+      min-height:0;
       overflow:auto;
-      padding: 12px 12px calc(var(--composerH) + var(--typingH) + var(--kb) + var(--safeBComp) + 12px) 12px;
+      padding: 12px 12px calc(var(--composerH) + var(--typingH) + max(0px, calc(var(--kb) + var(--safeBComp) - var(--kbFix))) + 12px) 12px;
       -webkit-overflow-scrolling: touch;
     }
 
@@ -370,7 +378,7 @@
       position:fixed;
       left:0;
       right:0;
-      bottom: calc(var(--composerH) + var(--kb) + var(--safeBComp));
+      bottom: calc(var(--composerH) + max(0px, calc(var(--kb) + var(--safeBComp) - var(--kbFix))));
       height: var(--typingH);
       display:none;
       align-items:center;
@@ -387,7 +395,7 @@
       position:fixed;
       left:0;
       right:0;
-      bottom: calc(var(--kb) + var(--safeBComp));
+      bottom: max(0px, calc(var(--kb) + var(--safeBComp) - var(--kbFix)));
       height: var(--composerH);
       padding: 10px 12px;
       border-top:1px solid var(--line);
@@ -449,7 +457,7 @@
       position:fixed;
       left:12px;
       right:12px;
-      bottom: calc(var(--composerH) + var(--kb) + var(--safeBComp) + 10px);
+      bottom: calc(var(--composerH) + max(0px, calc(var(--kb) + var(--safeBComp) - var(--kbFix))) + 10px);
       background:#fff;
       border:1px solid var(--line);
       border-radius: 16px;
@@ -957,6 +965,7 @@ try{
     const btnRefresh = document.getElementById('btnRefresh');
     const btnJoin = document.getElementById('btnJoin');
     const roomList = document.getElementById('roomList');
+    const appEl = document.getElementById('app');
 
     const logEl = document.getElementById('log');
     const composer = document.getElementById('composer');
@@ -1010,39 +1019,57 @@ try{
     }
 
 
+    function syncAppViewportHeight(){
+      // iOS Safari/PWA에서 키보드/툴바 애니메이션 중 100vh/100dvh가 순간적으로 어긋나는 경우 보정
+      let h = window.innerHeight || document.documentElement.clientHeight || 0;
+      if (window.visualViewport){
+        const vv = window.visualViewport;
+        h = Math.round((vv.height || 0) + (vv.offsetTop || 0)) || h;
+      }
+      document.documentElement.style.setProperty('--appH', h + 'px');
+      if (appEl) appEl.style.height = h + 'px'; // 일부 iOS 반영 타이밍 보완
+    }
+
     function updateKeyboardInset(){
-      const root = document.documentElement;
+      syncAppViewportHeight();
+
       if (!window.visualViewport){
-        root.style.setProperty('--kb', '0px');
-        root.style.setProperty('--safeBComp', 'env(safe-area-inset-bottom, 0px)');
+        document.documentElement.style.setProperty('--kb', '0px');
+        document.documentElement.style.setProperty('--safeBComp', 'env(safe-area-inset-bottom, 0px)');
         return;
       }
 
       const vv = window.visualViewport;
       const kb = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
-      root.style.setProperty('--kb', kb + 'px');
+      document.documentElement.style.setProperty('--kb', kb + 'px');
 
-      // iOS Safari/PWA에서 키보드가 열린 상태에서 safe-area(bottom)를 더하면
-      // 입력바가 공중에 뜬 것처럼 보일 수 있어 입력바용 safe-area를 제거
+      // iOS에서 키보드가 열렸을 때 safe-area(bottom)가 중복 계산되는 경우가 있어 입력 UI용만 보정
       const keyboardOpen = kb > 80;
-      root.style.setProperty('--safeBComp', keyboardOpen ? '0px' : 'env(safe-area-inset-bottom, 0px)');
+      document.documentElement.style.setProperty(
+        '--safeBComp',
+        keyboardOpen ? '0px' : 'env(safe-area-inset-bottom, 0px)'
+      );
     }
 
-    function refreshKeyboardInsetSoon(){
+    function refreshViewportLayoutSoon(){
       updateKeyboardInset();
-      [40, 90, 160, 260, 420].forEach(ms => setTimeout(updateKeyboardInset, ms));
+      requestAnimationFrame(updateKeyboardInset);
+      setTimeout(updateKeyboardInset, 60);
+      setTimeout(updateKeyboardInset, 140);
+      setTimeout(updateKeyboardInset, 260);
+      setTimeout(updateKeyboardInset, 420);
     }
 
     if (window.visualViewport){
       window.visualViewport.addEventListener('resize', updateKeyboardInset);
       window.visualViewport.addEventListener('scroll', updateKeyboardInset);
-      updateKeyboardInset();
-    }else{
-      document.documentElement.style.setProperty('--safeBComp', 'env(safe-area-inset-bottom, 0px)');
     }
-
-    window.addEventListener('resize', () => setTimeout(updateKeyboardInset, 0));
-    window.addEventListener('orientationchange', () => setTimeout(updateKeyboardInset, 250));
+    window.addEventListener('resize', refreshViewportLayoutSoon);
+    window.addEventListener('orientationchange', () => setTimeout(refreshViewportLayoutSoon, 180));
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) refreshViewportLayoutSoon();
+    });
+    refreshViewportLayoutSoon();
 
     function closeMenu(){ menu.classList.remove('open'); }
     menuBtn.addEventListener('click', () => menu.classList.toggle('open'));
@@ -1063,8 +1090,12 @@ try{
       emojiPanel.setAttribute('aria-hidden', 'true');
     });
 
-    inputEl.addEventListener('touchstart', () => { setTimeout(refreshKeyboardInsetSoon, 0); }, { passive:true });
-    inputEl.addEventListener('click', () => { setTimeout(refreshKeyboardInsetSoon, 0); });
+    // iOS에서 채팅 영역 드래그 후 레이아웃이 안정화되는 경우가 있어 드래그 종료 시 한 번 더 보정
+    ['touchend','mouseup'].forEach(evt => {
+      logEl.addEventListener(evt, () => {
+        if (document.activeElement === inputEl) refreshViewportLayoutSoon();
+      }, { passive:true });
+    });
 
     // auth + state
     let myUid = '';
@@ -1865,15 +1896,10 @@ function startPresence(rid){
       }, 2000);
 
       inputEl.addEventListener('input', markTypingActivity);
-      inputEl.addEventListener('focus', () => {
-        markTypingActivity();
-        refreshKeyboardInsetSoon();
-      });
+      inputEl.addEventListener('focus', markTypingActivity);
       inputEl.addEventListener('blur', () => {
         try{ myTypingRef.remove(); }catch(e){}
         typingOn = false;
-        setTimeout(updateKeyboardInset, 0);
-        setTimeout(updateKeyboardInset, 120);
       });
 
       window.addEventListener('beforeunload', () => {
@@ -2080,7 +2106,9 @@ if (msg.senderId !== myUid) {
       header.style.display = 'block';
       logEl.style.display = 'block';
       composer.style.display = 'flex';
+      refreshViewportLayoutSoon();
       inputEl.focus();
+      refreshViewportLayoutSoon();
     }
 
     function showHome(){
@@ -2095,6 +2123,7 @@ if (msg.senderId !== myUid) {
       composer.style.display = 'none';
       showTypingBar('');
       home.style.display = 'block';
+      refreshViewportLayoutSoon();
       refreshRooms();
     }
 
@@ -2198,6 +2227,16 @@ if (msg.senderId !== myUid) {
       if (roomId) markTypingActivity();
     }
     inputEl.addEventListener('input', onInput);
+    inputEl.addEventListener('focus', refreshViewportLayoutSoon);
+    inputEl.addEventListener('click', refreshViewportLayoutSoon);
+    inputEl.addEventListener('touchstart', refreshViewportLayoutSoon, { passive:true });
+    inputEl.addEventListener('blur', () => {
+      setTimeout(updateKeyboardInset, 60);
+      setTimeout(updateKeyboardInset, 220);
+    });
+    document.addEventListener('focusin', (e) => {
+      if (e && e.target === inputEl) refreshViewportLayoutSoon();
+    });
 
     function msgId(){
       if (crypto && crypto.randomUUID) return crypto.randomUUID();
