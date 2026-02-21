@@ -488,7 +488,7 @@
     await OneSignal.init({
       appId: "90c2ab9b-c948-4b4d-8f1e-56326f9b7aea"
     });
-window.__OS = OneSignal;
+window._OS = window.__OS = OneSignal;
 try{
   OneSignal.User.PushSubscription.addEventListener("change", function(){
     window.__schedulePushSync && window.__schedulePushSync();
@@ -1882,6 +1882,7 @@ db.ref('roomMembers/' + roomId + '/' + myUid).set({
   </script>
 </body>
 </html>
+
 
 
 
