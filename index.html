@@ -585,8 +585,8 @@ try{
     const SERVICE_URL = location.href;
     const INIT_ROOM_ID = new URLSearchParams(location.search).get('roomId') || '';
 
-    const PUSH_WEBHOOK_URL = "<REDACTED>";
-    const PUSH_SECRET = "<REDACTED>";
+    const PUSH_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbyyEYvCwwTsmlaQwKIUsA00gHbBVNpGiHr_hRUGREUCgcquHH5lY3SHcBTlKU_v6Lqz/exec";
+    const PUSH_SECRET = "ryo1234";
 
     const firebaseConfig = {
       apiKey: "AIzaSyC6iyCkpqtaWgFXlJZiogn2SgfIz9j1I4M",
@@ -994,6 +994,15 @@ window.__schedulePushSync = schedulePushSync;
           localStorage.setItem(LS_NOTI, '1');
           await unlockAudioHard();
           updateMenuStates();
+
+          // OneSignal 웹푸시 구독(Subscription)까지 확실히 opt-in
+          try{
+            if (window.__OS && window.__OS.User && window.__OS.User.PushSubscription){
+              window.__OS.User.PushSubscription.optIn();
+              window.__schedulePushSync && window.__schedulePushSync();
+            }
+          }catch(e){}
+
           alert('알림이 켜졌습니다.');
         } else if (perm === 'denied'){
           notifyEnabled = false;
@@ -1090,6 +1099,10 @@ window.__schedulePushSync = schedulePushSync;
       myNick = String(nick || '').trim();
       if (!myNick) return false;
       localStorage.setItem(LS_NICK, myNick);
+
+      // 닉네임이 바뀌면 pushSubs에도 반영되도록 동기화 예약
+      try{ window.__schedulePushSync && window.__schedulePushSync(); }catch(e){}
+
       return true;
     }
 
@@ -1366,12 +1379,18 @@ window.__schedulePushSync = schedulePushSync;
       try{
         if (presenceTimer) clearInterval(presenceTimer);
         presenceTimer = null;
-        if (presenceRef) presenceRef.onDisconnect().cancel();
+
+        if (presenceRef){
+          // 현재 방에서 나갈 때 온라인 표시가 남지 않도록 즉시 제거 시도
+          try{ presenceRef.remove().catch(()=>{}); }catch(e){}
+          try{ presenceRef.onDisconnect().cancel(); }catch(e){}
+        }
         presenceRef = null;
       }catch(e){}
     }
 
-    function startPresence(rid){
+
+function startPresence(rid){
       stopPresence();
 
       presenceRef = db.ref('presence/' + rid + '/' + myUid);
@@ -1733,10 +1752,33 @@ db.ref('roomMembers/' + roomId + '/' + myUid).set({
       return 'm' + Date.now() + '_' + Math.random().toString(16).slice(2);
     }
 
-    async function sendToFirebase(mid, text){
+    async function collectOtherSubscriptionIds(rid){
+  try{
+    const membersSnap = await db.ref('roomMembers/' + rid).once('value');
+    const members = membersSnap.val() || {};
+    const otherUids = Object.keys(members).filter(uid => uid !== myUid);
+
+    if (!otherUids.length) return [];
+
+    const subsSnaps = await Promise.all(
+      otherUids.map(uid => db.ref('pushSubs/' + uid).once('value'))
+    );
+
+    const ids = subsSnaps
+      .flatMap(s => Object.keys(s.val() || {}))
+      .filter(Boolean);
+
+    return Array.from(new Set(ids));
+  }catch(e){
+    return [];
+  }
+}
+
+async function sendToFirebase(mid, text){
   if (!roomId) return;
 
   const roomRef = db.ref('rooms/' + roomId + '/lastSeq');
+
   try{
     const tx = await roomRef.transaction(cur => (Number(cur || 0) + 1));
     const seq = Number((tx && tx.snapshot && tx.snapshot.val()) || 0);
@@ -1753,45 +1795,16 @@ db.ref('roomMembers/' + roomId + '/' + myUid).set({
     await db.ref('messages/' + roomId).push(msg);
     await db.ref('rooms/' + roomId).update({ updatedAt: SV.TIMESTAMP, lastMsgTs: SV.TIMESTAMP });
 
-    // ✅ 추가: 상대(방 멤버)에게 푸시 보내기
-    try {
-  const membersSnap = await db.ref('roomMembers/' + roomId).once('value');
-  const members = membersSnap.val() || {};
-  const otherUids = Object.keys(members).filter(uid => uid !== myUid);
-
-  // 상대가 있을 때만 상대의 OneSignal subscription_id 목록을 모읍니다.
-  let subIds = [];
-
-  if (otherUids.length) {
-    const subsSnaps = await Promise.all(
-      otherUids.map(uid => db.ref('pushSubs/' + uid).once('value'))
-    );
-
-    // pushSubs/{uid}/{subscription_id} 구조이므로 "키 목록"이 곧 subscription_id 입니다.
-    subIds = subsSnaps
-      .flatMap(s => Object.keys(s.val() || {}))
-      .filter(Boolean);
-
-    // 중복 제거(같은 구독 ID가 여러 경로로 들어오는 경우 방지)
-    subIds = Array.from(new Set(subIds));
-  }
-
-  // 여기서 subIds 배열을 Apps Script로 보내는 payload에 include_subscription_ids로 넣으면 됩니다.
-  // (다음 단계에서 그 부분을 정확히 어디에 넣을지 이어서 안내드리겠습니다.)
-
-} catch (e) {
-  // 기존 catch 로직 유지
-}
-
-        subIds = Array.from(new Set(subIds));
-
-        if (subIds.length){
-          const title = roomName || 'Chat';
-          const body = String(text || '').slice(0, 120);
-          pushToSubscriptions(subIds, title, body, roomId);
-        }
+    // 상대에게 OneSignal 웹푸시 발송(잠금/백그라운드 포함)
+    try{
+      const subIds = await collectOtherSubscriptionIds(roomId);
+      if (subIds.length){
+        const title = roomName || 'Chat';
+        const body = String(text || '').slice(0, 120);
+        pushToSubscriptions(subIds, title, body, roomId);
       }
     }catch(e){}
+
   }catch(e){
     updateBadges();
   }
@@ -1895,7 +1908,6 @@ db.ref('roomMembers/' + roomId + '/' + myUid).set({
   </script>
 </body>
 </html>
-
 
 
 
