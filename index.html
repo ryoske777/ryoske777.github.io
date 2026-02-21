@@ -489,6 +489,14 @@
       appId: "90c2ab9b-c948-4b4d-8f1e-56326f9b7aea"
     });
 window._OS = window.__OS = OneSignal;
+    try {
+  OneSignal.Notifications.addEventListener("foregroundWillDisplay", function (event) {
+    // 사이트가 화면에 떠 있는 동안은 푸시 배너/진동을 표시하지 않음
+    if (document.visibilityState === "visible") {
+      event.preventDefault();
+    }
+  });
+} catch (e) {}
 try{
   OneSignal.User.PushSubscription.addEventListener("change", function(){
     window.__schedulePushSync && window.__schedulePushSync();
