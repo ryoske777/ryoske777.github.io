@@ -1957,7 +1957,54 @@ window.__schedulePushSync = schedulePushSync;
     }
 
     // ── renderMessage (확장판) ──
-    function renderMessage(m, opt){
+    // ── 버블 내용을 메시지 데이터 기준으로 (재)구성하는 헬퍼 ──
+    // renderMessage 최초 렌더 & mergeServerMessage 확정 시 공유 사용
+    function buildQuoteEl(replyTo){
+      const quote = document.createElement('div');
+      quote.className = 'replyQuote';
+      const nameEl = document.createElement('div');
+      nameEl.className = 'replyQuoteName';
+      nameEl.textContent = replyTo.nick || '알 수 없음';
+      const textEl = document.createElement('div');
+      textEl.className = 'replyQuoteText';
+      textEl.textContent = String(replyTo.text || '').slice(0, 80);
+      quote.appendChild(nameEl);
+      quote.appendChild(textEl);
+      quote.addEventListener('click', () => {
+        const target = logEl.querySelector('[data-mid="' + CSS.escape(replyTo.mid || '') + '"]');
+        if (target){
+          target.scrollIntoView({ behavior:'smooth', block:'center' });
+          target.style.background = 'rgba(34,197,94,0.08)';
+          setTimeout(() => { target.style.background = ''; }, 1200);
+        }
+      });
+      return quote;
+    }
+
+    function rebuildBubble(bubble, m, wrapEl){
+      bubble.innerHTML = '';
+      if (m.deleted){
+        bubble.className = 'bubble deletedBubble';
+        bubble.textContent = '삭제된 메시지입니다.';
+        return;
+      }
+      bubble.className = 'bubble';
+      // 답글 인용 (있을 때만)
+      if (m.replyTo && m.replyTo.text){
+        bubble.appendChild(buildQuoteEl(m.replyTo));
+      }
+      // 본문 텍스트
+      bubble.appendChild(document.createTextNode(String(m.text || '')));
+      // 수정됨 마크
+      if (m.edited){
+        const em = document.createElement('span');
+        em.className = 'editedMark';
+        em.textContent = '(수정됨)';
+        bubble.appendChild(em);
+      }
+    }
+
+        function renderMessage(m, opt){
       if (seen.has(m.messageId)) return;
       const isMine = (m.senderId === myUid);
 
@@ -1971,39 +2018,13 @@ window.__schedulePushSync = schedulePushSync;
       // ── 버블 콘텐츠 ──
       const bubble = document.createElement('div');
 
-      if (m.deleted){
-        // 삭제된 메시지
-        bubble.className = 'bubble deletedBubble';
-        bubble.textContent = '삭제된 메시지입니다.';
-      } else {
-        // 일반 텍스트 버블
-        bubble.className = 'bubble';
+      // 버블 구성 (rebuildBubble 헬퍼로 통일)
+      rebuildBubble(bubble, m, wrap);
 
-        // 답글 인용 표시
-        if (m.replyTo && m.replyTo.text){
-          const quote = document.createElement('div');
-          quote.className = 'replyQuote';
-          quote.innerHTML = `<div class="replyQuoteName">${escapeHtml(m.replyTo.nick || '알 수 없음')}</div><div class="replyQuoteText">${escapeHtml(String(m.replyTo.text).slice(0, 80))}</div>`;
-          // 클릭 시 원본 메시지로 스크롤
-          quote.addEventListener('click', () => {
-            const target = logEl.querySelector(`[data-mid="${CSS.escape(m.replyTo.mid)}"]`);
-            if (target){ target.scrollIntoView({ behavior:'smooth', block:'center' }); target.style.background='rgba(34,197,94,0.08)'; setTimeout(()=>{ target.style.background=''; }, 1200); }
-          });
-          bubble.appendChild(quote);
-        }
-
-        const txt = String(m.text || '');
-        const txtNode = document.createTextNode(txt);
-        bubble.appendChild(txtNode);
-        if (m.edited){ const em = document.createElement('span'); em.className='editedMark'; em.textContent='(수정됨)'; bubble.appendChild(em); }
-
-        // 링크 프리뷰 (비동기)
-        if (!opt?.pending){
-          const url = extractUrl(txt);
-          if (url){
-            renderLinkPreview(url, wrap);
-          }
-        }
+      // 링크 프리뷰 (비동기, pending일 때 스킵)
+      if (!opt?.pending && !m.deleted){
+        const url = extractUrl(String(m.text || ''));
+        if (url) renderLinkPreview(url, wrap);
       }
 
       row.appendChild(bubble);
@@ -2051,7 +2072,7 @@ window.__schedulePushSync = schedulePushSync;
       }
 
       logEl.appendChild(wrap);
-      seen.set(m.messageId, { seq: Number(m.seq || 0), metaEl: meta, senderId: m.senderId, wrapEl: wrap, bubbleEl: bubble });
+      seen.set(m.messageId, { seq: Number(m.seq || 0), metaEl: meta, senderId: m.senderId, wrapEl: wrap, bubbleEl: bubble, text: String(m.text || ''), replyTo: m.replyTo || null });
     }
 
     // ── 메시지 수정/삭제 반영 (Firebase child_changed 수신 시) ──
@@ -2060,14 +2081,18 @@ window.__schedulePushSync = schedulePushSync;
       if (!obj) return;
       const bubble = obj.bubbleEl;
       if (!bubble) return;
-      if (m.deleted){
-        bubble.className = 'bubble deletedBubble';
-        bubble.textContent = '삭제된 메시지입니다.';
-      } else {
-        bubble.className = 'bubble';
-        bubble.textContent = String(m.text || '');
-        if (m.edited){ const em = document.createElement('span'); em.className='editedMark'; em.textContent='(수정됨)'; bubble.appendChild(em); }
-      }
+
+      // seen에 저장된 replyTo를 유지하면서 버블 재구성
+      const fullMsg = {
+        text: String(m.text || ''),
+        deleted: !!m.deleted,
+        edited: !!m.edited,
+        replyTo: obj.replyTo || null   // 수정/삭제해도 원본 답글 인용은 유지
+      };
+      rebuildBubble(bubble, fullMsg, obj.wrapEl);
+
+      // seen 갱신
+      obj.text = fullMsg.text;
     }
 
     function updateBadges(){
@@ -2133,13 +2158,39 @@ window.__schedulePushSync = schedulePushSync;
     }
 
     function mergeServerMessage(m){
+      const wasPending = pending.has(m.messageId);
+
       if (!seen.has(m.messageId)){
+        // 처음 보는 메시지 → 새로 렌더
         renderMessage(m, {pending:false});
+      } else if (wasPending) {
+        // pending이었던 내 메시지가 서버에서 확정됨
+        // → 버블을 서버 데이터(replyTo 포함)로 완전히 재구성
+        const obj = seen.get(m.messageId);
+        if (obj && obj.bubbleEl && !m.deleted) {
+          rebuildBubble(obj.bubbleEl, m, obj.wrapEl);
+
+          // 링크 프리뷰 (pending일 때 스킵했던 것)
+          const url = extractUrl(String(m.text || ''));
+          if (url) renderLinkPreview(url, obj.wrapEl);
+
+          // 리액션 watcher (pending일 때 스킵했던 것)
+          const reactionsBar = obj.wrapEl && obj.wrapEl.querySelector('.reactionsBar');
+          if (reactionsBar && !reactionWatchers.has(m.messageId)){
+            watchReactions(m.messageId, reactionsBar, true);
+          }
+        }
       }
-      if (pending.has(m.messageId)) pending.delete(m.messageId);
+
+      if (wasPending) pending.delete(m.messageId);
 
       const obj = seen.get(m.messageId);
-      if (obj) obj.seq = Number(m.seq || obj.seq || 0);
+      if (obj){
+        obj.seq = Number(m.seq || obj.seq || 0);
+        // text, replyTo를 서버 데이터로 확정
+        if (m.text !== undefined) obj.text = String(m.text || '');
+        if (m.replyTo !== undefined) obj.replyTo = m.replyTo || null;
+      }
 
       updateBadges();
       updateReadBadges();
@@ -3044,7 +3095,8 @@ async function sendToFirebase(mid, text, replyToData){
       const wrap = ctxTargetWrap;
       closeMsgMenu();
 
-      const currentText = bubble.textContent.replace('(수정됨)', '').trim();
+      // seen에 저장된 순수 텍스트를 사용 (replyQuote 텍스트 혼입 방지)
+      const currentText = (obj.text || '').trim();
 
       const editWrap = document.createElement('div');
       editWrap.className = 'editWrap';
@@ -3139,8 +3191,10 @@ async function sendToFirebase(mid, text, replyToData){
       if (!ctxTargetMid) return;
       const obj = seen.get(ctxTargetMid);
       if (!obj) return;
+      // nick: seen의 meta 첫 span (닉네임)
       const nick = obj.wrapEl ? (obj.wrapEl.querySelector('.meta span')?.textContent || '') : '';
-      const text = ctxTargetBubble ? ctxTargetBubble.textContent.replace('(수정됨)', '').trim() : '';
+      // text: seen에 저장된 순수 텍스트 — DOM에서 읽으면 replyQuote까지 포함돼서 중첩 발생!
+      const text = obj.text || '';
       setReply(ctxTargetMid, nick, text);
       closeMsgMenu();
     });
