@@ -546,6 +546,193 @@
       flex:1;
     }
 
+
+
+
+
+    /* ===== 메시지 컨텍스트 메뉴 (수정/삭제/리액션) ===== */
+    .msgCtxMenu{
+      position:fixed;
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius:14px;
+      box-shadow:0 14px 40px rgba(0,0,0,0.14);
+      overflow:hidden;
+      z-index:200;
+      min-width:160px;
+      display:none;
+    }
+    .msgCtxMenu.open{ display:block; }
+    .msgCtxMenu button{
+      width:100%;
+      padding:11px 14px;
+      border:0;
+      background:#fff;
+      text-align:left;
+      font-size:14px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      cursor:pointer;
+    }
+    .msgCtxMenu button:hover{ background:#f8fafc; }
+    .msgCtxMenu button.danger{ color:var(--danger); }
+    .ctxSep{ height:1px; background:var(--line); }
+
+    /* 빠른 리액션 바 */
+    .quickReact{
+      display:flex;
+      gap:4px;
+      padding:8px 10px;
+      border-bottom:1px solid var(--line);
+      flex-wrap:wrap;
+    }
+    .quickReact span{
+      font-size:20px;
+      cursor:pointer;
+      padding:2px 4px;
+      border-radius:8px;
+      line-height:1.2;
+      transition:transform .1s;
+    }
+    .quickReact span:hover{ transform:scale(1.3); }
+
+    /* ===== 메시지 수정 인라인 ===== */
+    .editWrap{
+      display:flex;
+      gap:6px;
+      align-items:center;
+      margin-top:6px;
+      flex-wrap:wrap;
+    }
+    .editInput{
+      flex:1;
+      min-width:0;
+      border:1px solid rgba(34,197,94,0.5);
+      border-radius:10px;
+      padding:6px 10px;
+      font-size:14px;
+      outline:none;
+      box-shadow:0 0 0 3px rgba(34,197,94,0.1);
+    }
+    .editSave, .editCancel{
+      padding:5px 12px;
+      border-radius:8px;
+      border:0;
+      font-size:13px;
+      font-weight:700;
+      cursor:pointer;
+    }
+    .editSave{ background:#111827; color:#fff; }
+    .editCancel{ background:#f3f4f6; color:#374151; }
+
+    /* 삭제된 메시지 */
+    .deletedBubble{
+      font-style:italic;
+      color:var(--muted);
+      font-size:13px;
+    }
+    .editedMark{
+      font-size:10px;
+      color:var(--muted);
+      margin-left:4px;
+    }
+
+    /* ===== 리액션 표시 ===== */
+    .reactionsBar{
+      display:flex;
+      flex-wrap:wrap;
+      gap:4px;
+      margin-top:4px;
+    }
+    .reactChip{
+      display:inline-flex;
+      align-items:center;
+      gap:3px;
+      padding:2px 8px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background:#fff;
+      font-size:13px;
+      cursor:pointer;
+      transition:background .15s, border-color .15s;
+      user-select:none;
+    }
+    .reactChip:hover{ background:#f0fdf4; border-color:var(--accent); }
+    .reactChip.mine{ background:#f0fdf4; border-color:var(--accent); }
+    .reactCount{ font-size:11px; color:var(--muted); font-weight:700; }
+
+    /* ===== 링크 프리뷰 ===== */
+    .linkPreview{
+      margin-top:8px;
+      border:1px solid var(--line);
+      border-radius:12px;
+      overflow:hidden;
+      background:#f8fafc;
+      cursor:pointer;
+      text-decoration:none;
+      color:inherit;
+      display:block;
+      max-width:100%;
+    }
+    .linkPreview:hover{ background:#f0f4f8; }
+    .lpImg{
+      width:100%;
+      max-height:140px;
+      object-fit:cover;
+      display:block;
+    }
+    .lpBody{
+      padding:10px 12px;
+    }
+    .lpSite{
+      font-size:10px;
+      color:var(--muted);
+      text-transform:uppercase;
+      letter-spacing:.5px;
+      margin-bottom:3px;
+    }
+    .lpTitle{
+      font-size:13px;
+      font-weight:700;
+      line-height:1.3;
+      word-break:break-word;
+      overflow:hidden;
+      display:-webkit-box;
+      -webkit-line-clamp:2;
+      -webkit-box-orient:vertical;
+    }
+    .lpDesc{
+      font-size:11px;
+      color:var(--muted);
+      margin-top:3px;
+      overflow:hidden;
+      display:-webkit-box;
+      -webkit-line-clamp:2;
+      -webkit-box-orient:vertical;
+    }
+
+
+    /* ===== 토스트 알림 ===== */
+    .toast{
+      position:fixed;
+      bottom:calc(var(--composerH) + max(0px, calc(var(--kb) + var(--safeBComp) - var(--kbFix))) + 12px);
+      left:50%;
+      transform:translateX(-50%) translateY(20px);
+      background:#111827;
+      color:#fff;
+      padding:9px 18px;
+      border-radius:999px;
+      font-size:13px;
+      font-weight:700;
+      opacity:0;
+      transition:opacity .2s, transform .2s;
+      pointer-events:none;
+      z-index:400;
+      white-space:nowrap;
+    }
+    .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
   </style>
 <script>
   window.OneSignalDeferred = window.OneSignalDeferred || [];
@@ -653,6 +840,24 @@ try{
       <button class="sendBtn" id="send" disabled>전송</button>
     </div>
   </div>
+
+
+  <!-- ===== 메시지 컨텍스트 메뉴 (수정/삭제/리액션) ===== -->
+  <div class="msgCtxMenu" id="msgCtxMenu">
+    <div class="quickReact" id="quickReactBar">
+      <span data-e="👍">👍</span>
+      <span data-e="❤️">❤️</span>
+      <span data-e="😂">😂</span>
+      <span data-e="😮">😮</span>
+      <span data-e="😢">😢</span>
+      <span data-e="🔥">🔥</span>
+    </div>
+    <button id="ctxEdit">✏️ 수정</button>
+    <button id="ctxDelete" class="danger">🗑 삭제</button>
+  </div>
+
+  <!-- ===== 토스트 알림 ===== -->
+  <div class="toast" id="toast"></div>
 
     <!-- ===== 비밀번호 모달 ===== -->
     <div class="modalOverlay" id="passModal" aria-hidden="true">
@@ -1554,47 +1759,206 @@ window.__schedulePushSync = schedulePushSync;
       typingBar.setAttribute('aria-hidden', 'false');
     }
 
+    // ── 링크 URL 추출 헬퍼 ──
+    function extractUrl(text){
+      try{
+        const m = String(text||'').match(/https?:\/\/[^\s]+/);
+        return m ? m[0] : null;
+      }catch(e){ return null; }
+    }
+
+    // ── 링크 프리뷰 렌더 (allorigins 프록시 사용) ──
+    async function renderLinkPreview(url, container){
+      try{
+        const proxy = 'https://api.allorigins.win/get?url=' + encodeURIComponent(url);
+        const res = await fetch(proxy, { signal: AbortSignal.timeout(5000) });
+        if (!res.ok) return;
+        const json = await res.json();
+        const html = json.contents || '';
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+
+        const getMeta = (prop) => {
+          const el = doc.querySelector(`meta[property="${prop}"],meta[name="${prop}"]`);
+          return el ? el.getAttribute('content') : '';
+        };
+
+        const title = getMeta('og:title') || doc.title || '';
+        const desc  = getMeta('og:description') || getMeta('description') || '';
+        const img   = getMeta('og:image') || '';
+        const site  = getMeta('og:site_name') || (new URL(url)).hostname;
+
+        if (!title) return;
+
+        const a = document.createElement('a');
+        a.className = 'linkPreview';
+        a.href = url;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+
+        if (img){
+          const im = document.createElement('img');
+          im.className = 'lpImg';
+          im.src = img;
+          im.alt = '';
+          im.onerror = () => im.remove();
+          a.appendChild(im);
+        }
+
+        const body = document.createElement('div');
+        body.className = 'lpBody';
+        body.innerHTML = `
+          <div class="lpSite">${escapeHtml(site)}</div>
+          <div class="lpTitle">${escapeHtml(title)}</div>
+          ${desc ? `<div class="lpDesc">${escapeHtml(desc)}</div>` : ''}
+        `;
+        a.appendChild(body);
+        container.appendChild(a);
+      }catch(e){}
+    }
+
+    // ── 리액션 업데이트 (Firebase 연동) ──
+    const reactionWatchers = new Map(); // mid -> firebase ref
+
+    function watchReactions(mid, reactionsBar, isMine){
+      if (reactionWatchers.has(mid)) return;
+      const ref = db.ref('reactions/' + roomId + '/' + mid);
+      reactionWatchers.set(mid, ref);
+
+      ref.on('value', snap => {
+        const data = snap.val() || {};
+        reactionsBar.innerHTML = '';
+        // 집계
+        const tally = {};
+        const myReact = {};
+        Object.entries(data).forEach(([uid, emoji]) => {
+          tally[emoji] = (tally[emoji] || 0) + 1;
+          if (uid === myUid) myReact[emoji] = true;
+        });
+        Object.entries(tally).forEach(([emoji, count]) => {
+          const chip = document.createElement('div');
+          chip.className = 'reactChip' + (myReact[emoji] ? ' mine' : '');
+          chip.innerHTML = `${emoji} <span class="reactCount">${count}</span>`;
+          chip.addEventListener('click', () => toggleReaction(mid, emoji));
+          reactionsBar.appendChild(chip);
+        });
+        scrollToBottom(false);
+      });
+    }
+
+    async function toggleReaction(mid, emoji){
+      try{
+        const ref = db.ref('reactions/' + roomId + '/' + mid + '/' + myUid);
+        const snap = await ref.once('value');
+        if (snap.val() === emoji){
+          await ref.remove();
+        } else {
+          await ref.set(emoji);
+        }
+      }catch(e){}
+    }
+
+    function stopReactionWatchers(){
+      reactionWatchers.forEach(ref => { try{ ref.off(); }catch(e){} });
+      reactionWatchers.clear();
+    }
+
+    // ── renderMessage (확장판) ──
     function renderMessage(m, opt){
       if (seen.has(m.messageId)) return;
+      const isMine = (m.senderId === myUid);
 
       const wrap = document.createElement('div');
       wrap.className = 'msg';
+      wrap.dataset.mid = m.messageId;
 
       const row = document.createElement('div');
-      row.className = 'row ' + (m.senderId === myUid ? 'me' : 'other');
+      row.className = 'row ' + (isMine ? 'me' : 'other');
 
+      // ── 버블 콘텐츠 ──
       const bubble = document.createElement('div');
-      bubble.className = 'bubble';
-      bubble.innerHTML = escapeHtml(m.text);
+
+      if (m.deleted){
+        // 삭제된 메시지
+        bubble.className = 'bubble deletedBubble';
+        bubble.textContent = '삭제된 메시지입니다.';
+      } else {
+        // 일반 텍스트 버블
+        bubble.className = 'bubble';
+        const txt = String(m.text || '');
+        bubble.textContent = txt;
+        if (m.edited){ const em = document.createElement('span'); em.className='editedMark'; em.textContent='(수정됨)'; bubble.appendChild(em); }
+
+        // 링크 프리뷰 (비동기)
+        if (!opt?.pending){
+          const url = extractUrl(txt);
+          if (url){
+            renderLinkPreview(url, wrap);
+          }
+        }
+      }
 
       row.appendChild(bubble);
       wrap.appendChild(row);
 
-      const meta = document.createElement('div');
-      meta.className = 'meta ' + (m.senderId === myUid ? 'me' : '');
+      // ── 리액션 바 ──
+      const reactionsBar = document.createElement('div');
+      reactionsBar.className = 'reactionsBar';
+      const reactAlign = document.createElement('div');
+      reactAlign.style.cssText = isMine ? 'display:flex;justify-content:flex-end' : 'display:flex;justify-content:flex-start';
+      reactAlign.appendChild(reactionsBar);
+      wrap.appendChild(reactAlign);
+      if (!opt?.pending && !m.deleted) watchReactions(m.messageId, reactionsBar, isMine);
 
+      // ── 메타 (닉네임, 시간) ──
+      const meta = document.createElement('div');
+      meta.className = 'meta ' + (isMine ? 'me' : '');
       const who = document.createElement('span');
       who.textContent = m.senderNick || '';
-
       const time = document.createElement('span');
       time.textContent = fmt(m.ts || Date.now());
-
       meta.appendChild(who);
       meta.appendChild(time);
 
-      if (m.senderId === myUid){
-        if (opt && opt.pending){
-          const b = document.createElement('span');
-          b.className = 'badgePending';
-          b.textContent = '전송 중';
-          meta.appendChild(b);
-        }
+      if (isMine && opt?.pending){
+        const b = document.createElement('span');
+        b.className = 'badgePending';
+        b.textContent = '전송 중';
+        meta.appendChild(b);
       }
 
       wrap.appendChild(meta);
-      logEl.appendChild(wrap);
 
-      seen.set(m.messageId, { seq: Number(m.seq || 0), metaEl: meta, senderId: m.senderId });
+      // ── 롱프레스/우클릭 → 컨텍스트 메뉴 ──
+      if (!m.deleted){
+        let longTimer = null;
+        const openCtx = (e) => {
+          e.preventDefault();
+          openMsgMenu(m.messageId, m.senderId, wrap, bubble);
+        };
+        wrap.addEventListener('contextmenu', openCtx);
+        wrap.addEventListener('touchstart', () => { longTimer = setTimeout(() => openMsgMenu(m.messageId, m.senderId, wrap, bubble), 550); }, { passive:true });
+        wrap.addEventListener('touchend', () => { clearTimeout(longTimer); });
+        wrap.addEventListener('touchmove', () => { clearTimeout(longTimer); });
+      }
+
+      logEl.appendChild(wrap);
+      seen.set(m.messageId, { seq: Number(m.seq || 0), metaEl: meta, senderId: m.senderId, wrapEl: wrap, bubbleEl: bubble });
+    }
+
+    // ── 메시지 수정/삭제 반영 (Firebase child_changed 수신 시) ──
+    function applyMsgUpdate(m){
+      const obj = seen.get(m.messageId);
+      if (!obj) return;
+      const bubble = obj.bubbleEl;
+      if (!bubble) return;
+      if (m.deleted){
+        bubble.className = 'bubble deletedBubble';
+        bubble.textContent = '삭제된 메시지입니다.';
+      } else {
+        bubble.className = 'bubble';
+        bubble.textContent = String(m.text || '');
+        if (m.edited){ const em = document.createElement('span'); em.className='editedMark'; em.textContent='(수정됨)'; bubble.appendChild(em); }
+      }
     }
 
     function updateBadges(){
@@ -2049,6 +2413,7 @@ function startPresence(rid){
 
     function subscribeMessages(rid, startSeq){
       stopMessages();
+      stopReactionWatchers();
 
       logEl.innerHTML = '';
       seen.clear();
@@ -2069,7 +2434,9 @@ function startPresence(rid){
           senderNick: String(m.senderNick || ''),
           text: String(m.text || ''),
           ts: Number(m.ts || 0),
-          seq: Number(m.seq || 0)
+          seq: Number(m.seq || 0),
+          deleted: !!m.deleted,
+          edited: !!m.edited
         };
 
         afterSeq = Math.max(afterSeq, msg.seq || 0);
@@ -2090,6 +2457,19 @@ if (msg.senderId !== myUid) {
 
         scrollToBottom(false);
         markReadNow();
+      });
+
+      // 메시지 수정/삭제 실시간 반영
+      ref.on('child_changed', snap => {
+        const m = snap.val();
+        if (!m) return;
+        applyMsgUpdate({
+          messageId: String(m.messageId || snap.key || ''),
+          text: String(m.text || ''),
+          deleted: !!m.deleted,
+          edited: !!m.edited,
+          type: String(m.type || '')
+        });
       });
     }
 
@@ -2467,7 +2847,145 @@ async function sendToFirebase(mid, text){
       showHome();
     }
 
-    init();
+    // ================================================================
+    // ===== 새 기능 2: 메시지 수정 / 삭제 =====
+    // ================================================================
+    const msgCtxMenu = document.getElementById('msgCtxMenu');
+    const ctxEdit = document.getElementById('ctxEdit');
+    const ctxDelete = document.getElementById('ctxDelete');
+    const quickReactBar = document.getElementById('quickReactBar');
+
+    let ctxTargetMid = null;
+    let ctxTargetSenderId = null;
+    let ctxTargetWrap = null;
+    let ctxTargetBubble = null;
+
+    function openMsgMenu(mid, senderId, wrap, bubble){
+      ctxTargetMid = mid;
+      ctxTargetSenderId = senderId;
+      ctxTargetWrap = wrap;
+      ctxTargetBubble = bubble;
+
+      const isMine = (senderId === myUid);
+      ctxEdit.style.display = isMine ? 'flex' : 'none';
+      ctxDelete.style.display = isMine ? 'flex' : 'none';
+
+      const rect = wrap.getBoundingClientRect();
+      let top = rect.bottom + 6;
+      let left = isMine ? rect.right - 200 : rect.left;
+      left = Math.max(8, Math.min(left, window.innerWidth - 210));
+      if (top + 180 > window.innerHeight) top = rect.top - 186;
+
+      msgCtxMenu.style.top = top + 'px';
+      msgCtxMenu.style.left = left + 'px';
+      msgCtxMenu.classList.add('open');
+    }
+
+    function closeMsgMenu(){
+      msgCtxMenu.classList.remove('open');
+      ctxTargetMid = null;
+    }
+
+    document.addEventListener('click', (e) => {
+      if (!msgCtxMenu.contains(e.target)) closeMsgMenu();
+    });
+
+    // 빠른 리액션 클릭
+    quickReactBar.addEventListener('click', async (e) => {
+      const sp = e.target.closest('[data-e]');
+      if (!sp || !ctxTargetMid) return;
+      const emoji = sp.dataset.e;
+      await toggleReaction(ctxTargetMid, emoji);
+      closeMsgMenu();
+    });
+
+    // 수정
+    ctxEdit.addEventListener('click', () => {
+      if (!ctxTargetMid || !ctxTargetBubble) return;
+      const obj = seen.get(ctxTargetMid);
+      if (!obj) return;
+      const mid = ctxTargetMid;
+      const bubble = ctxTargetBubble;
+      const wrap = ctxTargetWrap;
+      closeMsgMenu();
+
+      const currentText = bubble.textContent.replace('(수정됨)', '').trim();
+
+      const editWrap = document.createElement('div');
+      editWrap.className = 'editWrap';
+      const inp = document.createElement('input');
+      inp.className = 'editInput';
+      inp.type = 'text';
+      inp.value = currentText;
+      const saveBtn = document.createElement('button');
+      saveBtn.className = 'editSave';
+      saveBtn.textContent = '저장';
+      const cancelBtn = document.createElement('button');
+      cancelBtn.className = 'editCancel';
+      cancelBtn.textContent = '취소';
+      editWrap.appendChild(inp);
+      editWrap.appendChild(saveBtn);
+      editWrap.appendChild(cancelBtn);
+
+      const row = wrap.querySelector('.row');
+      if (row) row.insertAdjacentElement('afterend', editWrap);
+      inp.focus();
+      inp.select();
+
+      const cleanup = () => editWrap.remove();
+      cancelBtn.addEventListener('click', cleanup);
+
+      const doSave = async () => {
+        const newText = inp.value.trim();
+        if (!newText || newText === currentText){ cleanup(); return; }
+        try{
+          const snap = await db.ref('messages/' + roomId)
+            .orderByChild('messageId').equalTo(mid).once('value');
+          snap.forEach(child => {
+            child.ref.update({ text: newText, edited: true });
+          });
+          showToast('메시지가 수정되었습니다.');
+        }catch(e){ showToast('수정 실패'); }
+        cleanup();
+      };
+
+      saveBtn.addEventListener('click', doSave);
+      inp.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') doSave();
+        if (e.key === 'Escape') cleanup();
+      });
+    });
+
+    // 삭제
+    ctxDelete.addEventListener('click', async () => {
+      if (!ctxTargetMid) return;
+      const mid = ctxTargetMid;
+      closeMsgMenu();
+      if (!confirm('이 메시지를 삭제할까요?')) return;
+      try{
+        const snap = await db.ref('messages/' + roomId)
+          .orderByChild('messageId').equalTo(mid).once('value');
+        snap.forEach(child => {
+          child.ref.update({ deleted: true, text: '' });
+        });
+        showToast('메시지가 삭제되었습니다.');
+      }catch(e){ showToast('삭제 실패'); }
+    });
+
+    // ================================================================
+    // ===== 토스트 알림 =====
+    // ================================================================
+    const toastEl = document.getElementById('toast');
+    let toastTimer = null;
+    function showToast(msg, ms){
+      toastEl.textContent = msg;
+      toastEl.classList.add('show');
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toastEl.classList.remove('show'), ms || 2200);
+    }
+
+
+        init();
   </script>
 </body>
 </html>
