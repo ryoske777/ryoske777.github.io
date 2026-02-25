@@ -69,6 +69,9 @@
       min-height:0;
       overflow:hidden;
       padding-top: var(--safeT);
+      background: var(--bg);
+      -webkit-transform: translateZ(0); /* iOS GPU 레이어 강제 - 검은화면 방지 */
+      transform: translateZ(0);
     }
 
     header{
@@ -713,6 +716,78 @@
     }
 
 
+
+    /* ===== 답글(Reply) ===== */
+    .replyPreview{
+      position:absolute;
+      bottom: calc(100% + 2px);
+      left:0; right:0;
+      background: rgba(255,255,255,0.97);
+      border-top: 1px solid var(--line);
+      padding: 8px 12px;
+      display:flex;
+      align-items:center;
+      gap:8px;
+      font-size:12px;
+      color: var(--muted);
+      backdrop-filter: blur(8px);
+      z-index:21;
+    }
+    .replyPreviewBar{
+      width:3px;
+      height:100%;
+      min-height:28px;
+      background: var(--accent);
+      border-radius:2px;
+      flex-shrink:0;
+    }
+    .replyPreviewText{
+      flex:1;
+      min-width:0;
+      overflow:hidden;
+      white-space:nowrap;
+      text-overflow:ellipsis;
+    }
+    .replyPreviewName{
+      font-weight:700;
+      color: var(--accent);
+      margin-bottom:2px;
+    }
+    .replyCloseBtn{
+      border:0;
+      background:none;
+      font-size:18px;
+      cursor:pointer;
+      color:var(--muted);
+      flex-shrink:0;
+      padding:0 4px;
+      line-height:1;
+    }
+
+    .replyQuote{
+      border-left: 3px solid var(--accent);
+      padding: 5px 10px;
+      border-radius: 0 8px 8px 0;
+      background: rgba(34,197,94,0.07);
+      margin-bottom: 6px;
+      font-size:12px;
+      color: var(--muted);
+      cursor: pointer;
+      max-width: 100%;
+      overflow:hidden;
+    }
+    .replyQuote:hover{ background: rgba(34,197,94,0.12); }
+    .replyQuoteName{
+      font-weight:700;
+      color: var(--accent);
+      margin-bottom:2px;
+    }
+    .replyQuoteText{
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
     /* ===== 토스트 알림 ===== */
     .toast{
       position:fixed;
@@ -833,6 +908,14 @@ try{
     </div>
 
     <div class="composer" id="composer" style="display:none;">
+      <div class="replyPreview" id="replyPreview" style="display:none;">
+        <div class="replyPreviewBar"></div>
+        <div class="replyPreviewText">
+          <div class="replyPreviewName" id="replyPreviewName"></div>
+          <div id="replyPreviewMsg"></div>
+        </div>
+        <button class="replyCloseBtn" id="replyCloseBtn" title="답글 취소">✕</button>
+      </div>
       <div class="emojiBtn clickable" id="emojiBtn">😊</div>
       <div class="inputWrap">
         <input id="input" type="text" autocomplete="off" placeholder="메시지를 입력하세요" />
@@ -852,6 +935,7 @@ try{
       <span data-e="😢">😢</span>
       <span data-e="🔥">🔥</span>
     </div>
+    <button id="ctxReply">↩️ 답글</button>
     <button id="ctxEdit">✏️ 수정</button>
     <button id="ctxDelete" class="danger">🗑 삭제</button>
   </div>
@@ -1297,7 +1381,17 @@ try{
     window.addEventListener('resize', refreshViewportLayoutSoon);
     window.addEventListener('orientationchange', () => setTimeout(refreshViewportLayoutSoon, 180));
     document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) refreshViewportLayoutSoon();
+      if (!document.hidden){
+        // 백그라운드 복귀 시 레이아웃 재계산 + 검은 화면 복구
+        if (appEl) {
+          appEl.style.display = 'none';
+          // eslint-disable-next-line no-unused-expressions
+          appEl.offsetHeight; // reflow 강제
+          appEl.style.display = 'flex';
+        }
+        refreshViewportLayoutSoon();
+        setTimeout(refreshViewportLayoutSoon, 300);
+      }
     });
     refreshViewportLayoutSoon();
 
@@ -1884,8 +1978,23 @@ window.__schedulePushSync = schedulePushSync;
       } else {
         // 일반 텍스트 버블
         bubble.className = 'bubble';
+
+        // 답글 인용 표시
+        if (m.replyTo && m.replyTo.text){
+          const quote = document.createElement('div');
+          quote.className = 'replyQuote';
+          quote.innerHTML = `<div class="replyQuoteName">${escapeHtml(m.replyTo.nick || '알 수 없음')}</div><div class="replyQuoteText">${escapeHtml(String(m.replyTo.text).slice(0, 80))}</div>`;
+          // 클릭 시 원본 메시지로 스크롤
+          quote.addEventListener('click', () => {
+            const target = logEl.querySelector(`[data-mid="${CSS.escape(m.replyTo.mid)}"]`);
+            if (target){ target.scrollIntoView({ behavior:'smooth', block:'center' }); target.style.background='rgba(34,197,94,0.08)'; setTimeout(()=>{ target.style.background=''; }, 1200); }
+          });
+          bubble.appendChild(quote);
+        }
+
         const txt = String(m.text || '');
-        bubble.textContent = txt;
+        const txtNode = document.createTextNode(txt);
+        bubble.appendChild(txtNode);
         if (m.edited){ const em = document.createElement('span'); em.className='editedMark'; em.textContent='(수정됨)'; bubble.appendChild(em); }
 
         // 링크 프리뷰 (비동기)
@@ -2420,8 +2529,21 @@ function startPresence(rid){
       pending.clear();
       afterSeq = Number(startSeq || 0);
 
+      // 초기 로딩 완료 감지용 플래그
+      let initialLoadDone = false;
+
       const ref = db.ref('messages/' + rid).orderByChild('seq').startAt(afterSeq + 1);
       msgUnsub = ref;
+
+      // 초기 데이터 일괄 수신 완료 감지 → 최신 메시지로 스크롤
+      ref.once('value', () => {
+        initialLoadDone = true;
+        // 렌더링 후 맨 아래로 스크롤
+        requestAnimationFrame(() => {
+          logEl.scrollTop = logEl.scrollHeight;
+          setTimeout(() => { logEl.scrollTop = logEl.scrollHeight; }, 120);
+        });
+      });
 
       ref.on('child_added', snap => {
         const m = snap.val();
@@ -2436,27 +2558,30 @@ function startPresence(rid){
           ts: Number(m.ts || 0),
           seq: Number(m.seq || 0),
           deleted: !!m.deleted,
-          edited: !!m.edited
+          edited: !!m.edited,
+          replyTo: m.replyTo || null
         };
 
         afterSeq = Math.max(afterSeq, msg.seq || 0);
         mergeServerMessage(msg);
 
-if (msg.senderId !== myUid) {
-  if (document.hidden || !document.hasFocus()) {
-    bumpUnread();
-  } else {
-    if (shouldNotifyNow()) {
-      bumpUnread();
-      playBeep();
-    } else {
-      if (isNearBottom()) clearUnread();
-    }
-  }
-}
-
-        scrollToBottom(false);
-        markReadNow();
+        if (initialLoadDone) {
+          // 실시간으로 새로 온 메시지만 알림/스크롤 처리
+          if (msg.senderId !== myUid) {
+            if (document.hidden || !document.hasFocus()) {
+              bumpUnread();
+            } else {
+              if (shouldNotifyNow()) {
+                bumpUnread();
+                playBeep();
+              } else {
+                if (isNearBottom()) clearUnread();
+              }
+            }
+          }
+          scrollToBottom(false);
+          markReadNow();
+        }
       });
 
       // 메시지 수정/삭제 실시간 반영
@@ -2551,6 +2676,7 @@ if (msg.senderId !== myUid) {
       stopTyping();
       stopReads();
       clearUnread();
+      try{ clearReply(); }catch(e){}
 
       header.style.display = 'none';
       logEl.style.display = 'none';
@@ -2717,7 +2843,7 @@ if (msg.senderId !== myUid) {
   }
 }
 
-async function sendToFirebase(mid, text){
+async function sendToFirebase(mid, text, replyToData){
   if (!roomId) return;
 
   const roomRef = db.ref('rooms/' + roomId + '/lastSeq');
@@ -2734,6 +2860,7 @@ async function sendToFirebase(mid, text){
       ts: SV.TIMESTAMP,
       seq: seq
     };
+    if (replyToData) msg.replyTo = replyToData;
 
     await db.ref('messages/' + roomId).push(msg);
     await db.ref('rooms/' + roomId).update({ updatedAt: SV.TIMESTAMP, lastMsgTs: SV.TIMESTAMP });
@@ -2769,6 +2896,13 @@ async function sendToFirebase(mid, text){
 
       const mid = msgId();
 
+      // 답글 데이터 수집 후 초기화
+      let replyToData = null;
+      if (currentReplyTo){
+        replyToData = { ...currentReplyTo };
+        clearReply();
+      }
+
       const local = {
         roomId,
         messageId: mid,
@@ -2776,7 +2910,8 @@ async function sendToFirebase(mid, text){
         senderNick: myNick,
         text: text,
         ts: Date.now(),
-        seq: 0
+        seq: 0,
+        replyTo: replyToData
       };
 
       renderMessage(local, {pending:true});
@@ -2791,7 +2926,7 @@ async function sendToFirebase(mid, text){
       try{ db.ref('typing/' + roomId + '/' + myUid).remove(); }catch(e){}
       typingOn = false;
 
-      sendToFirebase(mid, text);
+      sendToFirebase(mid, text, replyToData);
     }
 
     function safeFocusInput(){
@@ -2970,6 +3105,44 @@ async function sendToFirebase(mid, text){
         });
         showToast('메시지가 삭제되었습니다.');
       }catch(e){ showToast('삭제 실패'); }
+    });
+
+    // ================================================================
+    // ===== 새 기능 3: 답글(Reply) =====
+    // ================================================================
+    const replyPreviewEl = document.getElementById('replyPreview');
+    const replyPreviewNameEl = document.getElementById('replyPreviewName');
+    const replyPreviewMsgEl = document.getElementById('replyPreviewMsg');
+    const replyCloseBtn = document.getElementById('replyCloseBtn');
+    const ctxReply = document.getElementById('ctxReply');
+
+    let currentReplyTo = null; // { mid, nick, text }
+
+    function setReply(mid, nick, text){
+      currentReplyTo = { mid, nick, text: String(text || '').slice(0, 100) };
+      replyPreviewNameEl.textContent = nick || '';
+      replyPreviewMsgEl.textContent = String(text || '').slice(0, 80);
+      replyPreviewEl.style.display = 'flex';
+      inputEl.focus();
+    }
+
+    function clearReply(){
+      currentReplyTo = null;
+      replyPreviewEl.style.display = 'none';
+      replyPreviewNameEl.textContent = '';
+      replyPreviewMsgEl.textContent = '';
+    }
+
+    replyCloseBtn.addEventListener('click', clearReply);
+
+    ctxReply.addEventListener('click', () => {
+      if (!ctxTargetMid) return;
+      const obj = seen.get(ctxTargetMid);
+      if (!obj) return;
+      const nick = obj.wrapEl ? (obj.wrapEl.querySelector('.meta span')?.textContent || '') : '';
+      const text = ctxTargetBubble ? ctxTargetBubble.textContent.replace('(수정됨)', '').trim() : '';
+      setReply(ctxTargetMid, nick, text);
+      closeMsgMenu();
     });
 
     // ================================================================
