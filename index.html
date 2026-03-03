@@ -988,7 +988,7 @@
 
     const firebaseConfig = {
       apiKey: "AIzaSyC6iyCkpqtaWgFXlJZiogn2SgfIz9j1I4M",
-      authDomain: "messenger-222df.firebaseapp.com",
+      authDomain: "messenger-222df.firebaseapp.com", 
       databaseURL: "https://messenger-222df-default-rtdb.asia-southeast1.firebasedatabase.app",
       projectId: "messenger-222df",
       storageBucket: "messenger-222df.firebasestorage.app",
@@ -1046,7 +1046,7 @@
     }
 
     function isSubscribed(rid){
-      return getSubscriptions().includes(String(rid || ''));
+      try{ return getSubscriptions().includes(String(rid || '')); }catch(e){ return false; }
     }
 
     async function toggleSubscribe(rid){
@@ -1348,12 +1348,7 @@
         firebaseStatus.innerHTML = `<div class="errorBox">⏳ Firebase 초기화 중...</div>`;
       }
     }
-    const EMOJIS = [
-      '😀','😂','🤣','😊','😍','🥰','😘','😎','🤩','🥳',
-      '😭','😢','😤','😡','🤯','😱','🥺','😴','🤔','🤫',
-      '👍','👎','👏','🙌','🤝','✌️','🤞','💪','🫶','❤️',
-      '🔥','⭐','🎉','🎊','💯','✅','❌','⚡','💬','👀'
-    ];
+    const EMOJIS = ['😀','😂','🤣','😊','😍','🥰','😘','😎','🤩','🥳','😭','😢','😤','😡','🤯','😱','🥺','😴','🤔','🤫','👍','👎','👏','🙌','🤝','✌️','🤞','💪','🫶','❤️','🔥','⭐','🎉','🎊','💯','✅','❌','⚡','💬','👀'];
 
     function buildEmoji(){
       emojiGrid.innerHTML = '';
@@ -2307,7 +2302,7 @@
         console.error('refreshRooms error:', e);
         const d = document.createElement('div');
         d.className = 'roomMeta';
-        d.textContent = '방 목록을 불러오지 못했습니다. (' + (e?.message || e) + ')';
+        d.textContent = '방 목록을 불러오지 못했습니다. (' + (e && e.message ? e.message : String(e)) + ')';
         roomList.appendChild(d);
       }
     }
@@ -2902,7 +2897,7 @@
       ownerNick = info.ownerNick;
       isOwner = (ownerUid && ownerUid === myUid);
       isJoined = true; // 입장 상태 표시
-      isSubbed = isSubscribed(rid); // 구독 여부 확인
+      try{ isSubbed = isSubscribed(rid); }catch(e){ isSubbed = false; }
 
       db.ref('roomMembers/' + roomId + '/' + myUid).set({
         nick: myNick,
