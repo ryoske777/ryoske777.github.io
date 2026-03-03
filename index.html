@@ -25,11 +25,11 @@
       --danger:#ef4444;
 
       --safeB: env(safe-area-inset-bottom, 0px);
-      --safeBComp: var(--safeB);
+      --safeBComp: var(--safeB); /* 키보드 열릴 때 입력바용 하단 여백 보정 */
       --safeT: env(safe-area-inset-top, 0px);
       --kb: 0px;
-      --kbFix: 40px;
-      --appH: 100dvh;
+      --kbFix: 40px; /* iOS 키보드 보조바 보정값 (기기별 36에서 48px 사이 조절) */
+      --appH: 100dvh; /* JS에서 visualViewport 기준 px로 갱신 */
       --composerH: 64px;
 
       --typingH: 34px;
@@ -70,7 +70,7 @@
       overflow:hidden;
       padding-top: var(--safeT);
       background: var(--bg);
-      -webkit-transform: translateZ(0);
+      -webkit-transform: translateZ(0); /* iOS GPU 레이어 강제 - 검은화면 방지 */
       transform: translateZ(0);
     }
 
@@ -311,11 +311,6 @@
       align-items:center;
       gap:6px;
     }
-    .chipSubbed{
-      border-color: var(--accent);
-      background: #f0fdf4;
-      color: var(--accent);
-    }
 
     .log{
       flex:1;
@@ -324,27 +319,6 @@
       padding: 12px 12px calc(var(--composerH) + var(--typingH) + max(0px, calc(var(--kb) + var(--safeBComp) - var(--kbFix))) + 12px) 12px;
       -webkit-overflow-scrolling: touch;
     }
-
-    .loadMoreBtn{
-      display:flex;
-      justify-content:center;
-      padding:16px 12px;
-      margin-bottom:12px;
-    }
-    .loadMoreBtn button{
-      padding:10px 20px;
-      border:1px solid var(--line);
-      border-radius:10px;
-      background:#fff;
-      font-size:13px;
-      font-weight:700;
-      color:var(--muted);
-      cursor:pointer;
-      transition:all .2s;
-    }
-    .loadMoreBtn button:hover{ background:#f8fafc; }
-    .loadMoreBtn button:active{ transform:scale(0.98); }
-    .loadMoreBtn button.loading{ opacity:0.6; pointer-events:none; }
 
     .msg{
       display:flex;
@@ -396,11 +370,13 @@
     .badgePending{ opacity:0.78; }
     .badgeFail{ color: var(--danger); font-weight:900; cursor:pointer; }
 
+    /* 읽음 표시 */
     .readBadge{
       font-weight:900;
       opacity:0.85;
     }
 
+    /* 입력창 바로 위 typing bar */
     .typingBar{
       position:fixed;
       left:0;
@@ -516,7 +492,7 @@
       .bubble{ max-width: 88%; }
       .emojiGrid{ grid-template-columns: repeat(7, 1fr); }
     }
-
+    /* ===== 비밀번호 모달 ===== */
     .modalOverlay{
       position:fixed;
       inset:0;
@@ -573,6 +549,11 @@
       flex:1;
     }
 
+
+
+
+
+    /* ===== 메시지 컨텍스트 메뉴 (수정/삭제/리액션) ===== */
     .msgCtxMenu{
       position:fixed;
       background:#fff;
@@ -601,6 +582,7 @@
     .msgCtxMenu button.danger{ color:var(--danger); }
     .ctxSep{ height:1px; background:var(--line); }
 
+    /* 빠른 리액션 바 */
     .quickReact{
       display:flex;
       gap:4px;
@@ -618,6 +600,7 @@
     }
     .quickReact span:hover{ transform:scale(1.3); }
 
+    /* ===== 메시지 수정 인라인 ===== */
     .editWrap{
       display:flex;
       gap:6px;
@@ -646,6 +629,7 @@
     .editSave{ background:#111827; color:#fff; }
     .editCancel{ background:#f3f4f6; color:#374151; }
 
+    /* 삭제된 메시지 */
     .deletedBubble{
       font-style:italic;
       color:var(--muted);
@@ -657,6 +641,7 @@
       margin-left:4px;
     }
 
+    /* ===== 리액션 표시 ===== */
     .reactionsBar{
       display:flex;
       flex-wrap:wrap;
@@ -680,6 +665,7 @@
     .reactChip.mine{ background:#f0fdf4; border-color:var(--accent); }
     .reactCount{ font-size:11px; color:var(--muted); font-weight:700; }
 
+    /* ===== 링크 프리뷰 ===== */
     .linkPreview{
       margin-top:8px;
       border:1px solid var(--line);
@@ -729,6 +715,9 @@
       -webkit-box-orient:vertical;
     }
 
+
+
+    /* ===== 답글(Reply) ===== */
     .replyPreview{
       position:absolute;
       bottom: calc(100% + 2px);
@@ -799,6 +788,7 @@
       text-overflow:ellipsis;
     }
 
+    /* ===== 토스트 알림 ===== */
     .toast{
       position:fixed;
       bottom:calc(var(--composerH) + max(0px, calc(var(--kb) + var(--safeBComp) - var(--kbFix))) + 12px);
@@ -825,28 +815,15 @@
     await OneSignal.init({
       appId: "90c2ab9b-c948-4b4d-8f1e-56326f9b7aea"
     });
-    window._OS = window.__OS = OneSignal;
-    
-    // 알림 클릭 시 처리
-    OneSignal.Notifications.addEventListener('click', function(notification) {
-      const url = notification.notification.launchURL;
-      if (url) {
-        window.location.href = url;
-      }
-    });
-
-    // 알림 수신 시 배지 업데이트
-    OneSignal.Notifications.addEventListener('foreground', function(notification) {
-      window.__updateBadge && window.__updateBadge();
-    });
-
-    try{
-      OneSignal.User.PushSubscription.addEventListener("change", function(){
-        window.__schedulePushSync && window.__schedulePushSync();
-      });
-      window.__schedulePushSync && window.__schedulePushSync();
-    }catch(e){}
+window._OS = window.__OS = OneSignal;
+try{
+  OneSignal.User.PushSubscription.addEventListener("change", function(){
+    window.__schedulePushSync && window.__schedulePushSync();
   });
+  window.__schedulePushSync && window.__schedulePushSync();
+}catch(e){}
+  });
+
 </script>
 </head>
 <body>
@@ -863,11 +840,13 @@
           <div class="menu" id="menu">
             <button id="mEnableNoti"><span>알림 켜기</span><span id="mEnableNotiState">›</span></button>
             <button id="mSound"><span>소리(삐) 켜기</span><span id="mSoundState">›</span></button>
+
+            <!-- 추가: 내 말풍선 색상 토글 -->
             <button id="mMyBubbleWhite"><span>내 말풍선 흰색(상대와 동일)</span><span id="mMyBubbleWhiteState">›</span></button>
+
             <button id="mNick"><span>닉네임 변경</span><span>›</span></button>
-            <button id="mRoomName"><span>방 이름 변경</span><span>›</span></button>
-            <button id="mRoomPass"><span>비밀번호 설정/변경</span><span>›</span></button>
-            <button id="mUnsubscribe" style="display:none;"><span>구독 해제</span><span>›</span></button>
+            <button id="mRoomName"><span>방 이름 변경(방장)</span><span>›</span></button>
+            <button id="mRoomPass"><span>비밀번호 설정/변경(방장)</span><span>›</span></button>
             <button id="mLeave"><span>나가기</span><span>›</span></button>
             <div class="hint" id="menuHint"></div>
           </div>
@@ -907,8 +886,11 @@
         </div>
 
         <div class="sectionTitle">채팅방 목록</div>
-        <div id="firebaseStatus"></div>
         <div class="roomList" id="roomList"></div>
+
+        <div class="rowBtns">
+          <button class="ghostBtn" id="btnJoin">참여하기</button>
+        </div>
 
         <div class="sectionTitle">안내</div>
         <div class="roomMeta">
@@ -942,6 +924,8 @@
     </div>
   </div>
 
+
+  <!-- ===== 메시지 컨텍스트 메뉴 (수정/삭제/리액션) ===== -->
   <div class="msgCtxMenu" id="msgCtxMenu">
     <div class="quickReact" id="quickReactBar">
       <span data-e="👍">👍</span>
@@ -956,22 +940,25 @@
     <button id="ctxDelete" class="danger">🗑 삭제</button>
   </div>
 
+  <!-- ===== 토스트 알림 ===== -->
   <div class="toast" id="toast"></div>
 
-  <div class="modalOverlay" id="passModal" aria-hidden="true">
-    <div class="modalCard" role="dialog" aria-modal="true" aria-labelledby="passModalTitle">
-      <div class="modalTitle" id="passModalTitle">비밀번호</div>
-      <div class="modalBody" id="passModalBody"></div>
-      <input id="passModalInput" type="password" autocomplete="off" placeholder="비밀번호" />
-      <div class="modalBtnsRow">
-        <button class="primaryBtn" id="passModalOk">확인</button>
-        <button class="ghostBtn" id="passModalCancel">취소</button>
-      </div>
-      <div class="modalBtnsRow" id="passModalOwnerRow" style="display:none;">
-        <button class="ghostBtn" id="passModalRemove">비밀번호 제거</button>
+    <!-- ===== 비밀번호 모달 ===== -->
+    <div class="modalOverlay" id="passModal" aria-hidden="true">
+      <div class="modalCard" role="dialog" aria-modal="true" aria-labelledby="passModalTitle">
+        <div class="modalTitle" id="passModalTitle">비밀번호</div>
+        <div class="modalBody" id="passModalBody"></div>
+        <input id="passModalInput" type="password" autocomplete="off" placeholder="비밀번호" />
+        <div class="modalBtnsRow">
+          <button class="primaryBtn" id="passModalOk">확인</button>
+          <button class="ghostBtn" id="passModalCancel">취소</button>
+        </div>
+        <div class="modalBtnsRow" id="passModalOwnerRow" style="display:none;">
+          <button class="ghostBtn" id="passModalRemove">비밀번호 제거</button>
+        </div>
       </div>
     </div>
-  </div>
+
 
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
@@ -981,37 +968,23 @@
     const SERVICE_URL = location.href;
     const INIT_ROOM_ID = new URLSearchParams(location.search).get('roomId') || '';
 
-    // ==================== Firebase 설정 ====================
-    // 다음 값들을 Firebase 콘솔에서 복사한 값으로 교체해주세요
-    const PUSH_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbyyEYvCwwTsmlaQwKIUsA00gHbBVNpGiHr_hRUGREUCgcquHH5lY3SHcBTlKU_v6Lqz/exec"; // 선택사항
-    const PUSH_SECRET = "ryo1234"; // 선택사항
+    const PUSH_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbyyEYvCwwTsmlaQwKIUsA00gHbBVNpGiHr_hRUGREUCgcquHH5lY3SHcBTlKU_v6Lqz/exec";
+    const PUSH_SECRET = "ryo1234";
 
     const firebaseConfig = {
       apiKey: "AIzaSyC6iyCkpqtaWgFXlJZiogn2SgfIz9j1I4M",
-      authDomain: "messenger-222df.firebaseapp.com", 
+      authDomain: "messenger-222df.firebaseapp.com",
       databaseURL: "https://messenger-222df-default-rtdb.asia-southeast1.firebasedatabase.app",
       projectId: "messenger-222df",
       storageBucket: "messenger-222df.firebasestorage.app",
-      messagingSenderId: "",
-      appId: "",
-      measurementId: ""
+      messagingSenderId: "694962613962",
+      appId: "1:694962613962:web:764e45b00345a8a27f4e33",
+      measurementId: "G-18XS6BY9GK"
     };
 
-    let db, SV;
-    let firebaseReady = false;
-    let firebaseError = null;
-
-    // Firebase 초기화
-    try {
-      firebase.initializeApp(firebaseConfig);
-      db = firebase.database();
-      SV = firebase.database.ServerValue;
-      firebaseReady = true;
-      console.log('✓ Firebase 초기화 성공');
-    } catch (error) {
-      firebaseError = '⚠️ Firebase 초기화 실패: ' + (error?.message || error);
-      console.error(firebaseError, error);
-    }
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const SV = firebase.database.ServerValue;
 
     const NAV_URL = location.origin + location.pathname;
 
@@ -1019,83 +992,42 @@
     const LS_NOTI   = 'chat_notify_enabled_v1';
     const LS_SOUND  = 'chat_beep_enabled_v1';
     const LS_ROOM_AUTH_PREFIX = 'chat_room_auth_v1_';
-    const LS_MY_BUBBLE_WHITE = 'chat_my_bubble_white_v1';
-    const LS_SUBSCRIPTIONS = 'chat_subscriptions_v1';
-    const LS_ENTRIES_PREFIX = 'chat_entries_v1_';
 
+    // 추가: 내 말풍선 흰색 토글 저장키
+    const LS_MY_BUBBLE_WHITE = 'chat_my_bubble_white_v1';
+
+    // 기본(원래) 내 말풍선 색상 백업(복원용)
     const DEFAULT_ME_BG   = '#374151';
     const DEFAULT_ME_TEXT = '#ffffff';
+
+    // 상대(기본) 말풍선 색상
     const DEFAULT_OTHER_BG   = '#ffffff';
     const DEFAULT_OTHER_TEXT = '#111827';
 
-    // ===== 구독 기능 =====
-    function getSubscriptions(){
-      try{
-        const data = localStorage.getItem(LS_SUBSCRIPTIONS) || '[]';
-        const parsed = JSON.parse(data);
-        return Array.isArray(parsed) ? parsed : [];
-      }catch(e){
-        return [];
-      }
-    }
-
-    function setSubscriptions(subs){
-      try{
-        localStorage.setItem(LS_SUBSCRIPTIONS, JSON.stringify(subs));
-      }catch(e){}
-    }
-
-    function isSubscribed(rid){
-      try{ return getSubscriptions().includes(String(rid || '')); }catch(e){ return false; }
-    }
-
-    async function toggleSubscribe(rid){
-      let subs = getSubscriptions();
-      const ridStr = String(rid || '');
-      
-      if (subs.includes(ridStr)){
-        // 구독 해제
-        subs = subs.filter(r => r !== ridStr);
-        showToast('구독을 해제했습니다.');
-      } else {
-        // 구독
-        subs.push(ridStr);
-        showToast('구독했습니다.');
-      }
-      
-      setSubscriptions(subs);
-      await refreshRooms();
-    }
-
-    // 페이지네이션 설정
-    const PAGE_SIZE = 50; // 한 번에 로드할 메시지 수
-    let loadedMessageCount = 0; // 현재 로드된 메시지 수
-    let isLoadingMore = false;
-    let hasMoreMessages = true;
-
     function pushToSubscriptions(subscriptionIds, title, body, roomId){
-      try{
-        if (!PUSH_WEBHOOK_URL) return;
-        if (!Array.isArray(subscriptionIds) || subscriptionIds.length === 0) return;
+  try{
+    if (!PUSH_WEBHOOK_URL) return;
+    if (!Array.isArray(subscriptionIds) || subscriptionIds.length === 0) return;
 
-        const url = NAV_URL + '?roomId=' + encodeURIComponent(roomId);
+    const url = NAV_URL + '?roomId=' + encodeURIComponent(roomId);
 
-        const payload = {
-          secret: PUSH_SECRET,
-          include_subscription_ids: subscriptionIds.slice(0, 20000),
-          title: String(title || 'Chat'),
-          body: String(body || 'New message'),
-          url
-        };
+    const payload = {
+      secret: PUSH_SECRET,
+      include_subscription_ids: subscriptionIds.slice(0, 20000),
+      title: String(title || 'Chat'),
+      body: String(body || 'New message'),
+      url
+    };
 
-        fetch(PUSH_WEBHOOK_URL, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify(payload)
-        }).catch(()=>{});
-      }catch(e){}
-    }
+    // CORS 때문에 응답은 신경 쓰지 않고 "발사"만 합니다.
+    fetch(PUSH_WEBHOOK_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    }).catch(()=>{});
+  }catch(e){}
+}
     
     function uuid(){
       if (crypto && crypto.randomUUID) return crypto.randomUUID();
@@ -1112,6 +1044,8 @@
       }
     }
 
+
+    // ===== 비밀번호방(선택) =====
     function _jsonParseSafe(s){
       try{ return JSON.parse(s); }catch(e){ return null; }
     }
@@ -1152,6 +1086,7 @@
       return await sha256Hex('roompass|' + String(pass || '') + '|' + String(salt || ''));
     }
 
+    // 모달(비밀번호 입력/설정)
     let __passModalResolve = null;
     function closePassModal(result){
       try{
@@ -1271,6 +1206,7 @@
       return { ver: newVer };
     }
 
+
     function isInIframe(){
       try{ return window.top !== window.self; }catch(e){ return true; }
     }
@@ -1284,6 +1220,7 @@
       return (window.navigator.standalone === true) || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
     }
 
+    // UI refs
     const header = document.getElementById('header');
     const roomTitle = document.getElementById('roomTitle');
     const roomSub = document.getElementById('roomSub');
@@ -1296,13 +1233,14 @@
     const mEnableNotiState = document.getElementById('mEnableNotiState');
     const mSound = document.getElementById('mSound');
     const mSoundState = document.getElementById('mSoundState');
+
+    // 추가: 내 말풍선 흰색 토글 메뉴
     const mMyBubbleWhite = document.getElementById('mMyBubbleWhite');
     const mMyBubbleWhiteState = document.getElementById('mMyBubbleWhiteState');
 
     const mNick = document.getElementById('mNick');
     const mRoomName = document.getElementById('mRoomName');
     const mRoomPass = document.getElementById('mRoomPass');
-    const mUnsubscribe = document.getElementById('mUnsubscribe');
     const mLeave = document.getElementById('mLeave');
 
     const home = document.getElementById('home');
@@ -1314,6 +1252,7 @@
 
     const btnCreate = document.getElementById('btnCreate');
     const btnRefresh = document.getElementById('btnRefresh');
+    const btnJoin = document.getElementById('btnJoin');
     const roomList = document.getElementById('roomList');
     const appEl = document.getElementById('app');
 
@@ -1327,6 +1266,8 @@
     const emojiGrid = document.getElementById('emojiGrid');
 
     const typingBar = document.getElementById('typingBar');
+
+    // 비밀번호 모달
     const passModal = document.getElementById('passModal');
     const passModalTitle = document.getElementById('passModalTitle');
     const passModalBody = document.getElementById('passModalBody');
@@ -1337,25 +1278,14 @@
     const passModalRemove = document.getElementById('passModalRemove');
     setupPassModal();
 
-    // Firebase 상태 표시
-    function updateFirebaseStatus(){
-      if (!firebaseStatus) return;
-      if (firebaseError){
-        firebaseStatus.innerHTML = `<div class="errorBox">❌ ${escapeHtml(firebaseError)}<br><br>Firebase 콘솔에서 다음을 확인해주세요:<br>1. apiKey, databaseURL 등이 올바르게 입력되었는지<br>2. Authentication → 익명 로그인 활성화<br>3. Realtime Database 규칙이 public으로 설정되었는지</div>`;
-      } else if (firebaseReady){
-        firebaseStatus.innerHTML = `<div style="color:#16a34a;font-size:12px;margin:10px 0;">✓ Firebase 연결됨</div>`;
-      } else {
-        firebaseStatus.innerHTML = `<div class="errorBox">⏳ Firebase 초기화 중...</div>`;
-      }
-    }
-    const EMOJIS = ['😀','😂','🤣','😊','😍','🥰','😘','😎','🤩','🥳','😭','😢','😤','😡','🤯','😱','🥺','😴','🤔','🤫','👍','👎','👏','🙌','🤝','✌️','🤞','💪','🫶','❤️','🔥','⭐','🎉','🎊','💯','✅','❌','⚡','💬','👀'];
-
+    const EMOJIS = ['😀','😄','😊','😍','😘','😎','🥹','😂','😭','😡','👍','👏','🙏','🔥','🎉','💯','❤️','✨','⭐','✅','❌','⚡','🍀','☕','🍜','🎮','📌','📝'];
     function buildEmoji(){
       emojiGrid.innerHTML = '';
       EMOJIS.forEach(e => {
         const d = document.createElement('div');
         d.className = 'emoji clickable';
         d.textContent = e;
+        // iOS Safari: 이모지 터치 시 input blur로 키보드가 닫히는 현상 방지
         let emojiTouchHandled = false;
         const insertEmojiAndKeepKeyboard = () => {
           inputEl.value = (inputEl.value || '') + e;
@@ -1391,6 +1321,7 @@
     }
     buildEmoji();
     
+    // 방 만들기: 비밀번호 입력 UI 토글
     if (homeUsePass){
       const syncHomePassUI = () => {
         const on = !!homeUsePass.checked;
@@ -1401,14 +1332,16 @@
       syncHomePassUI();
     }
 
+
     function syncAppViewportHeight(){
+      // iOS Safari/PWA에서 키보드/툴바 애니메이션 중 100vh/100dvh가 순간적으로 어긋나는 경우 보정
       let h = window.innerHeight || document.documentElement.clientHeight || 0;
       if (window.visualViewport){
         const vv = window.visualViewport;
         h = Math.round((vv.height || 0) + (vv.offsetTop || 0)) || h;
       }
       document.documentElement.style.setProperty('--appH', h + 'px');
-      if (appEl) appEl.style.height = h + 'px';
+      if (appEl) appEl.style.height = h + 'px'; // 일부 iOS 반영 타이밍 보완
     }
 
     function updateKeyboardInset(){
@@ -1424,6 +1357,7 @@
       const kb = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
       document.documentElement.style.setProperty('--kb', kb + 'px');
 
+      // iOS에서 키보드가 열렸을 때 safe-area(bottom)가 중복 계산되는 경우가 있어 입력 UI용만 보정
       const keyboardOpen = kb > 80;
       document.documentElement.style.setProperty(
         '--safeBComp',
@@ -1448,9 +1382,11 @@
     window.addEventListener('orientationchange', () => setTimeout(refreshViewportLayoutSoon, 180));
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden){
+        // 백그라운드 복귀 시 레이아웃 재계산 + 검은 화면 복구
         if (appEl) {
           appEl.style.display = 'none';
-          appEl.offsetHeight;
+          // eslint-disable-next-line no-unused-expressions
+          appEl.offsetHeight; // reflow 강제
           appEl.style.display = 'flex';
         }
         refreshViewportLayoutSoon();
@@ -1467,11 +1403,13 @@
       closeMenu();
     });
 
+    // iOS Safari: 이모지 버튼 터치 시 input blur(키보드 닫힘) 방지
     let emojiBtnTouchHandled = false;
     const toggleEmojiPanelKeepKeyboard = () => {
       emojiPanel.classList.toggle('open');
       const isOpen = emojiPanel.classList.contains('open');
       emojiPanel.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+      // 패널 토글 후에도 입력창 포커스를 유지해 키보드가 내려가지 않게 처리
       try{
         inputEl.focus({ preventScroll: true });
         const end = (inputEl.value || '').length;
@@ -1505,12 +1443,14 @@
       emojiPanel.setAttribute('aria-hidden', 'true');
     });
 
+    // iOS에서 채팅 영역 드래그 후 레이아웃이 안정화되는 경우가 있어 드래그 종료 시 한 번 더 보정
     ['touchend','mouseup'].forEach(evt => {
       logEl.addEventListener(evt, () => {
         if (document.activeElement === inputEl) refreshViewportLayoutSoon();
       }, { passive:true });
     });
 
+    // auth + state
     let myUid = '';
     let myNick = (localStorage.getItem(LS_NICK) || '').trim();
 
@@ -1519,27 +1459,30 @@
     let ownerUid = '';
     let ownerNick = '';
     let isOwner = false;
-    let isJoined = false; // 입장 여부
-    let isSubbed = false; // 구독 여부
 
+    // presence
     let presenceTimer = null;
     let presenceRef = null;
 
+    // typing
     let typingKeepAliveTimer = null;
     let typingWatchRef = null;
     let lastTypeAt = 0;
     let typingOn = false;
 
+    // reads (읽음)
     let readsWatchRef = null;
     let readsCache = {};
     let readsMarkTimer = null;
     let readsScrollTimer = null;
 
+    // messages
     let msgUnsub = null;
     let afterSeq = 0;
-    const seen = new Map();
+    const seen = new Map(); // messageId -> { seq, metaEl, senderId }
     const pending = new Map();
 
+    // ---- 알림/소리/타이틀 ----
     const TITLE_BASE = 'Chat';
     let unread = 0;
     let titleBlinkTimer = null;
@@ -1547,56 +1490,53 @@
     let notifyEnabled = (localStorage.getItem(LS_NOTI) === '1');
     let soundEnabled  = (localStorage.getItem(LS_SOUND) === '1');
 
-    // 배지 업데이트 함수
-    function updateBadgeCount(){
-      try{
-        if (window.__OS && window.__OS.User){
-          window.__OS.User.addTag('unread_count', unread.toString());
-        }
-      }catch(e){}
-    }
-    window.__updateBadge = updateBadgeCount;
+// ===== OneSignal 구독ID -> Firebase 저장 =====
+function syncPushSubToFirebase(){
+  try{
+    if (!window.__OS) return;
+    if (!myUid) return;
 
-    function syncPushSubToFirebase(){
-      try{
-        if (!window.__OS) return;
-        if (!myUid) return;
+    const subId = window.__OS.User.PushSubscription.id || '';
+    const optedIn = (window.__OS.User.PushSubscription.optedIn === true);
 
-        const subId = window.__OS.User.PushSubscription.id || '';
-        const optedIn = (window.__OS.User.PushSubscription.optedIn === true);
+    // 아직 구독이 없으면 저장하지 않음
+    if (!optedIn || !subId) return;
 
-        if (!optedIn || !subId) return;
+    const onesignalId = window.__OS.User.onesignalId || null;
 
-        const onesignalId = window.__OS.User.onesignalId || null;
+    db.ref('pushSubs/' + myUid + '/' + subId).set({
+      onesignalId,
+      nick: myNick || '',
+      updatedAt: SV.TIMESTAMP
+    }).catch(()=>{});
+  }catch(e){}
+}
 
-        db.ref('pushSubs/' + myUid + '/' + subId).set({
-          onesignalId,
-          nick: myNick || '',
-          updatedAt: SV.TIMESTAMP
-        }).catch(()=>{});
-      }catch(e){}
-    }
+let __pushSyncTimer = null;
+function schedulePushSync(){
+  if (__pushSyncTimer) clearTimeout(__pushSyncTimer);
+  __pushSyncTimer = setTimeout(syncPushSubToFirebase, 300);
+}
+window.__schedulePushSync = schedulePushSync;
 
-    let __pushSyncTimer = null;
-    function schedulePushSync(){
-      if (__pushSyncTimer) clearTimeout(__pushSyncTimer);
-      __pushSyncTimer = setTimeout(syncPushSubToFirebase, 300);
-    }
-    window.__schedulePushSync = schedulePushSync;
 
+    // 추가: 내 말풍선 흰색 모드
     let myBubbleWhite = (localStorage.getItem(LS_MY_BUBBLE_WHITE) === '1');
 
     function applyMyBubbleTheme(){
       if (myBubbleWhite){
+        // 내 말풍선을 상대와 동일하게(흰색) 맞춤
         document.documentElement.style.setProperty('--me', DEFAULT_OTHER_BG);
         document.documentElement.style.setProperty('--meText', DEFAULT_OTHER_TEXT);
       } else {
+        // 기본값(원래 상태) 복원
         document.documentElement.style.setProperty('--me', DEFAULT_ME_BG);
         document.documentElement.style.setProperty('--meText', DEFAULT_ME_TEXT);
       }
     }
     applyMyBubbleTheme();
 
+    // iOS 오디오 unlock
     let audioCtx = null;
     let audioReady = false;
     const BEEP_WAV =
@@ -1662,6 +1602,7 @@
       if (titleBlinkTimer) return;
       let flip = false;
       titleBlinkTimer = setInterval(() => {
+        // 포그라운드(탭이 활성)로 돌아오면 타이틀 깜빡임 즉시 중단
         if (!document.hidden && document.hasFocus()){
           stopTitleBlink();
           return;
@@ -1681,11 +1622,9 @@
       }
       document.title = TITLE_BASE;
     }
-    
     function bumpUnread(){
-      if (!isJoined) return; // 구독만 하면 unread 증가 안함
       unread = Math.min(999, unread + 1);
-      updateBadgeCount();
+      // 탭이 비활성일 때만 타이틀 깜빡임(활성 탭에서는 깜빡이지 않음)
       if (document.hidden || !document.hasFocus()){
         startTitleBlink();
       } else {
@@ -1693,25 +1632,24 @@
       }
       setHeader();
     }
-    
     function clearUnread(){
-      if (unread === 0) return; // 이미 0이면 함수 종료
       unread = 0;
-      updateBadgeCount();
       stopTitleBlink();
       setHeader();
     }
 
+    // 포커스/가시성 복귀 시 타이틀/미확인 카운트 정리(크롬 타이틀 깜빡임 방지)
     window.addEventListener('focus', () => {
-      try{ if (roomId && isJoined) clearUnread(); }catch(e){}
+      try{ if (roomId) clearUnread(); }catch(e){}
     });
     document.addEventListener('visibilitychange', () => {
       try{
-        if (!document.hidden && roomId && isJoined){
+        if (!document.hidden && roomId){
           clearUnread();
         }
       }catch(e){}
     });
+
 
     function shouldNotifyNow(){
       return (document.hidden || !document.hasFocus() || !isNearBottom());
@@ -1766,6 +1704,7 @@
           await unlockAudioHard();
           updateMenuStates();
 
+          // OneSignal 웹푸시 구독(Subscription)까지 확실히 opt-in
           try{
             if (window.__OS && window.__OS.User && window.__OS.User.PushSubscription){
               window.__OS.User.PushSubscription.optIn();
@@ -1806,6 +1745,7 @@
       }
     }
 
+    // 추가: 내 말풍선 흰색 토글
     function toggleMyBubbleWhite(){
       myBubbleWhite = !myBubbleWhite;
       localStorage.setItem(LS_MY_BUBBLE_WHITE, myBubbleWhite ? '1' : '0');
@@ -1831,6 +1771,8 @@
       }
       mEnableNotiState.textContent = notiText;
       mSoundState.textContent = soundEnabled ? '켜짐' : '꺼짐';
+
+      // 추가: 내 말풍선 흰색 상태 표시
       mMyBubbleWhiteState.textContent = myBubbleWhite ? '켜짐' : '꺼짐';
 
       const hints = [];
@@ -1841,7 +1783,7 @@
       if (!iosNoNoti && isInIframe()){
         hints.push('임베드(iframe) 상태: 알림 권한 요청 차단 가능 → "새 탭으로 열기" 필요');
       }
-      const base = (isOwner ? '방장 권한: 방 이름/비밀번호 변경 가능' : '방 이름/비밀번호는 방장만 변경 가능');
+      const base = (isOwner ? '방장 권한: 방 이름/비밀번호 변경 가능' : '방장만 방 이름/비밀번호 변경 가능');
       menuHint.innerHTML = escapeHtml(base + (hints.length ? '\n' + hints.join('\n') : ''));
     }
 
@@ -1855,16 +1797,19 @@
       await toggleSoundFromUserGesture();
     });
 
+    // 추가: 내 말풍선 흰색 버튼
     mMyBubbleWhite.addEventListener('click', () => {
       closeMenu();
       toggleMyBubbleWhite();
     });
 
+    // ---- 채팅 로직 ----
     function setNick(nick){
       myNick = String(nick || '').trim();
       if (!myNick) return false;
       localStorage.setItem(LS_NICK, myNick);
 
+      // 닉네임이 바뀌면 pushSubs에도 반영되도록 동기화 예약
       try{ window.__schedulePushSync && window.__schedulePushSync(); }catch(e){}
 
       return true;
@@ -1888,11 +1833,9 @@
     }
 
     function isNearBottom(){
-      // 스크롤 경계선에서만 읽음 처리 (140px 이내)
       const gap = logEl.scrollHeight - (logEl.scrollTop + logEl.clientHeight);
-      return gap <= 140;
+      return gap < 140;
     }
-    
     function scrollToBottom(force){
       if (!force && !isNearBottom()) return;
       logEl.scrollTop = logEl.scrollHeight;
@@ -1910,6 +1853,7 @@
       typingBar.setAttribute('aria-hidden', 'false');
     }
 
+    // ── 링크 URL 추출 헬퍼 ──
     function extractUrl(text){
       try{
         const m = String(text||'').match(/https?:\/\/[^\s]+/);
@@ -1917,6 +1861,7 @@
       }catch(e){ return null; }
     }
 
+    // ── 링크 프리뷰 렌더 (allorigins 프록시 사용) ──
     async function renderLinkPreview(url, container){
       try{
         const proxy = 'https://api.allorigins.win/get?url=' + encodeURIComponent(url);
@@ -1965,7 +1910,8 @@
       }catch(e){}
     }
 
-    const reactionWatchers = new Map();
+    // ── 리액션 업데이트 (Firebase 연동) ──
+    const reactionWatchers = new Map(); // mid -> firebase ref
 
     function watchReactions(mid, reactionsBar, isMine){
       if (reactionWatchers.has(mid)) return;
@@ -1975,6 +1921,7 @@
       ref.on('value', snap => {
         const data = snap.val() || {};
         reactionsBar.innerHTML = '';
+        // 집계
         const tally = {};
         const myReact = {};
         Object.entries(data).forEach(([uid, emoji]) => {
@@ -2009,6 +1956,9 @@
       reactionWatchers.clear();
     }
 
+    // ── renderMessage (확장판) ──
+    // ── 버블 내용을 메시지 데이터 기준으로 (재)구성하는 헬퍼 ──
+    // renderMessage 최초 렌더 & mergeServerMessage 확정 시 공유 사용
     function buildQuoteEl(replyTo){
       const quote = document.createElement('div');
       quote.className = 'replyQuote';
@@ -2039,10 +1989,13 @@
         return;
       }
       bubble.className = 'bubble';
+      // 답글 인용 (있을 때만)
       if (m.replyTo && m.replyTo.text){
         bubble.appendChild(buildQuoteEl(m.replyTo));
       }
+      // 본문 텍스트
       bubble.appendChild(document.createTextNode(String(m.text || '')));
+      // 수정됨 마크
       if (m.edited){
         const em = document.createElement('span');
         em.className = 'editedMark';
@@ -2051,21 +2004,24 @@
       }
     }
 
-    function renderMessage(m, opt){
+        function renderMessage(m, opt){
       if (seen.has(m.messageId)) return;
       const isMine = (m.senderId === myUid);
 
       const wrap = document.createElement('div');
       wrap.className = 'msg';
       wrap.dataset.mid = m.messageId;
-      wrap.dataset.seq = m.seq || 0; // seq 속성 추가
 
       const row = document.createElement('div');
       row.className = 'row ' + (isMine ? 'me' : 'other');
 
+      // ── 버블 콘텐츠 ──
       const bubble = document.createElement('div');
+
+      // 버블 구성 (rebuildBubble 헬퍼로 통일)
       rebuildBubble(bubble, m, wrap);
 
+      // 링크 프리뷰 (비동기, pending일 때 스킵)
       if (!opt?.pending && !m.deleted){
         const url = extractUrl(String(m.text || ''));
         if (url) renderLinkPreview(url, wrap);
@@ -2074,6 +2030,7 @@
       row.appendChild(bubble);
       wrap.appendChild(row);
 
+      // ── 리액션 바 ──
       const reactionsBar = document.createElement('div');
       reactionsBar.className = 'reactionsBar';
       const reactAlign = document.createElement('div');
@@ -2082,6 +2039,7 @@
       wrap.appendChild(reactAlign);
       if (!opt?.pending && !m.deleted) watchReactions(m.messageId, reactionsBar, isMine);
 
+      // ── 메타 (닉네임, 시간) ──
       const meta = document.createElement('div');
       meta.className = 'meta ' + (isMine ? 'me' : '');
       const who = document.createElement('span');
@@ -2100,6 +2058,7 @@
 
       wrap.appendChild(meta);
 
+      // ── 롱프레스/우클릭 → 컨텍스트 메뉴 ──
       if (!m.deleted){
         let longTimer = null;
         const openCtx = (e) => {
@@ -2116,20 +2075,23 @@
       seen.set(m.messageId, { seq: Number(m.seq || 0), metaEl: meta, senderId: m.senderId, wrapEl: wrap, bubbleEl: bubble, text: String(m.text || ''), replyTo: m.replyTo || null });
     }
 
+    // ── 메시지 수정/삭제 반영 (Firebase child_changed 수신 시) ──
     function applyMsgUpdate(m){
       const obj = seen.get(m.messageId);
       if (!obj) return;
       const bubble = obj.bubbleEl;
       if (!bubble) return;
 
+      // seen에 저장된 replyTo를 유지하면서 버블 재구성
       const fullMsg = {
         text: String(m.text || ''),
         deleted: !!m.deleted,
         edited: !!m.edited,
-        replyTo: obj.replyTo || null
+        replyTo: obj.replyTo || null   // 수정/삭제해도 원본 답글 인용은 유지
       };
       rebuildBubble(bubble, fullMsg, obj.wrapEl);
 
+      // seen 갱신
       obj.text = fullMsg.text;
     }
 
@@ -2162,7 +2124,6 @@
     }
 
     function updateReadBadges(){
-      // 구독자만 제외 (입장한 사용자만 카운트)
       const otherUids = Object.keys(readsCache || {}).filter(uid => uid !== myUid);
       const totalOthers = otherUids.length;
 
@@ -2200,15 +2161,20 @@
       const wasPending = pending.has(m.messageId);
 
       if (!seen.has(m.messageId)){
+        // 처음 보는 메시지 → 새로 렌더
         renderMessage(m, {pending:false});
       } else if (wasPending) {
+        // pending이었던 내 메시지가 서버에서 확정됨
+        // → 버블을 서버 데이터(replyTo 포함)로 완전히 재구성
         const obj = seen.get(m.messageId);
         if (obj && obj.bubbleEl && !m.deleted) {
           rebuildBubble(obj.bubbleEl, m, obj.wrapEl);
 
+          // 링크 프리뷰 (pending일 때 스킵했던 것)
           const url = extractUrl(String(m.text || ''));
           if (url) renderLinkPreview(url, obj.wrapEl);
 
+          // 리액션 watcher (pending일 때 스킵했던 것)
           const reactionsBar = obj.wrapEl && obj.wrapEl.querySelector('.reactionsBar');
           if (reactionsBar && !reactionWatchers.has(m.messageId)){
             watchReactions(m.messageId, reactionsBar, true);
@@ -2221,6 +2187,7 @@
       const obj = seen.get(m.messageId);
       if (obj){
         obj.seq = Number(m.seq || obj.seq || 0);
+        // text, replyTo를 서버 데이터로 확정
         if (m.text !== undefined) obj.text = String(m.text || '');
         if (m.replyTo !== undefined) obj.replyTo = m.replyTo || null;
       }
@@ -2230,11 +2197,6 @@
     }
 
     async function refreshRooms(){
-      if (!firebaseReady) {
-        updateFirebaseStatus();
-        return;
-      }
-
       roomList.innerHTML = '';
       try{
         const snap = await db.ref('rooms').orderByChild('updatedAt').limitToLast(50).once('value');
@@ -2271,23 +2233,10 @@
 
           const right = document.createElement('div');
           right.className = 'roomRight';
-          
-          const joined = isSubscribed(r.roomId);
-          
-          const btnEnter = document.createElement('div');
-          btnEnter.className = 'chip';
-          btnEnter.textContent = '입장';
-          
-          const btnSub = document.createElement('div');
-          btnSub.className = 'chip' + (joined ? ' chipSubbed' : '');
-          btnSub.textContent = joined ? '✓ 구독중' : '구독';
-          btnSub.addEventListener('click', (e) => {
-            e.stopPropagation();
-            toggleSubscribe(r.roomId);
-          });
-          
-          right.appendChild(btnEnter);
-          right.appendChild(btnSub);
+          const chip = document.createElement('div');
+          chip.className = 'chip';
+          chip.textContent = '입장';
+          right.appendChild(chip);
 
           item.appendChild(left);
           item.appendChild(right);
@@ -2299,10 +2248,9 @@
           roomList.appendChild(item);
         });
       }catch(e){
-        console.error('refreshRooms error:', e);
         const d = document.createElement('div');
         d.className = 'roomMeta';
-        d.textContent = '방 목록을 불러오지 못했습니다. (' + (e && e.message ? e.message : String(e)) + ')';
+        d.textContent = '방 목록을 불러오지 못했습니다. (권한/규칙 확인 필요)';
         roomList.appendChild(d);
       }
     }
@@ -2319,6 +2267,7 @@
       const newRoomId = uuid();
       const now = Date.now();
 
+      // 비밀번호(선택)
       let passEnabled = false;
       let passSalt = '';
       let passHash = '';
@@ -2364,6 +2313,10 @@
       }
     });
 
+    btnJoin.addEventListener('click', async () => {
+      alert('방 목록에서 입장해 주세요.');
+    });
+
     async function joinRoomFlow(rid){
       rid = String(rid||'').trim();
       if (!rid) return;
@@ -2377,6 +2330,7 @@
         const info = await loadRoomInfo(rid);
         if (!info){ alert('방을 찾을 수 없습니다.'); return; }
 
+        // 비밀번호 확인(필요 시) — 확인 전에는 URL을 바꾸지 않습니다.
         const ok = await ensureRoomAccess(info);
         if (!ok) return;
         info._accessOk = true;
@@ -2394,6 +2348,7 @@
         presenceTimer = null;
 
         if (presenceRef){
+          // 현재 방에서 나갈 때 온라인 표시가 남지 않도록 즉시 제거 시도
           try{ presenceRef.remove().catch(()=>{}); }catch(e){}
           try{ presenceRef.onDisconnect().cancel(); }catch(e){}
         }
@@ -2401,7 +2356,8 @@
       }catch(e){}
     }
 
-    function startPresence(rid){
+
+function startPresence(rid){
       stopPresence();
 
       presenceRef = db.ref('presence/' + rid + '/' + myUid);
@@ -2409,7 +2365,7 @@
       const obj = {
         nick: myNick,
         lastActive: SV.TIMESTAMP,
-        vis: document.visibilityState
+        vis: document.visibilityState // visible | hidden
       };
 
       presenceRef.onDisconnect().remove();
@@ -2529,6 +2485,8 @@
       });
     }
 
+
+    // presence vis 즉시 갱신(포그라운드/백그라운드 전환 시)
     document.addEventListener('visibilitychange', () => {
       try{
         if (presenceRef){
@@ -2541,6 +2499,7 @@
       }catch(e){}
     });
 
+    // ===== 읽음(reads) =====
     function stopReads(){
       try{
         if (readsWatchRef){
@@ -2559,7 +2518,6 @@
 
     function canMarkRead(){
       if (!roomId) return false;
-      if (!isJoined) return false; // 입장한 경우만 읽음 처리
       if (document.hidden) return false;
       if (!document.hasFocus()) return false;
       if (logEl.style.display === 'none') return false;
@@ -2595,10 +2553,7 @@
 
       logEl.addEventListener('scroll', () => {
         if (readsScrollTimer) clearTimeout(readsScrollTimer);
-        readsScrollTimer = setTimeout(() => { 
-          markReadNow(); 
-          if (canMarkRead()) clearUnread(); 
-        }, 120);
+        readsScrollTimer = setTimeout(() => { markReadNow(); if (canMarkRead()) clearUnread(); }, 120);
       });
 
       document.addEventListener('visibilitychange', () => {
@@ -2616,117 +2571,6 @@
       }catch(e){}
     }
 
-    // 페이지네이션: "이전 대화 보기" 버튼 생성
-    function createLoadMoreButton(){
-      const container = document.createElement('div');
-      container.className = 'loadMoreBtn';
-      container.id = 'loadMoreContainer';
-      const btn = document.createElement('button');
-      btn.textContent = '이전 대화 보기';
-      btn.id = 'loadMoreBtn';
-      btn.addEventListener('click', loadMoreMessages);
-      container.appendChild(btn);
-      return container;
-    }
-
-    async function loadMoreMessages(){
-      if (isLoadingMore || !hasMoreMessages || !roomId) return;
-      
-      const btn = document.getElementById('loadMoreBtn');
-      if (btn) {
-        btn.classList.add('loading');
-        btn.textContent = '로딩 중...';
-      }
-
-      isLoadingMore = true;
-
-      try{
-        // 현재 로드된 메시지 중 가장 오래된 seq 찾기
-        let oldestSeq = Infinity;
-        for (const [mid, obj] of seen.entries()){
-          const seq = Number(obj.seq || 0);
-          if (seq > 0 && seq < oldestSeq) oldestSeq = seq;
-        }
-
-        if (oldestSeq === Infinity || oldestSeq <= 0) {
-          hasMoreMessages = false;
-          isLoadingMore = false;
-          if (btn) btn.remove();
-          return;
-        }
-
-        // 이전 메시지들 로드 (seq < oldestSeq, 역순으로 최신 PAGE_SIZE개)
-        const snap = await db.ref('messages/' + roomId)
-          .orderByChild('seq')
-          .endAt(oldestSeq - 1)
-          .limitToLast(PAGE_SIZE + 1)
-          .once('value');
-
-        const items = [];
-        snap.forEach(child => {
-          const m = child.val();
-          if (!m) return;
-          items.push({
-            roomId: roomId,
-            messageId: String(m.messageId || child.key || ''),
-            senderId: String(m.senderId || ''),
-            senderNick: String(m.senderNick || ''),
-            text: String(m.text || ''),
-            ts: Number(m.ts || 0),
-            seq: Number(m.seq || 0),
-            deleted: !!m.deleted,
-            edited: !!m.edited,
-            replyTo: m.replyTo || null
-          });
-        });
-
-        // seq 오름차순 정렬 (낡은 것부터)
-        items.sort((a, b) => a.seq - b.seq);
-
-        if (items.length === 0){
-          hasMoreMessages = false;
-          isLoadingMore = false;
-          if (btn) btn.remove();
-          return;
-        }
-
-        // 기존 로드된 메시지 DOM 위치 저장
-        const scrollPosBefore = logEl.scrollHeight;
-
-        // 새 메시지들을 "이전 대화 보기" 버튼 다음에 삽입
-        const existingBtn = document.getElementById('loadMoreContainer');
-        items.forEach(msg => {
-          if (!seen.has(msg.messageId)){
-            renderMessage(msg, {pending: false});
-            loadedMessageCount++;
-          }
-        });
-
-        // 스크롤 위치 조정 (사용자 관점에서 같은 메시지에 머물러있게)
-        const scrollPosAfter = logEl.scrollHeight;
-        logEl.scrollTop = logEl.scrollTop + (scrollPosAfter - scrollPosBefore);
-
-        // "이전 대화 보기" 버튼 위치 이동 (최상단)
-        if (existingBtn) existingBtn.remove();
-        const newBtn = createLoadMoreButton();
-        logEl.insertBefore(newBtn, logEl.firstChild);
-
-        if (items.length < PAGE_SIZE) {
-          hasMoreMessages = false;
-          document.getElementById('loadMoreBtn')?.remove();
-        }
-      }catch(e){
-        console.error('Load more failed:', e);
-        hasMoreMessages = false;
-      }
-
-      isLoadingMore = false;
-      if (btn) {
-        btn.classList.remove('loading');
-        btn.textContent = '이전 대화 보기';
-      }
-    }
-
     function subscribeMessages(rid, startSeq){
       stopMessages();
       stopReactionWatchers();
@@ -2735,17 +2579,17 @@
       seen.clear();
       pending.clear();
       afterSeq = Number(startSeq || 0);
-      loadedMessageCount = 0;
-      isLoadingMore = false;
-      hasMoreMessages = true;
 
+      // 초기 로딩 완료 감지용 플래그
       let initialLoadDone = false;
 
       const ref = db.ref('messages/' + rid).orderByChild('seq').startAt(afterSeq + 1);
       msgUnsub = ref;
 
+      // 초기 데이터 일괄 수신 완료 감지 → 최신 메시지로 스크롤
       ref.once('value', () => {
         initialLoadDone = true;
+        // 렌더링 후 맨 아래로 스크롤
         requestAnimationFrame(() => {
           logEl.scrollTop = logEl.scrollHeight;
           setTimeout(() => { logEl.scrollTop = logEl.scrollHeight; }, 120);
@@ -2770,59 +2614,10 @@
         };
 
         afterSeq = Math.max(afterSeq, msg.seq || 0);
-
-        // 메시지 seq 기준으로 올바른 위치에 삽입
-        if (initialLoadDone && seen.size > 0) {
-          // 이미 로드된 메시지 사이에 삽입 필요
-          let insertedPos = false;
-          const allWraps = Array.from(logEl.querySelectorAll('[data-mid]'));
-          for (let i = 0; i < allWraps.length; i++){
-            const existingSeq = Number(allWraps[i].dataset.seq || 0);
-            if (msg.seq < existingSeq){
-              // 이 메시지 앞에 삽입
-              const newWrap = document.createElement('div');
-              newWrap.className = 'msg';
-              newWrap.dataset.mid = msg.messageId;
-              newWrap.dataset.seq = msg.seq;
-              
-              const row = document.createElement('div');
-              row.className = 'row ' + (msg.senderId === myUid ? 'me' : 'other');
-              const bubble = document.createElement('div');
-              rebuildBubble(bubble, msg, newWrap);
-              row.appendChild(bubble);
-              newWrap.appendChild(row);
-              
-              const reactionsBar = document.createElement('div');
-              reactionsBar.className = 'reactionsBar';
-              const reactAlign = document.createElement('div');
-              reactAlign.style.cssText = (msg.senderId === myUid) ? 'display:flex;justify-content:flex-end' : 'display:flex;justify-content:flex-start';
-              reactAlign.appendChild(reactionsBar);
-              newWrap.appendChild(reactAlign);
-              
-              const meta = document.createElement('div');
-              meta.className = 'meta ' + (msg.senderId === myUid ? 'me' : '');
-              const who = document.createElement('span');
-              who.textContent = msg.senderNick || '';
-              const time = document.createElement('span');
-              time.textContent = fmt(msg.ts || Date.now());
-              meta.appendChild(who);
-              meta.appendChild(time);
-              newWrap.appendChild(meta);
-              
-              allWraps[i].parentNode.insertBefore(newWrap, allWraps[i]);
-              seen.set(msg.messageId, { seq: msg.seq, metaEl: meta, senderId: msg.senderId, wrapEl: newWrap, bubbleEl: bubble, text: String(msg.text || ''), replyTo: msg.replyTo || null });
-              insertedPos = true;
-              break;
-            }
-          }
-          if (!insertedPos){
-            mergeServerMessage(msg);
-          }
-        } else {
-          mergeServerMessage(msg);
-        }
+        mergeServerMessage(msg);
 
         if (initialLoadDone) {
+          // 실시간으로 새로 온 메시지만 알림/스크롤 처리
           if (msg.senderId !== myUid) {
             if (document.hidden || !document.hasFocus()) {
               bumpUnread();
@@ -2840,6 +2635,7 @@
         }
       });
 
+      // 메시지 수정/삭제 실시간 반영
       ref.on('child_changed', snap => {
         const m = snap.val();
         if (!m) return;
@@ -2883,6 +2679,7 @@
         return;
       }
 
+      // 비밀번호 확인(필요 시)
       const ok = (info && info._accessOk === true) ? true : await ensureRoomAccess(info);
       if (!ok){
         try{ history.pushState({}, '', NAV_URL); }catch(e){}
@@ -2896,9 +2693,8 @@
       ownerUid = info.ownerUid;
       ownerNick = info.ownerNick;
       isOwner = (ownerUid && ownerUid === myUid);
-      isJoined = true; // 입장 상태 표시
-      try{ isSubbed = isSubscribed(rid); }catch(e){ isSubbed = false; }
 
+      // 멤버 등록(비밀번호 확인 후)
       db.ref('roomMembers/' + roomId + '/' + myUid).set({
         nick: myNick,
         joinedAt: SV.TIMESTAMP
@@ -2913,8 +2709,6 @@
       startReads(roomId);
 
       subscribeMessages(roomId, 0);
-      
-      updateMenuStates();
     }
 
     function showChat(){
@@ -2935,9 +2729,6 @@
       clearUnread();
       try{ clearReply(); }catch(e){}
 
-      isJoined = false;
-      isSubbed = false;
-
       header.style.display = 'none';
       logEl.style.display = 'none';
       composer.style.display = 'none';
@@ -2952,13 +2743,6 @@
       history.pushState({}, '', NAV_URL);
       roomId = '';
       showHome();
-    });
-
-    mUnsubscribe.addEventListener('click', async () => {
-      closeMenu();
-      if (!roomId) return;
-      await toggleSubscribe(roomId);
-      await refreshRooms();
     });
 
     mNick.addEventListener('click', async () => {
@@ -3071,79 +2855,81 @@
     }
 
     async function collectOtherSubscriptionIds(rid){
-      try{
-        const membersSnap = await db.ref('roomMembers/' + rid).once('value');
-        const members = membersSnap.val() || {};
-        let otherUids = Object.keys(members).filter(uid => uid !== myUid);
+  try{
+    const membersSnap = await db.ref('roomMembers/' + rid).once('value');
+    const members = membersSnap.val() || {};
+    let otherUids = Object.keys(members).filter(uid => uid !== myUid);
 
-        if (!otherUids.length) return [];
+    if (!otherUids.length) return [];
 
-        try{
-          const presSnap = await db.ref('presence/' + rid).once('value');
-          const pres = presSnap.val() || {};
-          const now = Date.now();
-          const ACTIVE_MS = 35000;
+    // 채팅방을 "보고 있는(visible)" 상대는 푸시 발송 대상에서 제외
+    try{
+      const presSnap = await db.ref('presence/' + rid).once('value');
+      const pres = presSnap.val() || {};
+      const now = Date.now();
+      const ACTIVE_MS = 35000; // presence 25초 갱신 + 여유
 
-          otherUids = otherUids.filter(uid => {
-            const p = pres[uid] || {};
-            const ts = Number(p.lastActive || 0);
-            const vis = String(p.vis || '');
-            const activeVisible = (vis === 'visible') && ts && ((now - ts) <= ACTIVE_MS);
-            return !activeVisible;
-          });
+      otherUids = otherUids.filter(uid => {
+        const p = pres[uid] || {};
+        const ts = Number(p.lastActive || 0);
+        const vis = String(p.vis || '');
+        const activeVisible = (vis === 'visible') && ts && ((now - ts) <= ACTIVE_MS);
+        return !activeVisible;
+      });
 
-          if (!otherUids.length) return [];
-        }catch(e){}
+      if (!otherUids.length) return [];
+    }catch(e){}
 
-        const subsSnaps = await Promise.all(
-          otherUids.map(uid => db.ref('pushSubs/' + uid).once('value'))
-        );
+    const subsSnaps = await Promise.all(
+      otherUids.map(uid => db.ref('pushSubs/' + uid).once('value'))
+    );
 
-        const ids = subsSnaps
-          .flatMap(s => Object.keys(s.val() || {}))
-          .filter(Boolean);
+    const ids = subsSnaps
+      .flatMap(s => Object.keys(s.val() || {}))
+      .filter(Boolean);
 
-        return Array.from(new Set(ids));
-      }catch(e){
-        return [];
+    return Array.from(new Set(ids));
+  }catch(e){
+    return [];
+  }
+}
+
+async function sendToFirebase(mid, text, replyToData){
+  if (!roomId) return;
+
+  const roomRef = db.ref('rooms/' + roomId + '/lastSeq');
+
+  try{
+    const tx = await roomRef.transaction(cur => (Number(cur || 0) + 1));
+    const seq = Number((tx && tx.snapshot && tx.snapshot.val()) || 0);
+
+    const msg = {
+      messageId: mid,
+      senderId: myUid,
+      senderNick: myNick,
+      text: String(text || '').slice(0, 4000),
+      ts: SV.TIMESTAMP,
+      seq: seq
+    };
+    if (replyToData) msg.replyTo = replyToData;
+
+    await db.ref('messages/' + roomId).push(msg);
+    await db.ref('rooms/' + roomId).update({ updatedAt: SV.TIMESTAMP, lastMsgTs: SV.TIMESTAMP });
+
+    // 상대에게 OneSignal 웹푸시 발송(잠금/백그라운드 포함)
+    try{
+      const subIds = await collectOtherSubscriptionIds(roomId);
+      if (subIds.length){
+        const title = roomName || 'Chat';
+        const body = String(text || '').slice(0, 120);
+        pushToSubscriptions(subIds, title, body, roomId);
       }
-    }
+    }catch(e){}
 
-    async function sendToFirebase(mid, text, replyToData){
-      if (!roomId) return;
-
-      const roomRef = db.ref('rooms/' + roomId + '/lastSeq');
-
-      try{
-        const tx = await roomRef.transaction(cur => (Number(cur || 0) + 1));
-        const seq = Number((tx && tx.snapshot && tx.snapshot.val()) || 0);
-
-        const msg = {
-          messageId: mid,
-          senderId: myUid,
-          senderNick: myNick,
-          text: String(text || '').slice(0, 4000),
-          ts: SV.TIMESTAMP,
-          seq: seq
-        };
-        if (replyToData) msg.replyTo = replyToData;
-
-        await db.ref('messages/' + roomId).push(msg);
-        await db.ref('rooms/' + roomId).update({ updatedAt: SV.TIMESTAMP, lastMsgTs: SV.TIMESTAMP });
-
-        try{
-          const subIds = await collectOtherSubscriptionIds(roomId);
-          if (subIds.length){
-            const title = roomName || 'Chat';
-            const body = String(text || '').slice(0, 120);
-            pushToSubscriptions(subIds, title, body, roomId);
-          }
-        }catch(e){}
-
-      }catch(e){
-        updateBadges();
-      }
-    }
+  }catch(e){
+    updateBadges();
+  }
+}
 
     function retrySend(mid){
       const p = pending.get(mid);
@@ -3161,6 +2947,7 @@
 
       const mid = msgId();
 
+      // 답글 데이터 수집 후 초기화
       let replyToData = null;
       if (currentReplyTo){
         replyToData = { ...currentReplyTo };
@@ -3215,22 +3002,17 @@
     });
 
     async function init(){
-      updateFirebaseStatus();
-
       if (myNick) homeNick.value = myNick;
 
       try{
         const cred = await firebase.auth().signInAnonymously();
-        myUid = (cred && cred.user && cred.user.uid) ? cred.user.uid : (firebase.auth().currentUser ? firebase.auth().currentUser.uid : '');
-        schedulePushSync();
+        myUid = (cred && cred.user && cred.user.uid) ? cred.user.uid : (firebase.auth().currentUser ? firebase.auth().currentUser.uid : '');schedulePushSync();
       }catch(e){
-        firebaseError = '❌ 익명 로그인 실패: ' + (e?.message || e);
-        console.error(firebaseError);
-        updateFirebaseStatus();
-        alert(firebaseError + '\n\nFirebase Authentication에서 익명 로그인이 활성화되었는지 확인해주세요.');
+        alert('Firebase 인증 실패: ' + (e && e.message ? e.message : ''));
         return;
       }
 
+      // 초기 메뉴 상태/테마 반영
       applyMyBubbleTheme();
       updateMenuStates();
 
@@ -3251,6 +3033,9 @@
       showHome();
     }
 
+    // ================================================================
+    // ===== 새 기능 2: 메시지 수정 / 삭제 =====
+    // ================================================================
     const msgCtxMenu = document.getElementById('msgCtxMenu');
     const ctxEdit = document.getElementById('ctxEdit');
     const ctxDelete = document.getElementById('ctxDelete');
@@ -3291,6 +3076,7 @@
       if (!msgCtxMenu.contains(e.target)) closeMsgMenu();
     });
 
+    // 빠른 리액션 클릭
     quickReactBar.addEventListener('click', async (e) => {
       const sp = e.target.closest('[data-e]');
       if (!sp || !ctxTargetMid) return;
@@ -3299,6 +3085,7 @@
       closeMsgMenu();
     });
 
+    // 수정
     ctxEdit.addEventListener('click', () => {
       if (!ctxTargetMid || !ctxTargetBubble) return;
       const obj = seen.get(ctxTargetMid);
@@ -3308,6 +3095,7 @@
       const wrap = ctxTargetWrap;
       closeMsgMenu();
 
+      // seen에 저장된 순수 텍스트를 사용 (replyQuote 텍스트 혼입 방지)
       const currentText = (obj.text || '').trim();
 
       const editWrap = document.createElement('div');
@@ -3355,6 +3143,7 @@
       });
     });
 
+    // 삭제
     ctxDelete.addEventListener('click', async () => {
       if (!ctxTargetMid) return;
       const mid = ctxTargetMid;
@@ -3370,13 +3159,16 @@
       }catch(e){ showToast('삭제 실패'); }
     });
 
+    // ================================================================
+    // ===== 새 기능 3: 답글(Reply) =====
+    // ================================================================
     const replyPreviewEl = document.getElementById('replyPreview');
     const replyPreviewNameEl = document.getElementById('replyPreviewName');
     const replyPreviewMsgEl = document.getElementById('replyPreviewMsg');
     const replyCloseBtn = document.getElementById('replyCloseBtn');
     const ctxReply = document.getElementById('ctxReply');
 
-    let currentReplyTo = null;
+    let currentReplyTo = null; // { mid, nick, text }
 
     function setReply(mid, nick, text){
       currentReplyTo = { mid, nick, text: String(text || '').slice(0, 100) };
@@ -3399,12 +3191,17 @@
       if (!ctxTargetMid) return;
       const obj = seen.get(ctxTargetMid);
       if (!obj) return;
+      // nick: seen의 meta 첫 span (닉네임)
       const nick = obj.wrapEl ? (obj.wrapEl.querySelector('.meta span')?.textContent || '') : '';
+      // text: seen에 저장된 순수 텍스트 — DOM에서 읽으면 replyQuote까지 포함돼서 중첩 발생!
       const text = obj.text || '';
       setReply(ctxTargetMid, nick, text);
       closeMsgMenu();
     });
 
+    // ================================================================
+    // ===== 토스트 알림 =====
+    // ================================================================
     const toastEl = document.getElementById('toast');
     let toastTimer = null;
     function showToast(msg, ms){
@@ -3414,7 +3211,8 @@
       toastTimer = setTimeout(() => toastEl.classList.remove('show'), ms || 2200);
     }
 
-    init();
+
+        init();
   </script>
 </body>
 </html>
