@@ -311,6 +311,11 @@
       align-items:center;
       gap:6px;
     }
+    .chipSubbed{
+      border-color: var(--accent);
+      background: #f0fdf4;
+      color: var(--accent);
+    }
 
     .log{
       flex:1;
@@ -860,8 +865,9 @@
             <button id="mSound"><span>소리(삐) 켜기</span><span id="mSoundState">›</span></button>
             <button id="mMyBubbleWhite"><span>내 말풍선 흰색(상대와 동일)</span><span id="mMyBubbleWhiteState">›</span></button>
             <button id="mNick"><span>닉네임 변경</span><span>›</span></button>
-            <button id="mRoomName"><span>방 이름 변경(방장)</span><span>›</span></button>
-            <button id="mRoomPass"><span>비밀번호 설정/변경(방장)</span><span>›</span></button>
+            <button id="mRoomName"><span>방 이름 변경</span><span>›</span></button>
+            <button id="mRoomPass"><span>비밀번호 설정/변경</span><span>›</span></button>
+            <button id="mUnsubscribe" style="display:none;"><span>구독 해제</span><span>›</span></button>
             <button id="mLeave"><span>나가기</span><span>›</span></button>
             <div class="hint" id="menuHint"></div>
           </div>
@@ -902,10 +908,6 @@
 
         <div class="sectionTitle">채팅방 목록</div>
         <div class="roomList" id="roomList"></div>
-
-        <div class="rowBtns">
-          <button class="ghostBtn" id="btnJoin">참여하기</button>
-        </div>
 
         <div class="sectionTitle">안내</div>
         <div class="roomMeta">
@@ -978,11 +980,11 @@
     const SERVICE_URL = location.href;
     const INIT_ROOM_ID = new URLSearchParams(location.search).get('roomId') || '';
 
-const PUSH_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbyyEYvCwwTsmlaQwKIUsA00gHbBVNpGiHr_hRUGREUCgcquHH5lY3SHcBTlKU_v6Lqz/exec";
-    const PUSH_SECRET = "ryo1234";
+    const PUSH_WEBHOOK_URL = "나만의키";
+    const PUSH_SECRET = "나만의키";
 
     const firebaseConfig = {
-      apiKey: "AIzaSyC6iyCkpqtaWgFXlJZiogn2SgfIz9j1I4M",
+      apiKey: "나만의키",
       authDomain: "messenger-222df.firebaseapp.com",
       databaseURL: "https://messenger-222df-default-rtdb.asia-southeast1.firebasedatabase.app",
       projectId: "messenger-222df",
@@ -1003,11 +1005,51 @@ const PUSH_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbyyEYvCwwTsmla
     const LS_SOUND  = 'chat_beep_enabled_v1';
     const LS_ROOM_AUTH_PREFIX = 'chat_room_auth_v1_';
     const LS_MY_BUBBLE_WHITE = 'chat_my_bubble_white_v1';
+    const LS_SUBSCRIPTIONS = 'chat_subscriptions_v1';
+    const LS_ENTRIES_PREFIX = 'chat_entries_v1_';
 
     const DEFAULT_ME_BG   = '#374151';
     const DEFAULT_ME_TEXT = '#ffffff';
     const DEFAULT_OTHER_BG   = '#ffffff';
     const DEFAULT_OTHER_TEXT = '#111827';
+
+    // ===== 구독 기능 =====
+    function getSubscriptions(){
+      try{
+        const data = localStorage.getItem(LS_SUBSCRIPTIONS) || '[]';
+        return JSON.parse(data);
+      }catch(e){
+        return [];
+      }
+    }
+
+    function setSubscriptions(subs){
+      try{
+        localStorage.setItem(LS_SUBSCRIPTIONS, JSON.stringify(subs));
+      }catch(e){}
+    }
+
+    function isSubscribed(rid){
+      return getSubscriptions().includes(String(rid || ''));
+    }
+
+    async function toggleSubscribe(rid){
+      let subs = getSubscriptions();
+      const ridStr = String(rid || '');
+      
+      if (subs.includes(ridStr)){
+        // 구독 해제
+        subs = subs.filter(r => r !== ridStr);
+        showToast('구독을 해제했습니다.');
+      } else {
+        // 구독
+        subs.push(ridStr);
+        showToast('구독했습니다.');
+      }
+      
+      setSubscriptions(subs);
+      await refreshRooms();
+    }
 
     // 페이지네이션 설정
     const PAGE_SIZE = 50; // 한 번에 로드할 메시지 수
@@ -1244,6 +1286,7 @@ const PUSH_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbyyEYvCwwTsmla
     const mNick = document.getElementById('mNick');
     const mRoomName = document.getElementById('mRoomName');
     const mRoomPass = document.getElementById('mRoomPass');
+    const mUnsubscribe = document.getElementById('mUnsubscribe');
     const mLeave = document.getElementById('mLeave');
 
     const home = document.getElementById('home');
@@ -1255,7 +1298,6 @@ const PUSH_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbyyEYvCwwTsmla
 
     const btnCreate = document.getElementById('btnCreate');
     const btnRefresh = document.getElementById('btnRefresh');
-    const btnJoin = document.getElementById('btnJoin');
     const roomList = document.getElementById('roomList');
     const appEl = document.getElementById('app');
 
@@ -1449,6 +1491,8 @@ const PUSH_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbyyEYvCwwTsmla
     let ownerUid = '';
     let ownerNick = '';
     let isOwner = false;
+    let isJoined = false; // 입장 여부
+    let isSubbed = false; // 구독 여부
 
     let presenceTimer = null;
     let presenceRef = null;
@@ -1609,7 +1653,9 @@ const PUSH_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbyyEYvCwwTsmla
       }
       document.title = TITLE_BASE;
     }
+    
     function bumpUnread(){
+      if (!isJoined) return; // 구독만 하면 unread 증가 안함
       unread = Math.min(999, unread + 1);
       updateBadgeCount();
       if (document.hidden || !document.hasFocus()){
@@ -1619,7 +1665,9 @@ const PUSH_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbyyEYvCwwTsmla
       }
       setHeader();
     }
+    
     function clearUnread(){
+      if (unread === 0) return; // 이미 0이면 함수 종료
       unread = 0;
       updateBadgeCount();
       stopTitleBlink();
@@ -1627,11 +1675,11 @@ const PUSH_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbyyEYvCwwTsmla
     }
 
     window.addEventListener('focus', () => {
-      try{ if (roomId) clearUnread(); }catch(e){}
+      try{ if (roomId && isJoined) clearUnread(); }catch(e){}
     });
     document.addEventListener('visibilitychange', () => {
       try{
-        if (!document.hidden && roomId){
+        if (!document.hidden && roomId && isJoined){
           clearUnread();
         }
       }catch(e){}
@@ -1765,7 +1813,7 @@ const PUSH_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbyyEYvCwwTsmla
       if (!iosNoNoti && isInIframe()){
         hints.push('임베드(iframe) 상태: 알림 권한 요청 차단 가능 → "새 탭으로 열기" 필요');
       }
-      const base = (isOwner ? '방장 권한: 방 이름/비밀번호 변경 가능' : '방장만 방 이름/비밀번호 변경 가능');
+      const base = (isOwner ? '방장 권한: 방 이름/비밀번호 변경 가능' : '방 이름/비밀번호는 방장만 변경 가능');
       menuHint.innerHTML = escapeHtml(base + (hints.length ? '\n' + hints.join('\n') : ''));
     }
 
@@ -1812,9 +1860,11 @@ const PUSH_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbyyEYvCwwTsmla
     }
 
     function isNearBottom(){
+      // 스크롤 경계선에서만 읽음 처리 (140px 이내)
       const gap = logEl.scrollHeight - (logEl.scrollTop + logEl.clientHeight);
-      return gap < 140;
+      return gap <= 140;
     }
+    
     function scrollToBottom(force){
       if (!force && !isNearBottom()) return;
       logEl.scrollTop = logEl.scrollHeight;
@@ -2084,6 +2134,7 @@ const PUSH_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbyyEYvCwwTsmla
     }
 
     function updateReadBadges(){
+      // 구독자만 제외 (입장한 사용자만 카운트)
       const otherUids = Object.keys(readsCache || {}).filter(uid => uid !== myUid);
       const totalOthers = otherUids.length;
 
@@ -2187,10 +2238,23 @@ const PUSH_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbyyEYvCwwTsmla
 
           const right = document.createElement('div');
           right.className = 'roomRight';
-          const chip = document.createElement('div');
-          chip.className = 'chip';
-          chip.textContent = '입장';
-          right.appendChild(chip);
+          
+          const joined = isSubscribed(r.roomId);
+          
+          const btnEnter = document.createElement('div');
+          btnEnter.className = 'chip';
+          btnEnter.textContent = '입장';
+          
+          const btnSub = document.createElement('div');
+          btnSub.className = 'chip' + (joined ? ' chipSubbed' : '');
+          btnSub.textContent = joined ? '✓ 구독중' : '구독';
+          btnSub.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleSubscribe(r.roomId);
+          });
+          
+          right.appendChild(btnEnter);
+          right.appendChild(btnSub);
 
           item.appendChild(left);
           item.appendChild(right);
@@ -2264,10 +2328,6 @@ const PUSH_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbyyEYvCwwTsmla
       }catch(e){
         alert('방 생성 실패: ' + (e && e.message ? e.message : ''));
       }
-    });
-
-    btnJoin.addEventListener('click', async () => {
-      alert('방 목록에서 입장해 주세요.');
     });
 
     async function joinRoomFlow(rid){
@@ -2465,6 +2525,7 @@ const PUSH_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbyyEYvCwwTsmla
 
     function canMarkRead(){
       if (!roomId) return false;
+      if (!isJoined) return false; // 입장한 경우만 읽음 처리
       if (document.hidden) return false;
       if (!document.hasFocus()) return false;
       if (logEl.style.display === 'none') return false;
@@ -2500,7 +2561,10 @@ const PUSH_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbyyEYvCwwTsmla
 
       logEl.addEventListener('scroll', () => {
         if (readsScrollTimer) clearTimeout(readsScrollTimer);
-        readsScrollTimer = setTimeout(() => { markReadNow(); if (canMarkRead()) clearUnread(); }, 120);
+        readsScrollTimer = setTimeout(() => { 
+          markReadNow(); 
+          if (canMarkRead()) clearUnread(); 
+        }, 120);
       });
 
       document.addEventListener('visibilitychange', () => {
@@ -2798,6 +2862,8 @@ const PUSH_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbyyEYvCwwTsmla
       ownerUid = info.ownerUid;
       ownerNick = info.ownerNick;
       isOwner = (ownerUid && ownerUid === myUid);
+      isJoined = true; // 입장 상태 표시
+      isSubbed = isSubscribed(rid); // 구독 여부 확인
 
       db.ref('roomMembers/' + roomId + '/' + myUid).set({
         nick: myNick,
@@ -2813,6 +2879,8 @@ const PUSH_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbyyEYvCwwTsmla
       startReads(roomId);
 
       subscribeMessages(roomId, 0);
+      
+      updateMenuStates();
     }
 
     function showChat(){
@@ -2833,6 +2901,9 @@ const PUSH_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbyyEYvCwwTsmla
       clearUnread();
       try{ clearReply(); }catch(e){}
 
+      isJoined = false;
+      isSubbed = false;
+
       header.style.display = 'none';
       logEl.style.display = 'none';
       composer.style.display = 'none';
@@ -2847,6 +2918,13 @@ const PUSH_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbyyEYvCwwTsmla
       history.pushState({}, '', NAV_URL);
       roomId = '';
       showHome();
+    });
+
+    mUnsubscribe.addEventListener('click', async () => {
+      closeMenu();
+      if (!roomId) return;
+      await toggleSubscribe(roomId);
+      await refreshRooms();
     });
 
     mNick.addEventListener('click', async () => {
