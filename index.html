@@ -94,16 +94,6 @@
     .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
     .loadMoreBtn{ display:block; width:100%; padding:10px; border:1px solid var(--line); border-radius:14px; background:#fff; font-size:13px; color:var(--muted); text-align:center; margin-bottom:10px; cursor:pointer; }
     #readSentinel{ height:1px; width:100%; pointer-events:none; margin-top:10px; }
-    /* 투표 배너 */
-    .voteBanner{ background:#fffbeb; border:1px solid #fde68a; border-radius:14px; padding:12px 14px; margin-bottom:12px; font-size:13px; }
-    .voteBanner .voteTitle{ font-weight:800; margin-bottom:8px; color:#92400e; font-size:13px; }
-    .voteCandRow{ display:flex; align-items:center; gap:8px; padding:5px 0; border-bottom:1px solid #fde68a; }
-    .voteCandRow:last-child{ border-bottom:none; }
-    .voteBar{ flex:1; height:7px; background:#fde68a; border-radius:999px; overflow:hidden; min-width:40px; }
-    .voteBarFill{ height:100%; background:#f59e0b; border-radius:999px; transition:width .3s; }
-    .voteCnt{ font-size:12px; color:#92400e; font-weight:700; min-width:26px; text-align:right; }
-    .voteBtn{ padding:3px 10px; border-radius:999px; border:1px solid #f59e0b; background:#fff; font-size:12px; font-weight:700; color:#92400e; cursor:pointer; white-space:nowrap; flex-shrink:0; }
-    .voteBtn.voted{ background:#f59e0b; color:#fff; }
   </style>
 
 <script>
@@ -132,7 +122,6 @@
             <button id="mNick"><span>닉네임 변경</span><span>›</span></button>
             <button id="mRoomName"><span>방 이름 변경</span><span>›</span></button>
             <button id="mRoomPass"><span>비밀번호 설정</span><span>›</span></button>
-            <button id="mVoteOwner"><span>👑 방장 지정 투표</span><span>›</span></button>
             <button id="mLeave"><span>나가기</span><span>›</span></button>
             <div class="hint" id="menuHint"></div>
           </div>
@@ -201,20 +190,6 @@
     </div>
   </div>
 
-  <!-- 방장 투표 모달 -->
-  <div class="modalOverlay" id="voteModal">
-    <div class="modalCard">
-      <div class="modalTitle">👑 방장 지정 투표</div>
-      <div style="font-size:13px;color:var(--muted);line-height:1.5;">
-        현재 접속 중인 멤버 중 방장을 다수결로 지정합니다.<br>과반수 동의 시 즉시 방장이 변경됩니다.
-      </div>
-      <div id="voteModalBody" style="display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto;"></div>
-      <div class="modalBtnsRow">
-        <button class="ghostBtn" id="voteModalClose">닫기</button>
-      </div>
-    </div>
-  </div>
-
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
@@ -237,11 +212,11 @@
     const NAV_URL = location.origin + location.pathname;
 
     // ── 상태 ──────────────────────────────────────────────────────
-    let myUid = '', myNick = '', roomId = '', roomName = '', isOwner = false;
+    let myUid = '', myNick = '', roomId = '', roomName = '';
     let seen = new Map();
     let reactionWatchers = new Map();
     let presenceRef = null, presenceListRef = null;
-    let typingWatchRef = null, readsWatchRef = null, msgRef = null, voteWatchRef = null;
+    let typingWatchRef = null, readsWatchRef = null, msgRef = null;
     let readsCache = {};
     // ★ 방 입장 시점에 확보한 "내 마지막 읽은 seq" — 이 값보다 큰 메시지만 unread로 카운트
     let myBaseReadSeq = 0;
@@ -254,7 +229,6 @@
     let readObserver = null, visibilityHandler = null;
     let oldestSeq = null;
     let onlineMembers = {};   // uid → { nick, lastSeen }
-    let voteData = null;
 
     // ── 유틸 ──────────────────────────────────────────────────────
     function uuid(){ return 'u'+Date.now()+'_'+Math.random().toString(16).slice(2); }
@@ -576,94 +550,6 @@
       catch(e){ showToast('전송 실패: '+e.message); inputEl.value=text; onInput(); }
     }
 
-    // ── 방장 투표 ──────────────────────────────────────────────────
-    function startVoteWatch(rid){
-      stopVoteWatch();
-      voteWatchRef=db.ref('votes/'+rid);
-      voteWatchRef.on('value',snap=>{
-        voteData=snap.val();
-        renderVoteBanner();
-        if(document.getElementById('voteModal').classList.contains('open')) renderVoteModal();
-      });
-    }
-    function stopVoteWatch(){
-      if(voteWatchRef){ voteWatchRef.off(); voteWatchRef=null; }
-      voteData=null;
-      const b=logEl.querySelector('.voteBanner'); if(b) b.remove();
-    }
-
-    function buildVoteHTML(forModal){
-      if(!voteData||!voteData.active) return '';
-      const total=Object.keys(onlineMembers).length||1;
-      const need=Math.ceil(total/2);
-      let html='<div class="voteTitle">👑 방장 지정 투표 진행 중 &nbsp;·&nbsp; 과반수 '+need+'표 필요 (온라인 '+total+'명)</div>';
-      Object.entries(voteData.candidates||{}).forEach(([uid,cand])=>{
-        const votes=Object.keys(cand.votes||{}).length;
-        const pct=Math.min(100,Math.round((votes/total)*100));
-        const voted=!!(cand.votes||{})[myUid];
-        html+='<div class="voteCandRow">'
-          +'<span style="font-weight:700;font-size:'+(forModal?'14':'13')+'px;min-width:'+(forModal?'90':'80')+'px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+escapeHtml(cand.nick)+'</span>'
-          +'<div class="voteBar"><div class="voteBarFill" style="width:'+pct+'%"></div></div>'
-          +'<span class="voteCnt">'+votes+'표</span>'
-          +'<button class="voteBtn'+(voted?' voted':'')+'" onclick="castVote(\''+uid+'\')">'+(voted?'취소':'투표')+'</button>'
-          +'</div>';
-      });
-      return html;
-    }
-
-    function renderVoteBanner(){
-      let banner=logEl.querySelector('.voteBanner');
-      if(!voteData||!voteData.active){ if(banner) banner.remove(); return; }
-      if(!banner){
-        banner=document.createElement('div'); banner.className='voteBanner';
-        logEl.insertBefore(banner,logEl.firstChild);
-      }
-      banner.innerHTML=buildVoteHTML(false);
-    }
-    function renderVoteModal(){
-      const body=document.getElementById('voteModalBody');
-      if(!voteData||!voteData.active){
-        body.innerHTML='<div style="color:var(--muted);font-size:13px;">진행 중인 투표가 없습니다.</div>'; return;
-      }
-      body.innerHTML=buildVoteHTML(true);
-    }
-
-    window.castVote=async function(candidateUid){
-      if(!roomId||!myUid||!voteData) return;
-      const ref=db.ref('votes/'+roomId+'/candidates/'+candidateUid+'/votes/'+myUid);
-      try{
-        const snap=await ref.once('value');
-        if(snap.exists()) await ref.remove();
-        else await ref.set(myNick);
-        // 과반수 체크
-        const allSnap=await db.ref('votes/'+roomId+'/candidates/'+candidateUid+'/votes').once('value');
-        const cnt=Object.keys(allSnap.val()||{}).length;
-        const total=Object.keys(onlineMembers).length||1;
-        if(cnt>=Math.ceil(total/2)){
-          await db.ref('rooms/'+roomId).update({ownerUid:candidateUid});
-          await db.ref('votes/'+roomId).remove();
-          const candNick=(voteData.candidates[candidateUid]||{}).nick||'멤버';
-          if(candidateUid===myUid) isOwner=true;
-          document.getElementById('voteModal').classList.remove('open');
-          showToast('👑 '+candNick+' 님이 새 방장이 되었습니다!',3500);
-        }
-      } catch(e){ showToast('투표 실패: '+e.message); }
-    };
-
-    function openVoteModal(){
-      menu.classList.remove('open');
-      const uids=Object.keys(onlineMembers);
-      if(uids.length<2){ showToast('투표는 2명 이상 접속 시 가능합니다'); return; }
-      if(!voteData||!voteData.active){
-        const candidates={};
-        uids.forEach(uid=>{ if(uid!==myUid) candidates[uid]={nick:(onlineMembers[uid].nick||'멤버'),votes:{}}; });
-        if(!Object.keys(candidates).length){ showToast('투표할 수 있는 다른 멤버가 없습니다'); return; }
-        db.ref('votes/'+roomId).set({active:true,createdBy:myUid,createdAt:SV.TIMESTAMP,candidates}).catch(()=>{});
-      }
-      renderVoteModal();
-      document.getElementById('voteModal').classList.add('open');
-    }
-    document.getElementById('voteModalClose').onclick=()=>document.getElementById('voteModal').classList.remove('open');
 
     // ── 방 입장 ────────────────────────────────────────────────────
     function showPassModal(title,body){
@@ -680,7 +566,7 @@
     async function enterRoomLocal(rid, infoOpt){
       const nickInput=document.getElementById('homeNick').value.trim();
       if(nickInput){ myNick=nickInput; localStorage.setItem('chat_nick',myNick); }
-      stopMessages(); stopPresence(); stopTyping(); stopReads(); stopVoteWatch();
+      stopMessages(); stopPresence(); stopTyping(); stopReads();
       oldestSeq=null; unread=0;
 
       let info=infoOpt;
@@ -696,7 +582,7 @@
         if(entered!==info.password){ showToast('비밀번호가 틀렸습니다'); return; }
       }
 
-      roomId=rid; roomName=info.roomName; isOwner=info.ownerUid===myUid;
+      roomId=rid; roomName=info.roomName;
 
       // ★ 핵심 수정: 메시지 구독 전에 내 마지막 읽은 seq를 먼저 로드
       // → child_added로 오는 기존 메시지들의 seq가 이 값 이하면 unread 카운트 안함
@@ -714,12 +600,12 @@
       seen.clear(); readsCache={}; unread=0;
 
       startPresence(roomId); startTyping(roomId); startReads(roomId);
-      startVoteWatch(roomId); subscribeMessages(roomId);
+      subscribeMessages(roomId);
       setTimeout(()=>{ if(seen.size>=50) addLoadMoreBtn(); },1200);
     }
 
     function showHome(){
-      stopMessages(); stopPresence(); stopTyping(); stopReads(); stopVoteWatch();
+      stopMessages(); stopPresence(); stopTyping(); stopReads();
       roomId=''; unread=0;
       home.style.display=''; header.style.display='none';
       logEl.style.display='none'; composer.style.display='none';
@@ -774,20 +660,17 @@
       myNick=n.trim(); localStorage.setItem('chat_nick',myNick); showToast('닉네임이 변경되었습니다'); menu.classList.remove('open');
     };
     document.getElementById('mRoomName').onclick=async()=>{
-      if(!isOwner){ showToast('방장만 변경할 수 있습니다'); return; }
       const n=prompt('새 방 이름:',roomName); if(!n||!n.trim()) return;
       try{ await db.ref('rooms/'+roomId).update({roomName:n.trim()}); roomName=n.trim(); roomTitle.textContent=roomName; document.title=roomName; showToast('방 이름이 변경되었습니다'); }
       catch(e){ showToast('변경 실패: '+e.message); }
       menu.classList.remove('open');
     };
     document.getElementById('mRoomPass').onclick=async()=>{
-      if(!isOwner){ showToast('방장만 설정할 수 있습니다'); return; }
       const pw=prompt('새 비밀번호 (비워두면 해제):'); if(pw===null) return;
       try{ await db.ref('rooms/'+roomId).update({password:pw.trim()||null}); showToast(pw.trim()?'비밀번호가 설정되었습니다':'비밀번호가 해제되었습니다'); }
       catch(e){ showToast('설정 실패: '+e.message); }
       menu.classList.remove('open');
     };
-    document.getElementById('mVoteOwner').onclick=()=>openVoteModal();
     document.getElementById('mLeave').onclick=()=>{ menu.classList.remove('open'); if(confirm('채팅방에서 나가시겠습니까?')) showHome(); };
 
     // ── 홈 버튼 ────────────────────────────────────────────────────
