@@ -311,6 +311,12 @@
       align-items:center;
       gap:6px;
     }
+    /* 구독 chip 색상 */
+    .chip.subbed{
+      border-color: var(--accent);
+      color: var(--accent);
+      background: #f0fdf4;
+    }
 
     .log{
       flex:1;
@@ -549,10 +555,6 @@
       flex:1;
     }
 
-
-
-
-
     /* ===== 메시지 컨텍스트 메뉴 (수정/삭제/리액션) ===== */
     .msgCtxMenu{
       position:fixed;
@@ -715,8 +717,6 @@
       -webkit-box-orient:vertical;
     }
 
-
-
     /* ===== 답글(Reply) ===== */
     .replyPreview{
       position:absolute;
@@ -845,8 +845,8 @@ try{
             <button id="mMyBubbleWhite"><span>내 말풍선 흰색(상대와 동일)</span><span id="mMyBubbleWhiteState">›</span></button>
 
             <button id="mNick"><span>닉네임 변경</span><span>›</span></button>
-            <button id="mRoomName"><span>방 이름 변경(방장)</span><span>›</span></button>
-            <button id="mRoomPass"><span>비밀번호 설정/변경(방장)</span><span>›</span></button>
+            <button id="mRoomName"><span>방 이름 변경</span><span>›</span></button>
+            <button id="mRoomPass"><span>비밀번호 설정/변경</span><span>›</span></button>
             <button id="mLeave"><span>나가기</span><span>›</span></button>
             <div class="hint" id="menuHint"></div>
           </div>
@@ -887,10 +887,6 @@ try{
 
         <div class="sectionTitle">채팅방 목록</div>
         <div class="roomList" id="roomList"></div>
-
-        <div class="rowBtns">
-          <button class="ghostBtn" id="btnJoin">참여하기</button>
-        </div>
 
         <div class="sectionTitle">안내</div>
         <div class="roomMeta">
@@ -968,7 +964,7 @@ try{
     const SERVICE_URL = location.href;
     const INIT_ROOM_ID = new URLSearchParams(location.search).get('roomId') || '';
 
-    const PUSH_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbyyEYvCwwTsmlaQwKIUsA00gHbBVNpGiHr_hRUGREUCgcquHH5lY3SHcBTlKU_v6Lqz/exec";
+const PUSH_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbyyEYvCwwTsmlaQwKIUsA00gHbBVNpGiHr_hRUGREUCgcquHH5lY3SHcBTlKU_v6Lqz/exec";
     const PUSH_SECRET = "ryo1234";
 
     const firebaseConfig = {
@@ -995,6 +991,9 @@ try{
 
     // 추가: 내 말풍선 흰색 토글 저장키
     const LS_MY_BUBBLE_WHITE = 'chat_my_bubble_white_v1';
+
+    // [변경4] 구독 목록 저장키
+    const LS_SUBSCRIPTIONS = 'chat_subscriptions_v1';
 
     // 기본(원래) 내 말풍선 색상 백업(복원용)
     const DEFAULT_ME_BG   = '#374151';
@@ -1044,6 +1043,39 @@ try{
       }
     }
 
+    // [변경4] 구독 관련 헬퍼
+    function getSubscriptions(){
+      try{ return JSON.parse(localStorage.getItem(LS_SUBSCRIPTIONS) || '{}'); }catch(e){ return {}; }
+    }
+    function isSubscribed(rid){
+      return !!(getSubscriptions()[rid]);
+    }
+    function setSubscription(rid, subscribed){
+      const subs = getSubscriptions();
+      if (subscribed) subs[rid] = true;
+      else delete subs[rid];
+      try{ localStorage.setItem(LS_SUBSCRIPTIONS, JSON.stringify(subs)); }catch(e){}
+    }
+    async function subscribeRoom(rid, nick){
+      setSubscription(rid, true);
+      // roomMembers에 등록 (푸시 수신용)
+      try{
+        await db.ref('roomMembers/' + rid + '/' + myUid).set({
+          nick: nick || myNick || '',
+          joinedAt: SV.TIMESTAMP,
+          subscribeOnly: true
+        });
+      }catch(e){}
+      // pushSubs 동기화
+      try{ window.__schedulePushSync && window.__schedulePushSync(); }catch(e){}
+    }
+    async function unsubscribeRoom(rid){
+      setSubscription(rid, false);
+      // roomMembers에서 제거
+      try{
+        await db.ref('roomMembers/' + rid + '/' + myUid).remove();
+      }catch(e){}
+    }
 
     // ===== 비밀번호방(선택) =====
     function _jsonParseSafe(s){
@@ -1252,7 +1284,6 @@ try{
 
     const btnCreate = document.getElementById('btnCreate');
     const btnRefresh = document.getElementById('btnRefresh');
-    const btnJoin = document.getElementById('btnJoin');
     const roomList = document.getElementById('roomList');
     const appEl = document.getElementById('app');
 
@@ -1475,6 +1506,9 @@ try{
     let readsCache = {};
     let readsMarkTimer = null;
     let readsScrollTimer = null;
+    // [변경1] IntersectionObserver 기반 읽음 처리용
+    let readSentinel = null;
+    let readObserver = null;
 
     // messages
     let msgUnsub = null;
@@ -1783,7 +1817,8 @@ window.__schedulePushSync = schedulePushSync;
       if (!iosNoNoti && isInIframe()){
         hints.push('임베드(iframe) 상태: 알림 권한 요청 차단 가능 → "새 탭으로 열기" 필요');
       }
-      const base = (isOwner ? '방장 권한: 방 이름/비밀번호 변경 가능' : '방장만 방 이름/비밀번호 변경 가능');
+      // [변경2] 방장 제한 제거 - 누구나 방 이름/비밀번호 변경 가능
+      const base = '누구나 방 이름/비밀번호를 변경할 수 있습니다.';
       menuHint.innerHTML = escapeHtml(base + (hints.length ? '\n' + hints.join('\n') : ''));
     }
 
@@ -2071,7 +2106,12 @@ window.__schedulePushSync = schedulePushSync;
         wrap.addEventListener('touchmove', () => { clearTimeout(longTimer); });
       }
 
-      logEl.appendChild(wrap);
+      // [변경1] sentinel 앞에 삽입하여 sentinel이 항상 맨 아래 유지
+      if (readSentinel && readSentinel.parentNode === logEl) {
+        logEl.insertBefore(wrap, readSentinel);
+      } else {
+        logEl.appendChild(wrap);
+      }
       seen.set(m.messageId, { seq: Number(m.seq || 0), metaEl: meta, senderId: m.senderId, wrapEl: wrap, bubbleEl: bubble, text: String(m.text || ''), replyTo: m.replyTo || null });
     }
 
@@ -2233,9 +2273,38 @@ window.__schedulePushSync = schedulePushSync;
 
           const right = document.createElement('div');
           right.className = 'roomRight';
+
+          // [변경4] 구독 버튼
+          const subChip = document.createElement('div');
+          const subbed = isSubscribed(r.roomId);
+          subChip.className = 'chip clickable' + (subbed ? ' subbed' : '');
+          subChip.textContent = subbed ? '🔔 구독중' : '🔔 구독';
+          subChip.title = subbed ? '구독 해제' : '알림만 받기(채팅 참여 없음)';
+          subChip.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            if (!myNick){
+              const nick = homeNick.value.trim();
+              if (!setNick(nick)){ alert('닉네임을 먼저 입력해 주세요.'); return; }
+            }
+            if (!myUid){ alert('로그인 상태를 확인 중입니다. 잠시 후 다시 시도해 주세요.'); return; }
+            const nowSubbed = isSubscribed(r.roomId);
+            if (nowSubbed){
+              await unsubscribeRoom(r.roomId);
+              subChip.className = 'chip clickable';
+              subChip.textContent = '🔔 구독';
+              subChip.title = '알림만 받기(채팅 참여 없음)';
+            } else {
+              await subscribeRoom(r.roomId, myNick);
+              subChip.className = 'chip clickable subbed';
+              subChip.textContent = '🔔 구독중';
+              subChip.title = '구독 해제';
+            }
+          });
+
           const chip = document.createElement('div');
           chip.className = 'chip';
           chip.textContent = '입장';
+          right.appendChild(subChip);
           right.appendChild(chip);
 
           item.appendChild(left);
@@ -2313,9 +2382,7 @@ window.__schedulePushSync = schedulePushSync;
       }
     });
 
-    btnJoin.addEventListener('click', async () => {
-      alert('방 목록에서 입장해 주세요.');
-    });
+    // [변경3] btnJoin 기능 삭제 - 관련 코드 제거됨
 
     async function joinRoomFlow(rid){
       rid = String(rid||'').trim();
@@ -2512,6 +2579,16 @@ function startPresence(rid){
         if (readsScrollTimer) clearTimeout(readsScrollTimer);
         readsScrollTimer = null;
 
+        // [변경1] IntersectionObserver 정리
+        if (readObserver){
+          readObserver.disconnect();
+          readObserver = null;
+        }
+        if (readSentinel){
+          try{ readSentinel.remove(); }catch(e){}
+          readSentinel = null;
+        }
+
         readsCache = {};
       }catch(e){}
     }
@@ -2547,19 +2624,44 @@ function startPresence(rid){
         updateReadBadges();
       });
 
-      readsMarkTimer = setInterval(() => {
-        markReadNow();
-      }, 2000);
+      // [변경1] IntersectionObserver로 읽음 처리 최적화
+      // sentinel 엘리먼트를 log 맨 아래에 추가
+      readSentinel = document.createElement('div');
+      readSentinel.id = 'readSentinel';
+      readSentinel.style.cssText = 'height:1px;width:100%;pointer-events:none;';
+      logEl.appendChild(readSentinel);
 
+      if (typeof IntersectionObserver !== 'undefined') {
+        readObserver = new IntersectionObserver((entries) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              markReadNow();
+              if (canMarkRead()) clearUnread();
+            }
+          });
+        }, { root: logEl, rootMargin: '0px', threshold: 0 });
+        readObserver.observe(readSentinel);
+      }
+
+      // 스크롤 이벤트 (보조 - 150ms 디바운스, 가벼움)
       logEl.addEventListener('scroll', () => {
         if (readsScrollTimer) clearTimeout(readsScrollTimer);
-        readsScrollTimer = setTimeout(() => { markReadNow(); if (canMarkRead()) clearUnread(); }, 120);
+        readsScrollTimer = setTimeout(() => {
+          markReadNow();
+          if (canMarkRead()) clearUnread();
+        }, 150);
       });
 
+      // 포커스/가시성 복귀 시
       document.addEventListener('visibilitychange', () => {
         if (!document.hidden) markReadNow();
       });
       window.addEventListener('focus', () => markReadNow());
+
+      // [변경1] 안전망: 30초마다 한 번씩만 (2초 → 30초로 대폭 완화)
+      readsMarkTimer = setInterval(() => {
+        markReadNow();
+      }, 30000);
     }
 
     function stopMessages(){
@@ -2762,13 +2864,10 @@ function startPresence(rid){
       setHeader([]);
     });
 
+    // [변경2] 방 이름 변경 - 아무나 가능 (isOwner 조건 제거)
     mRoomName.addEventListener('click', async () => {
       closeMenu();
       if (!roomId) return;
-      if (!isOwner){
-        alert('방장만 방 이름을 변경할 수 있습니다.');
-        return;
-      }
       const next = prompt('새 방 이름을 입력해 주세요.', roomName || '');
       if (!next) return;
 
@@ -2785,13 +2884,10 @@ function startPresence(rid){
       }
     });
 
+    // [변경2] 비밀번호 설정 - 아무나 가능 (isOwner 조건 제거)
     mRoomPass.addEventListener('click', async () => {
       closeMenu();
       if (!roomId) return;
-      if (!isOwner){
-        alert('방장만 비밀번호를 변경할 수 있습니다.');
-        return;
-      }
 
       const info = await loadRoomInfo(roomId);
       if (!info){
