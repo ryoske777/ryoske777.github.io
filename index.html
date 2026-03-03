@@ -988,13 +988,13 @@
 
     const firebaseConfig = {
       apiKey: "AIzaSyC6iyCkpqtaWgFXlJZiogn2SgfIz9j1I4M",
-      authDomain: "YOUR_AUTH_DOMAIN", 
-      databaseURL: "YOUR_DATABASE_URL",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_STORAGE_BUCKET",
-      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-      appId: "YOUR_APP_ID",
-      measurementId: "YOUR_MEASUREMENT_ID"
+      authDomain: "messenger-222df.firebaseapp.com",
+      databaseURL: "https://messenger-222df-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "messenger-222df",
+      storageBucket: "messenger-222df.firebasestorage.app",
+      messagingSenderId: "",
+      appId: "",
+      measurementId: ""
     };
 
     let db, SV;
@@ -1347,6 +1347,13 @@
         firebaseStatus.innerHTML = `<div class="errorBox">⏳ Firebase 초기화 중...</div>`;
       }
     }
+    const EMOJIS = [
+      '😀','😂','🤣','😊','😍','🥰','😘','😎','🤩','🥳',
+      '😭','😢','😤','😡','🤯','😱','🥺','😴','🤔','🤫',
+      '👍','👎','👏','🙌','🤝','✌️','🤞','💪','🫶','❤️',
+      '🔥','⭐','🎉','🎊','💯','✅','❌','⚡','💬','👀'
+    ];
+
     function buildEmoji(){
       emojiGrid.innerHTML = '';
       EMOJIS.forEach(e => {
