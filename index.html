@@ -21,85 +21,89 @@
       height:100%; margin:0; background:var(--bg); color:var(--text);
       font-family:-apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", Arial, sans-serif; overflow:hidden;
     }
-    button, .clickable{ -webkit-tap-highlight-color: transparent; touch-action: manipulation; cursor: pointer; transition: transform .08s ease, box-shadow .18s ease; }
-    button:active, .clickable:active{ transform: translateY(1px) scale(0.99); }
-    .app{
-      height: var(--appH, 100dvh); display:flex; flex-direction:column; min-height:0; overflow:hidden;
-      padding-top: var(--safeT); background: var(--bg); transform: translateZ(0);
-    }
-    header{ position:sticky; top:0; z-index:10; padding: 12px 14px 10px 14px; border-bottom:1px solid var(--line); background: rgba(255,255,255,0.92); backdrop-filter: blur(12px); }
+    button, .clickable{ -webkit-tap-highlight-color:transparent; touch-action:manipulation; cursor:pointer; transition:transform .08s ease, box-shadow .18s ease; }
+    button:active, .clickable:active{ transform:translateY(1px) scale(0.99); }
+    .app{ height:var(--appH,100dvh); display:flex; flex-direction:column; min-height:0; overflow:hidden; padding-top:var(--safeT); background:var(--bg); transform:translateZ(0); }
+    header{ position:sticky; top:0; z-index:10; padding:12px 14px 10px; border-bottom:1px solid var(--line); background:rgba(255,255,255,0.92); backdrop-filter:blur(12px); }
     .headTop{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
     .title{ font-size:16px; font-weight:800; margin:0; line-height:1.2; }
     .sub{ margin-top:6px; font-size:12px; color:var(--muted); display:flex; gap:10px; flex-wrap:wrap; }
-    .pill{ display:inline-flex; align-items:center; gap:6px; padding: 6px 10px; border-radius: 999px; border:1px solid var(--line); background:#fff; font-size:12px; color:var(--muted); }
+    .pill{ display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; border:1px solid var(--line); background:#fff; font-size:12px; color:var(--muted); }
     .menuWrap{ position:relative; display:flex; align-items:center; gap:8px; }
-    .menuBtn{ width:40px; height:40px; border-radius:12px; border:1px solid var(--line); background:#fff; display:flex; align-items:center; justify-content:center; font-size:22px; line-height:1; user-select:none; box-shadow: 0 6px 18px rgba(0,0,0,0.06); }
-    .menu{ position:absolute; right:0; top:46px; min-width: 280px; background:#fff; border:1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow2); overflow:hidden; display:none; z-index:100; }
+    .menuBtn{ width:40px; height:40px; border-radius:12px; border:1px solid var(--line); background:#fff; display:flex; align-items:center; justify-content:center; font-size:22px; line-height:1; user-select:none; box-shadow:0 6px 18px rgba(0,0,0,0.06); }
+    .menu{ position:absolute; right:0; top:46px; min-width:280px; background:#fff; border:1px solid var(--line); border-radius:14px; box-shadow:var(--shadow2); overflow:hidden; display:none; z-index:100; }
     .menu.open{ display:block; }
-    .menu button{ width:100%; padding: 12px; border:0; background:#fff; text-align:left; font-size:14px; display:flex; justify-content:space-between; align-items:center; }
+    .menu button{ width:100%; padding:12px; border:0; background:#fff; text-align:left; font-size:14px; display:flex; justify-content:space-between; align-items:center; }
     .menu button:hover{ background:#f8fafc; }
     .menu .hint{ font-size:12px; color:var(--muted); padding:10px 12px; border-top:1px solid var(--line); line-height:1.35; white-space:pre-wrap; }
-    .home{ flex:1; min-height:0; overflow:auto; padding: 16px; -webkit-overflow-scrolling: touch; }
-    .homeCard{ width:100%; max-width: 720px; margin: 0 auto; background:#fff; border:1px solid var(--line); border-radius: 18px; padding: 16px; box-shadow: var(--shadow); }
-    .homeTitle{ font-weight:900; font-size:18px; margin:0 0 10px 0; }
-    .sectionTitle{ font-size:12px; color:var(--muted); font-weight:800; margin: 14px 0 8px 0; }
-    .field{ display:flex; flex-direction:column; gap:8px; margin: 10px 0; }
+    .home{ flex:1; min-height:0; overflow:auto; padding:16px; -webkit-overflow-scrolling:touch; }
+    .homeCard{ width:100%; max-width:720px; margin:0 auto; background:#fff; border:1px solid var(--line); border-radius:18px; padding:16px; box-shadow:var(--shadow); }
+    .homeTitle{ font-weight:900; font-size:18px; margin:0 0 10px; }
+    .sectionTitle{ font-size:12px; color:var(--muted); font-weight:800; margin:14px 0 8px; }
+    .field{ display:flex; flex-direction:column; gap:8px; margin:10px 0; }
     .field label{ font-size:12px; color:var(--muted); }
-    .field input{ height:46px; border-radius: 14px; border:1px solid var(--line); padding: 0 12px; font-size:16px; outline:none; }
-    .rowBtns{ display:flex; gap:10px; margin-top: 10px; }
-    .primaryBtn{ flex:1; height:46px; border-radius: 14px; border:0; background:#111827; color:#fff; font-size:15px; font-weight:900; box-shadow: 0 10px 18px rgba(17,24,39,0.14); }
-    .ghostBtn{ flex:1; height:46px; border-radius: 14px; border:1px solid var(--line); background:#fff; color:#111827; font-size:15px; font-weight:800; }
+    .field input{ height:46px; border-radius:14px; border:1px solid var(--line); padding:0 12px; font-size:16px; outline:none; }
+    .rowBtns{ display:flex; gap:10px; margin-top:10px; }
+    .primaryBtn{ flex:1; height:46px; border-radius:14px; border:0; background:#111827; color:#fff; font-size:15px; font-weight:900; box-shadow:0 10px 18px rgba(17,24,39,0.14); }
+    .ghostBtn{ flex:1; height:46px; border-radius:14px; border:1px solid var(--line); background:#fff; color:#111827; font-size:15px; font-weight:800; }
     .roomList{ display:flex; flex-direction:column; gap:10px; }
-    .roomItem{ border:1px solid var(--line); border-radius: 16px; padding: 12px; background:#fff; box-shadow: 0 6px 18px rgba(0,0,0,0.04); display:flex; align-items:center; justify-content:space-between; gap:12px; }
-    .log{ flex:1; min-height:0; overflow:auto; padding: 12px 12px calc(var(--composerH) + var(--typingH) + 20px) 12px; -webkit-overflow-scrolling: touch; position:relative; }
-    .msg{ display:flex; flex-direction:column; gap:4px; margin: 10px 0; width:100%; }
+    .roomItem{ border:1px solid var(--line); border-radius:16px; padding:12px; background:#fff; box-shadow:0 6px 18px rgba(0,0,0,0.04); display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    .log{ flex:1; min-height:0; overflow:auto; padding:12px 12px calc(var(--composerH) + var(--typingH) + 20px) 12px; -webkit-overflow-scrolling:touch; position:relative; }
+    .msg{ display:flex; flex-direction:column; gap:4px; margin:10px 0; width:100%; }
     .row{ display:flex; gap:8px; width:100%; }
     .row.me{ justify-content:flex-end; }
-    .bubble{ max-width: 82%; padding: 12px; border-radius: 16px; border:1px solid var(--line); background: var(--other); color: var(--otherText); white-space: pre-wrap; word-break: break-word; font-size:16px; line-height:1.35; }
-    .row.me .bubble{ background: var(--me); color: var(--meText); border-color: transparent; border-bottom-right-radius: 6px; }
-    .row.other .bubble{ border-bottom-left-radius: 6px; }
+    .bubble{ max-width:82%; padding:12px; border-radius:16px; border:1px solid var(--line); background:var(--other); color:var(--otherText); white-space:pre-wrap; word-break:break-word; font-size:16px; line-height:1.35; }
+    .row.me .bubble{ background:var(--me); color:var(--meText); border-color:transparent; border-bottom-right-radius:6px; }
+    .row.other .bubble{ border-bottom-left-radius:6px; }
     .meta{ font-size:11px; color:var(--muted); display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
     .meta.me{ justify-content:flex-end; }
-    .badgePending{ opacity:0.78; }
-    .readBadge{ font-weight:900; opacity:0.85; color: var(--accent); font-size:11px; }
-    .typingBar{ position:fixed; left:0; right:0; bottom: calc(var(--composerH) + max(0px, calc(var(--kb) + var(--safeBComp) - var(--kbFix)))); height: var(--typingH); display:none; align-items:center; padding: 0 12px; font-size:12px; color:var(--muted); background: rgba(255,255,255,0.95); backdrop-filter: blur(12px); border-top:1px solid var(--line); z-index:19; }
-    .composer{ position:fixed; left:0; right:0; bottom: max(0px, calc(var(--kb) + var(--safeBComp) - var(--kbFix))); height: var(--composerH); padding: 10px 12px; border-top:1px solid var(--line); background: rgba(255,255,255,0.95); backdrop-filter: blur(12px); display:flex; gap:10px; align-items:center; z-index:20; }
-    .emojiBtn{ width:48px; height:48px; border-radius: 14px; border:1px solid var(--line); background: #fff; font-size:22px; display:flex; align-items:center; justify-content:center; user-select:none; }
-    .inputWrap{ flex:1; height:48px; border-radius: 14px; border:1px solid var(--line); background:#fff; display:flex; align-items:center; padding: 0 12px; }
+    .readBadge{ font-weight:900; color:var(--accent); font-size:11px; }
+    .typingBar{ position:fixed; left:0; right:0; bottom:calc(var(--composerH) + max(0px,calc(var(--kb) + var(--safeBComp) - var(--kbFix)))); height:var(--typingH); display:none; align-items:center; padding:0 12px; font-size:12px; color:var(--muted); background:rgba(255,255,255,0.95); backdrop-filter:blur(12px); border-top:1px solid var(--line); z-index:19; }
+    .composer{ position:fixed; left:0; right:0; bottom:max(0px,calc(var(--kb) + var(--safeBComp) - var(--kbFix))); height:var(--composerH); padding:10px 12px; border-top:1px solid var(--line); background:rgba(255,255,255,0.95); backdrop-filter:blur(12px); display:flex; gap:10px; align-items:center; z-index:20; }
+    .emojiBtn{ width:48px; height:48px; border-radius:14px; border:1px solid var(--line); background:#fff; font-size:22px; display:flex; align-items:center; justify-content:center; user-select:none; flex-shrink:0; }
+    .inputWrap{ flex:1; height:48px; border-radius:14px; border:1px solid var(--line); background:#fff; display:flex; align-items:center; padding:0 12px; min-width:0; }
     input[type="text"]{ width:100%; border:0; outline:none; font-size:16px; background:transparent; }
-    .sendBtn{ width:64px; height:48px; border-radius: 14px; border:0; background:#111827; color:#fff; font-size:15px; font-weight:900; }
+    .sendBtn{ width:64px; height:48px; border-radius:14px; border:0; background:#111827; color:#fff; font-size:15px; font-weight:900; flex-shrink:0; }
     .sendBtn:disabled{ opacity:0.45; }
-    .emojiPanel{ position:fixed; left:12px; right:12px; bottom: calc(var(--composerH) + max(0px, calc(var(--kb) + var(--safeBComp) - var(--kbFix))) + 10px); background:#fff; border:1px solid var(--line); border-radius: 16px; padding: 10px; box-shadow: var(--shadow); display:none; z-index:30; }
+    .emojiPanel{ position:fixed; left:12px; right:12px; bottom:calc(var(--composerH) + max(0px,calc(var(--kb) + var(--safeBComp) - var(--kbFix))) + 10px); background:#fff; border:1px solid var(--line); border-radius:16px; padding:10px; box-shadow:var(--shadow); display:none; z-index:30; }
     .emojiPanel.open{ display:block; }
-    .emojiGrid{ display:grid; grid-template-columns: repeat(8, 1fr); gap:8px; }
-    .emoji{ height:38px; border-radius: 10px; display:flex; align-items:center; justify-content:center; font-size:22px; user-select:none; cursor:pointer; }
+    .emojiGrid{ display:grid; grid-template-columns:repeat(8,1fr); gap:8px; }
+    .emoji{ height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:22px; user-select:none; cursor:pointer; }
     .emoji:active{ background:#f3f4f6; }
-    .modalOverlay{ position:fixed; inset:0; background: rgba(0,0,0,0.45); display:none; align-items:center; justify-content:center; padding:16px; z-index:50; }
+    .modalOverlay{ position:fixed; inset:0; background:rgba(0,0,0,0.45); display:none; align-items:center; justify-content:center; padding:16px; z-index:50; }
     .modalOverlay.open{ display:flex; }
-    .modalCard{ width:100%; max-width:420px; background:#fff; border:1px solid var(--line); border-radius: 18px; padding: 20px; display:flex; flex-direction:column; gap:12px; }
+    .modalCard{ width:100%; max-width:420px; background:#fff; border:1px solid var(--line); border-radius:18px; padding:20px; display:flex; flex-direction:column; gap:12px; }
     .modalTitle{ font-size:16px; font-weight:800; margin:0; }
     .modalBtnsRow{ display:flex; gap:10px; margin-top:4px; }
-    #passModalInput{ height:46px; border-radius:14px; border:1px solid var(--line); padding:0 12px; font-size:16px; outline:none; }
+    .passInput{ height:46px; border-radius:14px; border:1px solid var(--line); padding:0 12px; font-size:16px; outline:none; width:100%; }
     .msgCtxMenu{ position:fixed; background:#fff; border:1px solid var(--line); border-radius:14px; box-shadow:0 14px 40px rgba(0,0,0,0.14); overflow:hidden; z-index:200; min-width:160px; display:none; }
     .msgCtxMenu.open{ display:block; }
     .msgCtxMenu button{ width:100%; padding:11px 14px; border:0; background:#fff; text-align:left; font-size:14px; display:flex; align-items:center; gap:10px; }
     .msgCtxMenu button:hover{ background:#f8fafc; }
-    .msgCtxMenu button.danger{ color: var(--danger); }
+    .msgCtxMenu button.danger{ color:var(--danger); }
     .quickReact{ display:flex; gap:4px; padding:8px 10px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
     .quickReact span{ font-size:20px; cursor:pointer; padding:2px 4px; border-radius:8px; transition:transform .1s; }
     .quickReact span:active{ transform:scale(1.3); }
     .deletedBubble{ font-style:italic; color:var(--muted); font-size:13px; }
-    .reactChip{ display:inline-flex; align-items:center; gap:3px; padding:2px 8px; border-radius:999px; border:1px solid var(--line); background:#fff; font-size:13px; cursor:pointer; user-select:none; margin-top:4px; transition: background .1s; }
-    .reactChip.mine{ background:#f0fdf4; border-color: var(--accent); }
-    .reactRow{ display:flex; flex-wrap:wrap; gap:4px; padding: 2px 0; }
-    .replyPreview{ position:absolute; bottom: 100%; left:0; right:0; background: rgba(255,255,255,0.97); border-top: 1px solid var(--line); padding: 8px 12px; display:none; align-items:center; gap:8px; font-size:12px; z-index:21; }
-    .replyQuote{ border-left: 3px solid var(--accent); padding: 5px 10px; background: rgba(34,197,94,0.07); margin-bottom: 6px; font-size:12px; cursor: pointer; border-radius: 4px; }
+    .reactChip{ display:inline-flex; align-items:center; gap:3px; padding:2px 8px; border-radius:999px; border:1px solid var(--line); background:#fff; font-size:13px; cursor:pointer; user-select:none; margin-top:4px; }
+    .reactChip.mine{ background:#f0fdf4; border-color:var(--accent); }
+    .reactRow{ display:flex; flex-wrap:wrap; gap:4px; padding:2px 0; }
+    .replyPreview{ position:absolute; bottom:100%; left:0; right:0; background:rgba(255,255,255,0.97); border-top:1px solid var(--line); padding:8px 12px; display:none; align-items:center; gap:8px; font-size:12px; z-index:21; }
+    .replyQuote{ border-left:3px solid var(--accent); padding:5px 10px; background:rgba(34,197,94,0.07); margin-bottom:6px; font-size:12px; cursor:pointer; border-radius:4px; }
     .toast{ position:fixed; bottom:calc(var(--composerH) + 20px); left:50%; transform:translateX(-50%) translateY(20px); background:#111827; color:#fff; padding:9px 18px; border-radius:999px; font-size:13px; opacity:0; transition:all .2s; z-index:400; pointer-events:none; white-space:nowrap; }
     .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
     .loadMoreBtn{ display:block; width:100%; padding:10px; border:1px solid var(--line); border-radius:14px; background:#fff; font-size:13px; color:var(--muted); text-align:center; margin-bottom:10px; cursor:pointer; }
-    #readSentinel{ height: 1px; width: 100%; pointer-events: none; margin-top: 10px; }
-    .joinRow{ display:flex; gap:8px; margin-top:8px; }
-    .joinRow input{ flex:1; height:46px; border-radius:14px; border:1px solid var(--line); padding:0 12px; font-size:14px; outline:none; }
+    #readSentinel{ height:1px; width:100%; pointer-events:none; margin-top:10px; }
+    /* 투표 배너 */
+    .voteBanner{ background:#fffbeb; border:1px solid #fde68a; border-radius:14px; padding:12px 14px; margin-bottom:12px; font-size:13px; }
+    .voteBanner .voteTitle{ font-weight:800; margin-bottom:8px; color:#92400e; font-size:13px; }
+    .voteCandRow{ display:flex; align-items:center; gap:8px; padding:5px 0; border-bottom:1px solid #fde68a; }
+    .voteCandRow:last-child{ border-bottom:none; }
+    .voteBar{ flex:1; height:7px; background:#fde68a; border-radius:999px; overflow:hidden; min-width:40px; }
+    .voteBarFill{ height:100%; background:#f59e0b; border-radius:999px; transition:width .3s; }
+    .voteCnt{ font-size:12px; color:#92400e; font-weight:700; min-width:26px; text-align:right; }
+    .voteBtn{ padding:3px 10px; border-radius:999px; border:1px solid #f59e0b; background:#fff; font-size:12px; font-weight:700; color:#92400e; cursor:pointer; white-space:nowrap; flex-shrink:0; }
+    .voteBtn.voted{ background:#f59e0b; color:#fff; }
   </style>
 
 <script>
@@ -128,6 +132,7 @@
             <button id="mNick"><span>닉네임 변경</span><span>›</span></button>
             <button id="mRoomName"><span>방 이름 변경</span><span>›</span></button>
             <button id="mRoomPass"><span>비밀번호 설정</span><span>›</span></button>
+            <button id="mVoteOwner"><span>👑 방장 지정 투표</span><span>›</span></button>
             <button id="mLeave"><span>나가기</span><span>›</span></button>
             <div class="hint" id="menuHint"></div>
           </div>
@@ -146,12 +151,6 @@
         <div class="rowBtns"><button class="primaryBtn" id="btnCreate">방 만들기</button><button class="ghostBtn" id="btnRefresh">새로고침</button></div>
         <div class="sectionTitle">채팅방 목록</div>
         <div class="roomList" id="roomList"></div>
-        <!-- [FIX #9] 방 참여 UI 구현 -->
-        <div class="sectionTitle">방 ID로 참여</div>
-        <div class="joinRow">
-          <input id="joinRoomIdInput" type="text" placeholder="방 ID 입력" />
-          <button class="ghostBtn" id="btnJoin" style="flex:0;min-width:80px;width:80px;padding:0;white-space:nowrap;">참여하기</button>
-        </div>
       </div>
     </div>
 
@@ -165,8 +164,11 @@
     <div class="composer" id="composer" style="display:none;">
       <div class="replyPreview" id="replyPreview">
         <div style="width:3px;height:24px;background:var(--accent);border-radius:2px;flex-shrink:0;"></div>
-        <div style="flex:1;min-width:0;"><div class="replyPreviewName" id="replyPreviewName" style="font-weight:700;color:var(--accent);"></div><div id="replyPreviewMsg" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div></div>
-        <button class="replyCloseBtn" id="replyCloseBtn" style="border:0;background:none;font-size:18px;flex-shrink:0;">✕</button>
+        <div style="flex:1;min-width:0;">
+          <div id="replyPreviewName" style="font-weight:700;color:var(--accent);"></div>
+          <div id="replyPreviewMsg" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+        </div>
+        <button id="replyCloseBtn" style="border:0;background:none;font-size:18px;flex-shrink:0;">✕</button>
       </div>
       <div class="emojiBtn clickable" id="emojiBtn">😊</div>
       <div class="inputWrap"><input id="input" type="text" autocomplete="off" placeholder="메시지를 입력하세요" /></div>
@@ -176,7 +178,8 @@
 
   <div class="msgCtxMenu" id="msgCtxMenu">
     <div class="quickReact" id="quickReactBar">
-      <span data-e="👍">👍</span><span data-e="❤️">❤️</span><span data-e="😂">😂</span><span data-e="😮">😮</span><span data-e="😢">😢</span><span data-e="🔥">🔥</span>
+      <span data-e="👍">👍</span><span data-e="❤️">❤️</span><span data-e="😂">😂</span>
+      <span data-e="😮">😮</span><span data-e="😢">😢</span><span data-e="🔥">🔥</span>
     </div>
     <button id="ctxReply">↩️ 답글</button>
     <button id="ctxEdit">✏️ 수정</button>
@@ -185,15 +188,29 @@
 
   <div class="toast" id="toast"></div>
 
-  <!-- [FIX #8] 비밀번호 모달 구조 수정 -->
+  <!-- 비밀번호 모달 -->
   <div class="modalOverlay" id="passModal">
     <div class="modalCard">
       <div class="modalTitle" id="passModalTitle">비밀번호</div>
       <div id="passModalBody" style="font-size:13px;color:var(--muted);"></div>
-      <input id="passModalInput" type="password" placeholder="비밀번호" />
+      <input class="passInput" id="passModalInput" type="password" placeholder="비밀번호" />
       <div class="modalBtnsRow">
         <button class="primaryBtn" id="passModalOk">확인</button>
         <button class="ghostBtn" id="passModalCancel">취소</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 방장 투표 모달 -->
+  <div class="modalOverlay" id="voteModal">
+    <div class="modalCard">
+      <div class="modalTitle">👑 방장 지정 투표</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.5;">
+        현재 접속 중인 멤버 중 방장을 다수결로 지정합니다.<br>과반수 동의 시 즉시 방장이 변경됩니다.
+      </div>
+      <div id="voteModalBody" style="display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto;"></div>
+      <div class="modalBtnsRow">
+        <button class="ghostBtn" id="voteModalClose">닫기</button>
       </div>
     </div>
   </div>
@@ -214,60 +231,56 @@
       messagingSenderId: "694962613962",
       appId: "1:694962613962:web:764e45b00345a8a27f4e33"
     };
-
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const SV = firebase.database.ServerValue;
     const NAV_URL = location.origin + location.pathname;
 
-    // ── 상태 변수 ──────────────────────────────────────────────
+    // ── 상태 ──────────────────────────────────────────────────────
     let myUid = '', myNick = '', roomId = '', roomName = '', isOwner = false;
-    let seen = new Map();                  // mid → { seq, metaEl, senderId, wrapEl, bubbleEl, text, replyTo }
-    let reactionWatchers = new Map();      // [FIX #6] 실제 리액션 연결에 사용
-    let presenceRef = null, presenceListRef = null;   // [FIX #12] 리스너 분리
-    let typingWatchRef = null, readsWatchRef = null, msgRef = null;
-    let readsCache = {}, unread = 0;
+    let seen = new Map();
+    let reactionWatchers = new Map();
+    let presenceRef = null, presenceListRef = null;
+    let typingWatchRef = null, readsWatchRef = null, msgRef = null, voteWatchRef = null;
+    let readsCache = {};
+    // ★ 방 입장 시점에 확보한 "내 마지막 읽은 seq" — 이 값보다 큰 메시지만 unread로 카운트
+    let myBaseReadSeq = 0;
+    let unread = 0;
     let soundEnabled = true, notiEnabled = false, myBubbleWhite = false;
     let currentReplyTo = null;
-    let ctxTargetMid = null, ctxTargetWrap = null, ctxTargetBubble = null, ctxTargetSenderId = null;
+    let ctxTargetMid = null, ctxTargetSenderId = null;
     let editingMid = null;
     let typingDebounceTimer = null, isTypingSent = false;
     let readObserver = null, visibilityHandler = null;
-    let oldestSeq = null;   // [FIX #10] 페이지네이션용
+    let oldestSeq = null;
+    let onlineMembers = {};   // uid → { nick, lastSeen }
+    let voteData = null;
 
-    // ── 유틸 ──────────────────────────────────────────────────
-    function uuid() { return 'u' + Date.now() + '_' + Math.random().toString(16).slice(2); }
-
-    // [FIX #7] escapeHtml 오타 수정: "' Barb" → "'"
-    function escapeHtml(s) {
-      return String(s).replace(/[&<>"']/g, c => ({
-        '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
-      }[c]));
+    // ── 유틸 ──────────────────────────────────────────────────────
+    function uuid(){ return 'u'+Date.now()+'_'+Math.random().toString(16).slice(2); }
+    function escapeHtml(s){
+      return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+    function fmt(ts){
+      return new Intl.DateTimeFormat('ko-KR',{month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit'}).format(new Date(ts));
     }
 
-    function fmt(ts) {
-      return new Intl.DateTimeFormat('ko-KR', {
-        month:'numeric', day:'numeric', hour:'numeric', minute:'2-digit'
-      }).format(new Date(ts));
+    // ★ unread 는 항상 이 함수를 통해서만 변경
+    function setUnread(n){
+      unread = Math.max(0, n);
+      document.title = unread > 0 ? '('+unread+') '+roomName : (roomName || 'Chat');
     }
-
-    // [FIX #15] clearUnread 구현
-    function clearUnread() {
-      unread = 0;
-      document.title = roomName || 'Chat';
-    }
+    function clearUnread(){ setUnread(0); }
 
     let toastTimer = null;
-    function showToast(msg, dur = 2000) {
+    function showToast(msg, dur=2000){
       const el = document.getElementById('toast');
-      el.textContent = msg;
-      el.classList.add('show');
+      el.textContent = msg; el.classList.add('show');
       clearTimeout(toastTimer);
-      toastTimer = setTimeout(() => el.classList.remove('show'), dur);
+      toastTimer = setTimeout(()=>el.classList.remove('show'), dur);
     }
 
-    // ── DOM 참조 ──────────────────────────────────────────────
-    const appEl     = document.getElementById('app');
+    // ── DOM ────────────────────────────────────────────────────────
     const logEl     = document.getElementById('log');
     const inputEl   = document.getElementById('input');
     const sendBtn   = document.getElementById('send');
@@ -280,796 +293,555 @@
     const menuBtn   = document.getElementById('menuBtn');
     const menu      = document.getElementById('menu');
 
-    // ── 이모지 패널 초기화 ────────────────────────────────────
+    // ── 이모지 패널 ────────────────────────────────────────────────
     const EMOJIS = ['😀','😂','🥰','😎','🤔','😢','😡','🤩','👍','👎','❤️','🔥','✅','🎉','💯','🙏','😮','😴','🤣','😊','👋','🙌','💪','🎊','🍀','⭐','🌈','💬'];
-    const emojiGrid = document.getElementById('emojiGrid');
-    EMOJIS.forEach(em => {
-      const el = document.createElement('div');
-      el.className = 'emoji clickable';
-      el.textContent = em;
-      el.onclick = () => {
-        inputEl.value += em;
-        onInput();
-        document.getElementById('emojiPanel').classList.remove('open');
-        inputEl.focus();
-      };
-      emojiGrid.appendChild(el);
+    EMOJIS.forEach(em=>{
+      const el=document.createElement('div'); el.className='emoji clickable'; el.textContent=em;
+      el.onclick=()=>{ inputEl.value+=em; onInput(); document.getElementById('emojiPanel').classList.remove('open'); inputEl.focus(); };
+      document.getElementById('emojiGrid').appendChild(el);
     });
-
-    document.getElementById('emojiBtn').onclick = (e) => {
-      e.stopPropagation();
-      document.getElementById('emojiPanel').classList.toggle('open');
+    document.getElementById('emojiBtn').onclick=e=>{
+      e.stopPropagation(); document.getElementById('emojiPanel').classList.toggle('open');
     };
 
-    // ── Presence ──────────────────────────────────────────────
-    // [FIX #12] presenceListRef 별도 관리로 리스너 누수 방지
-    function startPresence(rid) {
+    // ── Presence ───────────────────────────────────────────────────
+    function startPresence(rid){
       stopPresence();
-      presenceRef = db.ref('presence/' + rid + '/' + myUid);
-      presenceListRef = db.ref('presence/' + rid);
-
-      const updateStatus = () => {
-        if (!presenceRef) return;
-        if (document.visibilityState === 'visible') {
-          presenceRef.set({ nick: myNick, lastSeen: SV.TIMESTAMP });
+      presenceRef = db.ref('presence/'+rid+'/'+myUid);
+      presenceListRef = db.ref('presence/'+rid);
+      const update = ()=>{
+        if(!presenceRef) return;
+        if(document.visibilityState==='visible'){
+          presenceRef.set({nick:myNick, lastSeen:SV.TIMESTAMP});
           presenceRef.onDisconnect().remove();
-        } else {
-          presenceRef.remove();
-        }
+        } else presenceRef.remove();
       };
-      visibilityHandler = updateStatus;
+      visibilityHandler = update;
       document.addEventListener('visibilitychange', visibilityHandler);
-      updateStatus();
-
-      presenceListRef.on('value', snap => {
-        const v = snap.val() || {};
-        const online = [...new Set(Object.values(v).map(p => p.nick))].slice(0, 10);
-        setHeader(online);
+      update();
+      presenceListRef.on('value', snap=>{
+        onlineMembers = snap.val()||{};
+        const nicks = [...new Set(Object.values(onlineMembers).map(p=>p.nick))].slice(0,10);
+        setHeader(nicks);
       });
     }
-
-    function stopPresence() {
-      if (visibilityHandler) document.removeEventListener('visibilitychange', visibilityHandler);
-      if (presenceRef) { presenceRef.remove(); presenceRef.off(); presenceRef = null; }
-      // [FIX #12] presenceListRef.off() 추가
-      if (presenceListRef) { presenceListRef.off(); presenceListRef = null; }
+    function stopPresence(){
+      if(visibilityHandler) document.removeEventListener('visibilitychange', visibilityHandler);
+      if(presenceRef){ presenceRef.remove(); presenceRef.off(); presenceRef=null; }
+      if(presenceListRef){ presenceListRef.off(); presenceListRef=null; }
     }
 
-    // ── Typing ────────────────────────────────────────────────
-    function sendTypingStatus(isTyping) {
-      if (!roomId || !myUid || isTypingSent === isTyping) return;
-      isTypingSent = isTyping;
-      const ref = db.ref('typing/' + roomId + '/' + myUid);
-      if (isTyping) {
-        ref.set({ nick: myNick, until: Date.now() + 10000 });
-        ref.onDisconnect().remove();
-      } else {
-        ref.remove();
-      }
+    // ── Typing ─────────────────────────────────────────────────────
+    function sendTypingStatus(isTyping){
+      if(!roomId||!myUid||isTypingSent===isTyping) return;
+      isTypingSent=isTyping;
+      const ref=db.ref('typing/'+roomId+'/'+myUid);
+      if(isTyping){ ref.set({nick:myNick,until:Date.now()+10000}); ref.onDisconnect().remove(); }
+      else ref.remove();
     }
-
-    function onInput() {
-      // 수정 모드가 아닐 때 전송 버튼 상태 업데이트
-      sendBtn.disabled = !inputEl.value.trim();
-      if (!roomId) return;
+    function onInput(){
+      sendBtn.disabled=!inputEl.value.trim();
+      if(!roomId) return;
       sendTypingStatus(true);
-      if (typingDebounceTimer) clearTimeout(typingDebounceTimer);
-      typingDebounceTimer = setTimeout(() => sendTypingStatus(false), 3000);
+      if(typingDebounceTimer) clearTimeout(typingDebounceTimer);
+      typingDebounceTimer=setTimeout(()=>sendTypingStatus(false),3000);
+    }
+    function startTyping(rid){
+      if(typingWatchRef) typingWatchRef.off();
+      typingWatchRef=db.ref('typing/'+rid);
+      typingWatchRef.on('value',snap=>{
+        const v=snap.val()||{}, now=Date.now(); let best=null;
+        Object.keys(v).forEach(uid=>{ if(uid!==myUid&&v[uid].until>now) if(!best||v[uid].until>best.until) best=v[uid]; });
+        showTypingBar(best?best.nick+' 님이 입력 중입니다':'');
+      });
+    }
+    function stopTyping(){
+      if(typingWatchRef){ typingWatchRef.off(); typingWatchRef=null; }
+      if(typingDebounceTimer) clearTimeout(typingDebounceTimer);
+      sendTypingStatus(false); showTypingBar('');
     }
 
-    function startTyping(rid) {
-      if (typingWatchRef) { typingWatchRef.off(); }
-      typingWatchRef = db.ref('typing/' + rid);
-      typingWatchRef.on('value', snap => {
-        const v = snap.val() || {}, now = Date.now();
-        let best = null;
-        Object.keys(v).forEach(uid => {
-          if (uid !== myUid && v[uid].until > now) {
-            if (!best || v[uid].until > best.until) best = v[uid];
-          }
-        });
-        showTypingBar(best ? best.nick + ' 님이 입력 중입니다' : '');
+    // ── Reads ──────────────────────────────────────────────────────
+    function startReads(rid){
+      if(readsWatchRef){ readsWatchRef.off(); }
+      readsWatchRef=db.ref('reads/'+rid);
+      readsWatchRef.on('value',snap=>{ readsCache=snap.val()||{}; updateReadBadges(); });
+      if(readObserver){ readObserver.disconnect(); }
+      readObserver=new IntersectionObserver(entries=>{
+        if(entries[0].isIntersecting&&!document.hidden){ markReadNow(); clearUnread(); }
+      },{root:logEl,threshold:0.1});
+      const sentinel=document.getElementById('readSentinel');
+      if(sentinel) readObserver.observe(sentinel);
+      window.removeEventListener('focus',onWindowFocus);
+      window.addEventListener('focus',onWindowFocus);
+    }
+    function onWindowFocus(){ markReadNow(); clearUnread(); }
+    function stopReads(){
+      if(readObserver){ readObserver.disconnect(); readObserver=null; }
+      if(readsWatchRef){ readsWatchRef.off(); readsWatchRef=null; }
+      window.removeEventListener('focus',onWindowFocus);
+    }
+    function markReadNow(){
+      if(!roomId||!myUid) return;
+      const entries=[...seen.values()]; if(!entries.length) return;
+      const last=entries[entries.length-1];
+      db.ref('reads/'+roomId+'/'+myUid).set({nick:myNick,lastReadSeq:last.seq,ts:SV.TIMESTAMP}).catch(()=>{});
+    }
+    function updateReadBadges(){
+      seen.forEach((info,mid)=>{
+        if(info.senderId!==myUid) return;
+        const readers=Object.entries(readsCache).filter(([uid,r])=>uid!==myUid&&r.lastReadSeq>=info.seq);
+        let badge=info.metaEl.querySelector('.readBadge');
+        if(!badge){ badge=document.createElement('span'); badge.className='readBadge'; info.metaEl.appendChild(badge); }
+        badge.textContent=readers.length>0?'읽음 '+readers.length:'';
       });
     }
 
-    function stopTyping() {
-      if (typingWatchRef) { typingWatchRef.off(); typingWatchRef = null; }
-      if (typingDebounceTimer) clearTimeout(typingDebounceTimer);
-      sendTypingStatus(false);
-      showTypingBar('');
+    // ── 리액션 ─────────────────────────────────────────────────────
+    function watchReactions(mid){
+      if(reactionWatchers.has(mid)) return;
+      const ref=db.ref('reactions/'+roomId+'/'+mid);
+      ref.on('value',snap=>updateReactionUI(mid,snap.val()||{}));
+      reactionWatchers.set(mid,ref);
     }
-
-    // ── Reads ─────────────────────────────────────────────────
-    function startReads(rid) {
-      stopReads();
-      readsWatchRef = db.ref('reads/' + rid);
-      readsWatchRef.on('value', snap => {
-        readsCache = snap.val() || {};
-        updateReadBadges();
-      });
-
-      const sentinel = document.getElementById('readSentinel');
-      readObserver = new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting && !document.hidden) {
-          markReadNow();
-          clearUnread();
-        }
-      }, { root: logEl, threshold: 0.1 });
-      readObserver.observe(sentinel);
-
-      window.addEventListener('focus', onWindowFocus);
-    }
-
-    function onWindowFocus() {
-      markReadNow();
-      clearUnread();
-    }
-
-    function stopReads() {
-      if (readObserver) { readObserver.disconnect(); readObserver = null; }
-      if (readsWatchRef) { readsWatchRef.off(); readsWatchRef = null; }
-      window.removeEventListener('focus', onWindowFocus);
-    }
-
-    function markReadNow() {
-      if (!roomId || !myUid) return;
-      const entries = [...seen.values()];
-      if (!entries.length) return;
-      const last = entries[entries.length - 1];
-      db.ref('reads/' + roomId + '/' + myUid).set({
-        nick: myNick, lastReadSeq: last.seq, ts: SV.TIMESTAMP
-      }).catch(() => {});
-    }
-
-    // [FIX #5] updateReadBadges 구현
-    function updateReadBadges() {
-      seen.forEach((info, mid) => {
-        if (info.senderId !== myUid) return;
-        const otherReaders = Object.entries(readsCache).filter(
-          ([uid, r]) => uid !== myUid && r.lastReadSeq >= info.seq
-        );
-        let badge = info.metaEl.querySelector('.readBadge');
-        if (!badge) {
-          badge = document.createElement('span');
-          badge.className = 'readBadge';
-          info.metaEl.appendChild(badge);
-        }
-        badge.textContent = otherReaders.length > 0 ? `읽음 ${otherReaders.length}` : '';
+    function stopReactions(){ reactionWatchers.forEach(r=>r.off()); reactionWatchers.clear(); }
+    function updateReactionUI(mid,data){
+      const info=seen.get(mid); if(!info) return;
+      let row=info.wrapEl.querySelector('.reactRow');
+      if(!row){ row=document.createElement('div'); row.className='reactRow'; const r=info.wrapEl.querySelector('.row'); if(r) r.after(row); }
+      row.innerHTML='';
+      Object.entries(data).forEach(([emoji,users])=>{
+        const uids=Object.keys(users); if(!uids.length) return;
+        const chip=document.createElement('span');
+        chip.className='reactChip'+(users[myUid]?' mine':'');
+        chip.textContent=emoji+' '+uids.length;
+        chip.onclick=()=>toggleReaction(mid,emoji);
+        row.appendChild(chip);
       });
     }
-
-    // ── 리액션 ────────────────────────────────────────────────
-    // [FIX #6] reactionWatchers 실제 구현
-    function watchReactions(mid) {
-      if (reactionWatchers.has(mid)) return;
-      const ref = db.ref('reactions/' + roomId + '/' + mid);
-      ref.on('value', snap => {
-        const data = snap.val() || {};
-        updateReactionUI(mid, data);
-      });
-      reactionWatchers.set(mid, ref);
+    function toggleReaction(mid,emoji){
+      if(!roomId||!myUid) return;
+      const ref=db.ref('reactions/'+roomId+'/'+mid+'/'+emoji+'/'+myUid);
+      ref.once('value').then(snap=>{ if(snap.exists()) ref.remove().catch(()=>{}); else ref.set(myNick).catch(()=>{}); }).catch(()=>{});
     }
 
-    function stopReactions() {
-      reactionWatchers.forEach(ref => ref.off());
-      reactionWatchers.clear();
-    }
-
-    function updateReactionUI(mid, data) {
-      const info = seen.get(mid);
-      if (!info) return;
-      // data: { "👍": { uid1: true, uid2: true }, ... }
-      let reactRow = info.wrapEl.querySelector('.reactRow');
-      if (!reactRow) {
-        reactRow = document.createElement('div');
-        reactRow.className = 'reactRow';
-        const row = info.wrapEl.querySelector('.row');
-        if (row) row.after(reactRow);
-      }
-      reactRow.innerHTML = '';
-      Object.entries(data).forEach(([emoji, users]) => {
-        const uids = Object.keys(users);
-        if (!uids.length) return;
-        const chip = document.createElement('span');
-        chip.className = 'reactChip' + (users[myUid] ? ' mine' : '');
-        chip.textContent = emoji + ' ' + uids.length;
-        chip.title = Object.values(users).filter(v => typeof v === 'string').join(', ');
-        chip.onclick = () => toggleReaction(mid, emoji);
-        reactRow.appendChild(chip);
-      });
-    }
-
-    function toggleReaction(mid, emoji) {
-      if (!roomId || !myUid) return;
-      const ref = db.ref('reactions/' + roomId + '/' + mid + '/' + emoji + '/' + myUid);
-      ref.once('value').then(snap => {
-        if (snap.exists()) ref.remove().catch(() => {});
-        else ref.set(myNick).catch(() => {});
-      }).catch(() => {});
-    }
-
-    // ── 메시지 렌더링 ─────────────────────────────────────────
-    function renderMessage(m, prepend = false) {
-      if (seen.has(m.messageId)) return;
-      const isMine = m.senderId === myUid;
-      const wrap = document.createElement('div');
-      wrap.className = 'msg';
-      wrap.dataset.mid = m.messageId;
-
-      const row = document.createElement('div');
-      row.className = 'row ' + (isMine ? 'me' : 'other');
-      const bubble = document.createElement('div');
-      bubble.className = 'bubble';
-      rebuildBubble(bubble, m);
-      row.appendChild(bubble);
-      wrap.appendChild(row);
-
-      const meta = document.createElement('div');
-      meta.className = 'meta ' + (isMine ? 'me' : '');
-      meta.innerHTML = `<span>${escapeHtml(m.senderNick)}</span><span>${m.ts ? fmt(m.ts) : ''}</span>`;
+    // ── 메시지 렌더링 ──────────────────────────────────────────────
+    function renderMessage(m, prepend=false){
+      if(seen.has(m.messageId)) return;
+      const isMine=m.senderId===myUid;
+      const wrap=document.createElement('div'); wrap.className='msg'; wrap.dataset.mid=m.messageId;
+      const row=document.createElement('div'); row.className='row '+(isMine?'me':'other');
+      const bubble=document.createElement('div'); bubble.className='bubble';
+      rebuildBubble(bubble,m); row.appendChild(bubble); wrap.appendChild(row);
+      const meta=document.createElement('div'); meta.className='meta '+(isMine?'me':'');
+      meta.innerHTML='<span>'+escapeHtml(m.senderNick)+'</span><span>'+(m.ts?fmt(m.ts):'')+'</span>';
       wrap.appendChild(meta);
-
-      const sentinel = document.getElementById('readSentinel');
-      if (prepend) {
-        logEl.insertBefore(wrap, logEl.firstChild);
-      } else {
-        logEl.insertBefore(wrap, sentinel);
-      }
-
-      seen.set(m.messageId, {
-        seq: m.seq || 0,
-        metaEl: meta,
-        senderId: m.senderId,
-        wrapEl: wrap,
-        bubbleEl: bubble,
-        text: m.text,
-        replyTo: m.replyTo
-      });
-
-      // 리액션 감시 시작
+      const sentinel=document.getElementById('readSentinel');
+      if(prepend) logEl.insertBefore(wrap,logEl.firstChild);
+      else logEl.insertBefore(wrap,sentinel);
+      seen.set(m.messageId,{seq:m.seq||0,metaEl:meta,senderId:m.senderId,wrapEl:wrap,bubbleEl:bubble,text:m.text,replyTo:m.replyTo});
       watchReactions(m.messageId);
 
-      // 롱프레스 / 우클릭 컨텍스트 메뉴
-      let longPressTimer = null;
-      wrap.oncontextmenu = (e) => {
-        e.preventDefault();
-        openMsgMenu(m.messageId, m.senderId, wrap, bubble, e.clientX, e.clientY);
-      };
-      wrap.addEventListener('touchstart', () => {
-        longPressTimer = setTimeout(() => {
-          openMsgMenu(m.messageId, m.senderId, wrap, bubble);
-        }, 500);
-      }, { passive: true });
-      wrap.addEventListener('touchend', () => clearTimeout(longPressTimer), { passive: true });
-      wrap.addEventListener('touchmove', () => clearTimeout(longPressTimer), { passive: true });
-
-      // 읽지 않은 메시지 카운트 (내 메시지 제외)
-      if (!isMine) {
-        unread++;
-        document.title = `(${unread}) ${roomName}`;
+      // ★ unread 카운트: 내 메시지가 아니고, prepend(과거 로드)가 아니며,
+      //    방 입장 시 이미 읽은 seq(myBaseReadSeq)보다 큰 메시지만 카운트
+      if(!isMine && !prepend && (m.seq||0) > myBaseReadSeq){
+        setUnread(unread+1);
       }
+
+      // 롱프레스 / 우클릭
+      let lp=null;
+      wrap.oncontextmenu=e=>{ e.preventDefault(); openMsgMenu(m.messageId,m.senderId,wrap,bubble,e.clientX,e.clientY); };
+      wrap.addEventListener('touchstart',()=>{ lp=setTimeout(()=>openMsgMenu(m.messageId,m.senderId,wrap,bubble),500); },{passive:true});
+      wrap.addEventListener('touchend',()=>clearTimeout(lp),{passive:true});
+      wrap.addEventListener('touchmove',()=>clearTimeout(lp),{passive:true});
     }
 
-    function rebuildBubble(bubble, m) {
-      bubble.innerHTML = '';
-      if (m.deleted) {
-        bubble.className = 'bubble deletedBubble';
-        bubble.textContent = '삭제된 메시지입니다.';
-        return;
-      }
-      bubble.className = 'bubble';
-      if (m.replyTo) {
-        const q = document.createElement('div');
-        q.className = 'replyQuote';
-        q.innerHTML = `<div style="font-weight:700;color:var(--accent)">${escapeHtml(m.replyTo.nick)}</div><div>${escapeHtml((m.replyTo.text || '').slice(0, 50))}</div>`;
-        q.onclick = () => {
-          const target = logEl.querySelector(`[data-mid="${m.replyTo.mid}"]`);
-          if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        };
+    function rebuildBubble(bubble,m){
+      bubble.innerHTML='';
+      if(m.deleted){ bubble.className='bubble deletedBubble'; bubble.textContent='삭제된 메시지입니다.'; return; }
+      bubble.className='bubble';
+      if(m.replyTo){
+        const q=document.createElement('div'); q.className='replyQuote';
+        q.innerHTML='<div style="font-weight:700;color:var(--accent)">'+escapeHtml(m.replyTo.nick)+'</div><div>'+escapeHtml((m.replyTo.text||'').slice(0,50))+'</div>';
+        q.onclick=()=>{ const t=logEl.querySelector('[data-mid="'+m.replyTo.mid+'"]'); if(t) t.scrollIntoView({behavior:'smooth',block:'center'}); };
         bubble.appendChild(q);
       }
-      const txt = document.createElement('div');
-      txt.textContent = m.text;
-      bubble.appendChild(txt);
+      const txt=document.createElement('div'); txt.textContent=m.text; bubble.appendChild(txt);
     }
 
-    // ── 컨텍스트 메뉴 ─────────────────────────────────────────
-    function openMsgMenu(mid, senderId, wrap, bubble, x, y) {
-      ctxTargetMid = mid;
-      ctxTargetWrap = wrap;
-      ctxTargetBubble = bubble;
-      ctxTargetSenderId = senderId;
-      const isMine = senderId === myUid;
-      document.getElementById('ctxEdit').style.display = isMine ? '' : 'none';
-      document.getElementById('ctxDelete').style.display = isMine ? '' : 'none';
-
-      const ctxMenu = document.getElementById('msgCtxMenu');
-      ctxMenu.classList.add('open');
-
-      if (x !== undefined && y !== undefined) {
-        const menuW = 180, menuH = 200;
-        ctxMenu.style.left = Math.min(x, window.innerWidth - menuW) + 'px';
-        ctxMenu.style.top = Math.min(y, window.innerHeight - menuH) + 'px';
+    // ── 컨텍스트 메뉴 ──────────────────────────────────────────────
+    function openMsgMenu(mid,senderId,wrap,bubble,x,y){
+      ctxTargetMid=mid; ctxTargetSenderId=senderId;
+      const isMine=senderId===myUid;
+      document.getElementById('ctxEdit').style.display=isMine?'':'none';
+      document.getElementById('ctxDelete').style.display=isMine?'':'none';
+      const ctx=document.getElementById('msgCtxMenu'); ctx.classList.add('open');
+      if(x!==undefined){
+        ctx.style.left=Math.min(x,window.innerWidth-180)+'px';
+        ctx.style.top=Math.min(y,window.innerHeight-200)+'px';
       } else {
-        // 터치 시 말풍선 위치 기준
-        const rect = bubble.getBoundingClientRect();
-        ctxMenu.style.left = Math.min(rect.left, window.innerWidth - 180) + 'px';
-        ctxMenu.style.top = Math.min(rect.bottom + 4, window.innerHeight - 200) + 'px';
+        const r=bubble.getBoundingClientRect();
+        ctx.style.left=Math.min(r.left,window.innerWidth-180)+'px';
+        ctx.style.top=Math.min(r.bottom+4,window.innerHeight-200)+'px';
       }
     }
+    function closeMsgMenu(){ document.getElementById('msgCtxMenu').classList.remove('open'); }
 
-    function closeMsgMenu() {
-      document.getElementById('msgCtxMenu').classList.remove('open');
-    }
-
-    // 퀵 리액션 클릭
-    document.getElementById('quickReactBar').onclick = (e) => {
-      const emoji = e.target.dataset.e;
-      if (emoji && ctxTargetMid) {
-        toggleReaction(ctxTargetMid, emoji);
-        closeMsgMenu();
-      }
+    document.getElementById('quickReactBar').onclick=e=>{
+      const emoji=e.target.dataset.e;
+      if(emoji&&ctxTargetMid){ toggleReaction(ctxTargetMid,emoji); closeMsgMenu(); }
     };
-
-    // 답글
-    document.getElementById('ctxReply').onclick = () => {
-      if (!ctxTargetMid) return;
-      const info = seen.get(ctxTargetMid);
-      if (!info) return;
-      currentReplyTo = { mid: ctxTargetMid, nick: escapeHtml(info.senderId === myUid ? myNick : (info.metaEl.querySelector('span')?.textContent || '')), text: info.text };
-      document.getElementById('replyPreviewName').textContent = currentReplyTo.nick;
-      document.getElementById('replyPreviewMsg').textContent = (info.text || '').slice(0, 60);
-      document.getElementById('replyPreview').style.display = 'flex';
+    document.getElementById('ctxReply').onclick=()=>{
+      if(!ctxTargetMid) return;
+      const info=seen.get(ctxTargetMid); if(!info) return;
+      const nick=info.senderId===myUid?myNick:(info.metaEl.querySelector('span')?.textContent||'');
+      currentReplyTo={mid:ctxTargetMid,nick,text:info.text};
+      document.getElementById('replyPreviewName').textContent=nick;
+      document.getElementById('replyPreviewMsg').textContent=(info.text||'').slice(0,60);
+      document.getElementById('replyPreview').style.display='flex';
+      closeMsgMenu(); inputEl.focus();
+    };
+    document.getElementById('ctxEdit').onclick=()=>{
+      if(!ctxTargetMid||ctxTargetSenderId!==myUid) return;
+      const info=seen.get(ctxTargetMid); if(!info||!info.text) return;
+      editingMid=ctxTargetMid; inputEl.value=info.text; sendBtn.textContent='수정'; sendBtn.disabled=false;
+      closeMsgMenu(); inputEl.focus();
+    };
+    document.getElementById('ctxDelete').onclick=async()=>{
+      if(!ctxTargetMid||ctxTargetSenderId!==myUid) return;
+      if(!confirm('메시지를 삭제할까요?')) return;
       closeMsgMenu();
-      inputEl.focus();
+      try{
+        await db.ref('messages/'+roomId+'/'+ctxTargetMid).update({deleted:true,text:''});
+        await db.ref('reactions/'+roomId+'/'+ctxTargetMid).remove();
+      } catch(e){ showToast('삭제 실패: '+e.message); }
     };
-
-    // 수정
-    document.getElementById('ctxEdit').onclick = () => {
-      if (!ctxTargetMid || ctxTargetSenderId !== myUid) return;
-      const info = seen.get(ctxTargetMid);
-      if (!info || !info.text) return;
-      editingMid = ctxTargetMid;
-      inputEl.value = info.text;
-      sendBtn.textContent = '수정';
-      sendBtn.disabled = false;
-      closeMsgMenu();
-      inputEl.focus();
-    };
-
-    // 삭제
-    document.getElementById('ctxDelete').onclick = async () => {
-      if (!ctxTargetMid || ctxTargetSenderId !== myUid) return;
-      if (!confirm('메시지를 삭제할까요?')) return;
-      closeMsgMenu();
-      try {
-        await db.ref('messages/' + roomId + '/' + ctxTargetMid).update({ deleted: true, text: '' });
-        // 리액션도 제거
-        await db.ref('reactions/' + roomId + '/' + ctxTargetMid).remove();
-      } catch(e) {
-        showToast('삭제 실패: ' + e.message);
-      }
-    };
-
-    // 외부 클릭 시 메뉴/이모지 패널 닫기
-    document.addEventListener('click', (e) => {
-      if (!document.getElementById('msgCtxMenu').contains(e.target)) closeMsgMenu();
-      if (!document.getElementById('emojiPanel').contains(e.target) &&
-          !document.getElementById('emojiBtn').contains(e.target)) {
+    document.addEventListener('click',e=>{
+      if(!document.getElementById('msgCtxMenu').contains(e.target)) closeMsgMenu();
+      if(!document.getElementById('emojiPanel').contains(e.target)&&!document.getElementById('emojiBtn').contains(e.target))
         document.getElementById('emojiPanel').classList.remove('open');
-      }
-      if (!menu.contains(e.target) && !menuBtn.contains(e.target)) menu.classList.remove('open');
+      if(!menu.contains(e.target)&&!menuBtn.contains(e.target)) menu.classList.remove('open');
     });
 
-    // ── 메시지 구독/해제 ──────────────────────────────────────
-    // [FIX #4] stopMessages 구현
-    function stopMessages() {
-      if (msgRef) { msgRef.off(); msgRef = null; }
-      stopReactions();
-      seen.clear();
+    // ── 메시지 구독/해제 ───────────────────────────────────────────
+    function stopMessages(){
+      if(msgRef){ msgRef.off(); msgRef=null; }
+      stopReactions(); seen.clear();
     }
-
-    // [FIX #10] limitToLast(50) 적용 + 더 보기 버튼
-    function subscribeMessages(rid) {
-      msgRef = db.ref('messages/' + rid).orderByChild('seq').limitToLast(50);
-      msgRef.on('child_added', snap => {
-        const m = { messageId: snap.key, ...snap.val() };
+    function subscribeMessages(rid){
+      msgRef=db.ref('messages/'+rid).orderByChild('seq').limitToLast(50);
+      msgRef.on('child_added',snap=>{
+        const m={messageId:snap.key,...snap.val()};
         renderMessage(m);
-        // 메시지가 50개 채워지면 처음 seq 기억 (더 보기용)
-        if (oldestSeq === null || m.seq < oldestSeq) oldestSeq = m.seq;
+        if(oldestSeq===null||m.seq<oldestSeq) oldestSeq=m.seq;
         scrollToBottom();
       });
-      msgRef.on('child_changed', snap => {
-        const m = { messageId: snap.key, ...snap.val() };
-        const info = seen.get(m.messageId);
-        if (info) {
-          rebuildBubble(info.bubbleEl, m);
-          info.text = m.text;
+      msgRef.on('child_changed',snap=>{
+        const m={messageId:snap.key,...snap.val()};
+        const info=seen.get(m.messageId);
+        if(info){ rebuildBubble(info.bubbleEl,m); info.text=m.text; }
+      });
+    }
+    function addLoadMoreBtn(){
+      if(logEl.querySelector('.loadMoreBtn')) return;
+      const btn=document.createElement('button'); btn.className='loadMoreBtn'; btn.textContent='이전 메시지 더 보기';
+      btn.onclick=loadOlderMessages; logEl.insertBefore(btn,logEl.firstChild);
+    }
+    async function loadOlderMessages(){
+      if(!roomId||oldestSeq===null) return;
+      try{
+        const snap=await db.ref('messages/'+roomId).orderByChild('seq').endAt(oldestSeq-1).limitToLast(30).once('value');
+        const msgs=[]; snap.forEach(c=>msgs.push({messageId:c.key,...c.val()}));
+        if(!msgs.length){ showToast('더 이상 메시지가 없습니다'); return; }
+        const sh=logEl.scrollHeight;
+        msgs.forEach(m=>{ if(!seen.has(m.messageId)){ renderMessage(m,true); if(m.seq<oldestSeq) oldestSeq=m.seq; } });
+        logEl.scrollTop=logEl.scrollHeight-sh;
+      } catch(e){ showToast('불러오기 실패: '+e.message); }
+    }
+    function scrollToBottom(){ requestAnimationFrame(()=>{ logEl.scrollTop=logEl.scrollHeight; }); }
+
+    // ── 메시지 전송 ────────────────────────────────────────────────
+    async function send(){
+      const text=inputEl.value.trim(); if(!text||!roomId) return;
+      if(editingMid){
+        try{ await db.ref('messages/'+roomId+'/'+editingMid).update({text,edited:true}); showToast('수정되었습니다'); }
+        catch(e){ showToast('수정 실패: '+e.message); return; }
+        editingMid=null; sendBtn.textContent='전송'; inputEl.value=''; onInput(); return;
+      }
+      const mid=uuid();
+      const seq=Date.now()*1000+Math.floor(Math.random()*1000);
+      const m={senderId:myUid,senderNick:myNick,text,ts:SV.TIMESTAMP,seq,...(currentReplyTo?{replyTo:currentReplyTo}:{})};
+      inputEl.value=''; clearReply(); onInput(); sendTypingStatus(false);
+      try{ await db.ref('messages/'+roomId+'/'+mid).set(m); }
+      catch(e){ showToast('전송 실패: '+e.message); inputEl.value=text; onInput(); }
+    }
+
+    // ── 방장 투표 ──────────────────────────────────────────────────
+    function startVoteWatch(rid){
+      stopVoteWatch();
+      voteWatchRef=db.ref('votes/'+rid);
+      voteWatchRef.on('value',snap=>{
+        voteData=snap.val();
+        renderVoteBanner();
+        if(document.getElementById('voteModal').classList.contains('open')) renderVoteModal();
+      });
+    }
+    function stopVoteWatch(){
+      if(voteWatchRef){ voteWatchRef.off(); voteWatchRef=null; }
+      voteData=null;
+      const b=logEl.querySelector('.voteBanner'); if(b) b.remove();
+    }
+
+    function buildVoteHTML(forModal){
+      if(!voteData||!voteData.active) return '';
+      const total=Object.keys(onlineMembers).length||1;
+      const need=Math.ceil(total/2);
+      let html='<div class="voteTitle">👑 방장 지정 투표 진행 중 &nbsp;·&nbsp; 과반수 '+need+'표 필요 (온라인 '+total+'명)</div>';
+      Object.entries(voteData.candidates||{}).forEach(([uid,cand])=>{
+        const votes=Object.keys(cand.votes||{}).length;
+        const pct=Math.min(100,Math.round((votes/total)*100));
+        const voted=!!(cand.votes||{})[myUid];
+        html+='<div class="voteCandRow">'
+          +'<span style="font-weight:700;font-size:'+(forModal?'14':'13')+'px;min-width:'+(forModal?'90':'80')+'px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+escapeHtml(cand.nick)+'</span>'
+          +'<div class="voteBar"><div class="voteBarFill" style="width:'+pct+'%"></div></div>'
+          +'<span class="voteCnt">'+votes+'표</span>'
+          +'<button class="voteBtn'+(voted?' voted':'')+'" onclick="castVote(\''+uid+'\')">'+(voted?'취소':'투표')+'</button>'
+          +'</div>';
+      });
+      return html;
+    }
+
+    function renderVoteBanner(){
+      let banner=logEl.querySelector('.voteBanner');
+      if(!voteData||!voteData.active){ if(banner) banner.remove(); return; }
+      if(!banner){
+        banner=document.createElement('div'); banner.className='voteBanner';
+        logEl.insertBefore(banner,logEl.firstChild);
+      }
+      banner.innerHTML=buildVoteHTML(false);
+    }
+    function renderVoteModal(){
+      const body=document.getElementById('voteModalBody');
+      if(!voteData||!voteData.active){
+        body.innerHTML='<div style="color:var(--muted);font-size:13px;">진행 중인 투표가 없습니다.</div>'; return;
+      }
+      body.innerHTML=buildVoteHTML(true);
+    }
+
+    window.castVote=async function(candidateUid){
+      if(!roomId||!myUid||!voteData) return;
+      const ref=db.ref('votes/'+roomId+'/candidates/'+candidateUid+'/votes/'+myUid);
+      try{
+        const snap=await ref.once('value');
+        if(snap.exists()) await ref.remove();
+        else await ref.set(myNick);
+        // 과반수 체크
+        const allSnap=await db.ref('votes/'+roomId+'/candidates/'+candidateUid+'/votes').once('value');
+        const cnt=Object.keys(allSnap.val()||{}).length;
+        const total=Object.keys(onlineMembers).length||1;
+        if(cnt>=Math.ceil(total/2)){
+          await db.ref('rooms/'+roomId).update({ownerUid:candidateUid});
+          await db.ref('votes/'+roomId).remove();
+          const candNick=(voteData.candidates[candidateUid]||{}).nick||'멤버';
+          if(candidateUid===myUid) isOwner=true;
+          document.getElementById('voteModal').classList.remove('open');
+          showToast('👑 '+candNick+' 님이 새 방장이 되었습니다!',3500);
         }
+      } catch(e){ showToast('투표 실패: '+e.message); }
+    };
+
+    function openVoteModal(){
+      menu.classList.remove('open');
+      const uids=Object.keys(onlineMembers);
+      if(uids.length<2){ showToast('투표는 2명 이상 접속 시 가능합니다'); return; }
+      if(!voteData||!voteData.active){
+        const candidates={};
+        uids.forEach(uid=>{ if(uid!==myUid) candidates[uid]={nick:(onlineMembers[uid].nick||'멤버'),votes:{}}; });
+        if(!Object.keys(candidates).length){ showToast('투표할 수 있는 다른 멤버가 없습니다'); return; }
+        db.ref('votes/'+roomId).set({active:true,createdBy:myUid,createdAt:SV.TIMESTAMP,candidates}).catch(()=>{});
+      }
+      renderVoteModal();
+      document.getElementById('voteModal').classList.add('open');
+    }
+    document.getElementById('voteModalClose').onclick=()=>document.getElementById('voteModal').classList.remove('open');
+
+    // ── 방 입장 ────────────────────────────────────────────────────
+    function showPassModal(title,body){
+      return new Promise(resolve=>{
+        document.getElementById('passModalTitle').textContent=title;
+        document.getElementById('passModalBody').textContent=body;
+        document.getElementById('passModalInput').value='';
+        const modal=document.getElementById('passModal'); modal.classList.add('open');
+        document.getElementById('passModalOk').onclick=()=>{ modal.classList.remove('open'); resolve(document.getElementById('passModalInput').value); };
+        document.getElementById('passModalCancel').onclick=()=>{ modal.classList.remove('open'); resolve(null); };
       });
     }
 
-    function addLoadMoreBtn() {
-      const existing = logEl.querySelector('.loadMoreBtn');
-      if (existing) return;
-      const btn = document.createElement('button');
-      btn.className = 'loadMoreBtn';
-      btn.textContent = '이전 메시지 더 보기';
-      btn.onclick = loadOlderMessages;
-      logEl.insertBefore(btn, logEl.firstChild);
-    }
+    async function enterRoomLocal(rid, infoOpt){
+      const nickInput=document.getElementById('homeNick').value.trim();
+      if(nickInput){ myNick=nickInput; localStorage.setItem('chat_nick',myNick); }
+      stopMessages(); stopPresence(); stopTyping(); stopReads(); stopVoteWatch();
+      oldestSeq=null; unread=0;
 
-    async function loadOlderMessages() {
-      if (!roomId || oldestSeq === null) return;
-      try {
-        const snap = await db.ref('messages/' + roomId)
-          .orderByChild('seq').endAt(oldestSeq - 1).limitToLast(30).once('value');
-        const msgs = [];
-        snap.forEach(child => msgs.push({ messageId: child.key, ...child.val() }));
-        if (!msgs.length) { showToast('더 이상 메시지가 없습니다'); return; }
-
-        const scrollH = logEl.scrollHeight;
-        msgs.forEach(m => {
-          if (!seen.has(m.messageId)) {
-            renderMessage(m, true);
-            if (m.seq < oldestSeq) oldestSeq = m.seq;
-          }
-        });
-        // 스크롤 위치 보정
-        logEl.scrollTop = logEl.scrollHeight - scrollH;
-      } catch(e) {
-        showToast('불러오기 실패: ' + e.message);
+      let info=infoOpt;
+      if(!info){
+        try{ const snap=await db.ref('rooms/'+rid).once('value'); info=snap.val(); }
+        catch(e){ showToast('방 정보를 불러올 수 없습니다'); return; }
       }
-    }
+      if(!info){ showToast('존재하지 않는 방입니다'); return; }
 
-    function scrollToBottom() {
-      requestAnimationFrame(() => { logEl.scrollTop = logEl.scrollHeight; });
-    }
-
-    // ── 메시지 전송 ───────────────────────────────────────────
-    // [FIX #14] try-catch 에러 핸들링 추가
-    async function send() {
-      const text = inputEl.value.trim();
-      if (!text || !roomId) return;
-
-      // 수정 모드
-      if (editingMid) {
-        try {
-          await db.ref('messages/' + roomId + '/' + editingMid).update({ text, edited: true });
-          showToast('수정되었습니다');
-        } catch(e) {
-          showToast('수정 실패: ' + e.message);
-          return;
-        }
-        editingMid = null;
-        sendBtn.textContent = '전송';
-        inputEl.value = '';
-        onInput();
-        return;
+      if(info.password){
+        const entered=await showPassModal('비밀번호 입력', info.roomName+' 방의 비밀번호를 입력하세요');
+        if(entered===null) return;
+        if(entered!==info.password){ showToast('비밀번호가 틀렸습니다'); return; }
       }
 
-      // 새 메시지
-      const mid = uuid();
-      // [FIX #11] seq 충돌 방지: 마이크로초 + 랜덤 컴포넌트
-      const seq = Date.now() * 1000 + Math.floor(Math.random() * 1000);
-      const m = {
-        senderId: myUid,
-        senderNick: myNick,
-        text,
-        ts: SV.TIMESTAMP,
-        seq,
-        ...(currentReplyTo ? { replyTo: currentReplyTo } : {})
-      };
-      inputEl.value = '';
-      clearReply();
-      onInput();
-      sendTypingStatus(false);
+      roomId=rid; roomName=info.roomName; isOwner=info.ownerUid===myUid;
 
-      try {
-        await db.ref('messages/' + roomId + '/' + mid).set(m);
-      } catch(e) {
-        showToast('전송 실패: ' + e.message);
-        inputEl.value = text; // 실패 시 복구
-        onInput();
-      }
+      // ★ 핵심 수정: 메시지 구독 전에 내 마지막 읽은 seq를 먼저 로드
+      // → child_added로 오는 기존 메시지들의 seq가 이 값 이하면 unread 카운트 안함
+      try{
+        const rs=await db.ref('reads/'+rid+'/'+myUid).once('value');
+        myBaseReadSeq=(rs.val()||{}).lastReadSeq||0;
+      } catch(e){ myBaseReadSeq=0; }
+
+      home.style.display='none'; header.style.display='block';
+      logEl.style.display='block'; composer.style.display='flex';
+      typingBar.style.display='none';
+      roomTitle.textContent=roomName; document.title=roomName;
+      history.replaceState({},'',NAV_URL+'?roomId='+rid);
+      logEl.innerHTML='<div id="readSentinel"></div>';
+      seen.clear(); readsCache={}; unread=0;
+
+      startPresence(roomId); startTyping(roomId); startReads(roomId);
+      startVoteWatch(roomId); subscribeMessages(roomId);
+      setTimeout(()=>{ if(seen.size>=50) addLoadMoreBtn(); },1200);
     }
 
-    // ── 방 입장 ───────────────────────────────────────────────
-    // [FIX #8] 비밀번호 검증 구현
-    function showPassModal(title, body) {
-      return new Promise((resolve) => {
-        document.getElementById('passModalTitle').textContent = title;
-        document.getElementById('passModalBody').textContent = body;
-        document.getElementById('passModalInput').value = '';
-        const modal = document.getElementById('passModal');
-        modal.classList.add('open');
-        document.getElementById('passModalOk').onclick = () => {
-          const val = document.getElementById('passModalInput').value;
-          modal.classList.remove('open');
-          resolve(val);
-        };
-        document.getElementById('passModalCancel').onclick = () => {
-          modal.classList.remove('open');
-          resolve(null);
-        };
-      });
+    function showHome(){
+      stopMessages(); stopPresence(); stopTyping(); stopReads(); stopVoteWatch();
+      roomId=''; unread=0;
+      home.style.display=''; header.style.display='none';
+      logEl.style.display='none'; composer.style.display='none';
+      typingBar.style.display='none'; document.title='Chat';
+      history.replaceState({},'',NAV_URL); refreshRooms();
     }
 
-    async function enterRoomLocal(rid, infoOpt) {
-      // 닉네임 저장
-      const nickInput = document.getElementById('homeNick').value.trim();
-      if (nickInput) { myNick = nickInput; localStorage.setItem('chat_nick', myNick); }
-
-      stopMessages(); stopPresence(); stopTyping(); stopReads();
-      oldestSeq = null;
-
-      let info = infoOpt;
-      if (!info) {
-        try {
-          const snap = await db.ref('rooms/' + rid).once('value');
-          info = snap.val();
-        } catch(e) { showToast('방 정보를 불러올 수 없습니다'); return; }
-      }
-      if (!info) { showToast('존재하지 않는 방입니다'); return; }
-
-      // [FIX #8] 비밀번호 있으면 검증
-      if (info.password) {
-        const entered = await showPassModal('비밀번호 입력', info.roomName + ' 방의 비밀번호를 입력하세요');
-        if (entered === null) return;      // 취소
-        if (entered !== info.password) { showToast('비밀번호가 틀렸습니다'); return; }
-      }
-
-      roomId = rid;
-      roomName = info.roomName;
-      isOwner = info.ownerUid === myUid;
-
-      home.style.display = 'none';
-      header.style.display = 'block';
-      logEl.style.display = 'block';
-      composer.style.display = 'flex';
-      typingBar.style.display = 'none';
-      roomTitle.textContent = roomName;
-      document.title = roomName;
-      history.replaceState({}, '', NAV_URL + '?roomId=' + rid);
-
-      logEl.innerHTML = '<div id="readSentinel"></div>';
-      seen.clear();
-      unread = 0;
-
-      startPresence(roomId);
-      startTyping(roomId);
-      startReads(roomId);
-      subscribeMessages(roomId);
-
-      // 50개 이상이면 더 보기 버튼 추가 (약간의 딜레이 후 판단)
-      setTimeout(() => { if (seen.size >= 50) addLoadMoreBtn(); }, 1000);
-    }
-
-    function showHome() {
-      stopMessages(); stopPresence(); stopTyping(); stopReads();
-      roomId = '';
-      home.style.display = '';
-      header.style.display = 'none';
-      logEl.style.display = 'none';
-      composer.style.display = 'none';
-      typingBar.style.display = 'none';
-      document.title = 'Chat';
-      history.replaceState({}, '', NAV_URL);
-      refreshRooms();
-    }
-
-    // ── 방 목록 ───────────────────────────────────────────────
-    async function refreshRooms() {
-      try {
-        const snap = await db.ref('rooms').limitToLast(30).once('value');
-        const list = document.getElementById('roomList');
-        list.innerHTML = '';
-        const val = snap.val() || {};
-        const entries = Object.entries(val).reverse();
-        if (!entries.length) {
-          list.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px 0;">방이 없습니다. 새 방을 만들어보세요!</div>';
-          return;
-        }
-        entries.forEach(([id, r]) => {
-          const item = document.createElement('div');
-          item.className = 'roomItem clickable';
-          const lockIcon = (r.password && r.password !== null) ? ' 🔒' : '';
-          item.innerHTML = `<div style="flex:1;min-width:0;"><b>${escapeHtml(r.roomName)}${lockIcon}</b><div style="font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">ID: ${id.slice(0,12)}…</div></div><button class="ghostBtn" style="flex:0;min-width:52px;width:52px;height:36px;padding:0;font-size:13px;white-space:nowrap;">입장</button>`;
-          item.onclick = () => enterRoomLocal(id, r);
+    // ── 방 목록 ────────────────────────────────────────────────────
+    async function refreshRooms(){
+      try{
+        const snap=await db.ref('rooms').limitToLast(30).once('value');
+        const list=document.getElementById('roomList'); list.innerHTML='';
+        const entries=Object.entries(snap.val()||{}).reverse();
+        if(!entries.length){ list.innerHTML='<div style="color:var(--muted);font-size:13px;padding:8px 0;">방이 없습니다. 새 방을 만들어보세요!</div>'; return; }
+        entries.forEach(([id,r])=>{
+          const item=document.createElement('div'); item.className='roomItem clickable';
+          const lock=(r.password&&r.password!==null)?' 🔒':'';
+          item.innerHTML='<div style="flex:1;min-width:0;"><b>'+escapeHtml(r.roomName)+lock+'</b><div style="font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">ID: '+id.slice(0,12)+'…</div></div>'
+            +'<button class="ghostBtn" style="flex:0;min-width:52px;width:52px;height:36px;padding:0;font-size:13px;white-space:nowrap;">입장</button>';
+          item.onclick=()=>enterRoomLocal(id,r);
           list.appendChild(item);
         });
-      } catch(e) {
-        showToast('목록 불러오기 실패: ' + e.message);
-      }
+      } catch(e){ showToast('목록 불러오기 실패: '+e.message); }
     }
 
-    // ── 메뉴 버튼 핸들러 ─────────────────────────────────────
-    menuBtn.onclick = (e) => { e.stopPropagation(); menu.classList.toggle('open'); };
-
-    // 알림 켜기/끄기
-    document.getElementById('mEnableNoti').onclick = async () => {
-      if (!window.__OS) { showToast('알림 초기화 중입니다'); return; }
-      try {
-        if (!notiEnabled) {
-          await window.__OS.Notifications.requestPermission();
-          notiEnabled = true;
-          document.getElementById('mEnableNotiState').textContent = '✅';
-          showToast('알림이 켜졌습니다');
-        } else {
-          notiEnabled = false;
-          document.getElementById('mEnableNotiState').textContent = '›';
-          showToast('알림이 꺼졌습니다');
-        }
-      } catch(e) { showToast('알림 설정 실패'); }
+    // ── 메뉴 핸들러 ────────────────────────────────────────────────
+    menuBtn.onclick=e=>{ e.stopPropagation(); menu.classList.toggle('open'); };
+    document.getElementById('mEnableNoti').onclick=async()=>{
+      if(!window.__OS){ showToast('알림 초기화 중입니다'); return; }
+      try{
+        if(!notiEnabled){ await window.__OS.Notifications.requestPermission(); notiEnabled=true; document.getElementById('mEnableNotiState').textContent='✅'; showToast('알림이 켜졌습니다'); }
+        else{ notiEnabled=false; document.getElementById('mEnableNotiState').textContent='›'; showToast('알림이 꺼졌습니다'); }
+      } catch(e){ showToast('알림 설정 실패'); }
       menu.classList.remove('open');
     };
-
-    // 소리 켜기/끄기
-    document.getElementById('mSound').onclick = () => {
-      soundEnabled = !soundEnabled;
-      document.getElementById('mSoundState').textContent = soundEnabled ? '✅' : '›';
-      showToast(soundEnabled ? '소리가 켜졌습니다' : '소리가 꺼졌습니다');
+    document.getElementById('mSound').onclick=()=>{
+      soundEnabled=!soundEnabled;
+      document.getElementById('mSoundState').textContent=soundEnabled?'✅':'›';
+      showToast(soundEnabled?'소리가 켜졌습니다':'소리가 꺼졌습니다');
       menu.classList.remove('open');
     };
-
-    // 내 말풍선 흰색 토글
-    document.getElementById('mMyBubbleWhite').onclick = () => {
-      myBubbleWhite = !myBubbleWhite;
-      document.documentElement.style.setProperty('--me', myBubbleWhite ? '#ffffff' : '#374151');
-      document.documentElement.style.setProperty('--meText', myBubbleWhite ? '#111827' : '#ffffff');
-      document.getElementById('mMyBubbleWhiteState').textContent = myBubbleWhite ? '✅' : '›';
-      localStorage.setItem('chat_bubbleWhite', myBubbleWhite ? '1' : '');
+    document.getElementById('mMyBubbleWhite').onclick=()=>{
+      myBubbleWhite=!myBubbleWhite;
+      document.documentElement.style.setProperty('--me',myBubbleWhite?'#ffffff':'#374151');
+      document.documentElement.style.setProperty('--meText',myBubbleWhite?'#111827':'#ffffff');
+      document.getElementById('mMyBubbleWhiteState').textContent=myBubbleWhite?'✅':'›';
+      localStorage.setItem('chat_bubbleWhite',myBubbleWhite?'1':'');
       menu.classList.remove('open');
     };
-
-    // 닉네임 변경
-    document.getElementById('mNick').onclick = async () => {
-      const newNick = prompt('새 닉네임을 입력하세요:', myNick);
-      if (!newNick || !newNick.trim()) return;
-      myNick = newNick.trim();
-      localStorage.setItem('chat_nick', myNick);
-      showToast('닉네임이 변경되었습니다');
+    document.getElementById('mNick').onclick=()=>{
+      const n=prompt('새 닉네임을 입력하세요:',myNick); if(!n||!n.trim()) return;
+      myNick=n.trim(); localStorage.setItem('chat_nick',myNick); showToast('닉네임이 변경되었습니다'); menu.classList.remove('open');
+    };
+    document.getElementById('mRoomName').onclick=async()=>{
+      if(!isOwner){ showToast('방장만 변경할 수 있습니다'); return; }
+      const n=prompt('새 방 이름:',roomName); if(!n||!n.trim()) return;
+      try{ await db.ref('rooms/'+roomId).update({roomName:n.trim()}); roomName=n.trim(); roomTitle.textContent=roomName; document.title=roomName; showToast('방 이름이 변경되었습니다'); }
+      catch(e){ showToast('변경 실패: '+e.message); }
       menu.classList.remove('open');
     };
-
-    // 방 이름 변경 (방장만)
-    document.getElementById('mRoomName').onclick = async () => {
-      if (!isOwner) { showToast('방장만 변경할 수 있습니다'); return; }
-      const newName = prompt('새 방 이름:', roomName);
-      if (!newName || !newName.trim()) return;
-      try {
-        await db.ref('rooms/' + roomId).update({ roomName: newName.trim() });
-        roomName = newName.trim();
-        roomTitle.textContent = roomName;
-        document.title = roomName;
-        showToast('방 이름이 변경되었습니다');
-      } catch(e) { showToast('변경 실패: ' + e.message); }
+    document.getElementById('mRoomPass').onclick=async()=>{
+      if(!isOwner){ showToast('방장만 설정할 수 있습니다'); return; }
+      const pw=prompt('새 비밀번호 (비워두면 해제):'); if(pw===null) return;
+      try{ await db.ref('rooms/'+roomId).update({password:pw.trim()||null}); showToast(pw.trim()?'비밀번호가 설정되었습니다':'비밀번호가 해제되었습니다'); }
+      catch(e){ showToast('설정 실패: '+e.message); }
       menu.classList.remove('open');
     };
+    document.getElementById('mVoteOwner').onclick=()=>openVoteModal();
+    document.getElementById('mLeave').onclick=()=>{ menu.classList.remove('open'); if(confirm('채팅방에서 나가시겠습니까?')) showHome(); };
 
-    // 비밀번호 설정
-    document.getElementById('mRoomPass').onclick = async () => {
-      if (!isOwner) { showToast('방장만 설정할 수 있습니다'); return; }
-      const pw = prompt('새 비밀번호 (비워두면 해제):');
-      if (pw === null) return;
-      try {
-        await db.ref('rooms/' + roomId).update({ password: pw.trim() || null });
-        showToast(pw.trim() ? '비밀번호가 설정되었습니다' : '비밀번호가 해제되었습니다');
-      } catch(e) { showToast('설정 실패: ' + e.message); }
-      menu.classList.remove('open');
+    // ── 홈 버튼 ────────────────────────────────────────────────────
+    document.getElementById('btnCreate').onclick=async()=>{
+      const nick=document.getElementById('homeNick').value.trim();
+      if(nick){ myNick=nick; localStorage.setItem('chat_nick',myNick); }
+      const name=document.getElementById('homeRoomName').value.trim();
+      if(!name){ showToast('방 이름을 입력하세요'); return; }
+      const usePass=document.getElementById('homeUsePass').checked;
+      const pw=usePass?document.getElementById('homeRoomPass').value:'';
+      const rid=uuid();
+      try{
+        await db.ref('rooms/'+rid).set({roomName:name,ownerUid:myUid,createdAt:SV.TIMESTAMP,...(pw?{password:pw}:{})});
+        enterRoomLocal(rid,{roomName:name,ownerUid:myUid,password:pw||null});
+      } catch(e){ showToast('방 생성 실패: '+e.message); }
+    };
+    document.getElementById('btnRefresh').onclick=refreshRooms;
+    document.getElementById('homeUsePass').onchange=function(){
+      document.getElementById('homePassField').style.display=this.checked?'':'none';
     };
 
-    // 나가기
-    document.getElementById('mLeave').onclick = () => {
-      menu.classList.remove('open');
-      if (confirm('채팅방에서 나가시겠습니까?')) showHome();
-    };
+    // ── 인풋 이벤트 ────────────────────────────────────────────────
+    inputEl.oninput=onInput;
+    inputEl.onkeydown=e=>{ if(e.key==='Enter'&&!e.isComposing) send(); };
+    sendBtn.onclick=send;
+    document.getElementById('replyCloseBtn').onclick=clearReply;
+    function clearReply(){ currentReplyTo=null; document.getElementById('replyPreview').style.display='none'; }
+    function setHeader(users){ roomSub.innerHTML='<span class="pill">🟢 온라인: '+(users.join(', ')||myNick)+'</span>'; }
+    function showTypingBar(t){ typingBar.style.display=t?'flex':'none'; typingBar.textContent=t; }
 
-    // ── 홈 버튼 핸들러 ────────────────────────────────────────
-    document.getElementById('btnCreate').onclick = async () => {
-      const nick = document.getElementById('homeNick').value.trim();
-      if (nick) { myNick = nick; localStorage.setItem('chat_nick', myNick); }
-      const name = document.getElementById('homeRoomName').value.trim();
-      if (!name) { showToast('방 이름을 입력하세요'); return; }
-      const usePass = document.getElementById('homeUsePass').checked;
-      const pw = usePass ? document.getElementById('homeRoomPass').value : '';
-
-      const rid = uuid();
-      try {
-        await db.ref('rooms/' + rid).set({
-          roomName: name,
-          ownerUid: myUid,
-          createdAt: SV.TIMESTAMP,
-          ...(pw ? { password: pw } : {})
-        });
-        enterRoomLocal(rid, { roomName: name, ownerUid: myUid, password: pw || null });
-      } catch(e) { showToast('방 생성 실패: ' + e.message); }
-    };
-
-    document.getElementById('btnRefresh').onclick = refreshRooms;
-
-    // [FIX #9] btnJoin 구현
-    document.getElementById('btnJoin').onclick = () => {
-      const rid = document.getElementById('joinRoomIdInput').value.trim();
-      if (!rid) { showToast('방 ID를 입력하세요'); return; }
-      enterRoomLocal(rid);
-    };
-    document.getElementById('joinRoomIdInput').onkeydown = (e) => {
-      if (e.key === 'Enter') document.getElementById('btnJoin').click();
-    };
-
-    // 비밀번호 사용 체크박스
-    document.getElementById('homeUsePass').onchange = function() {
-      document.getElementById('homePassField').style.display = this.checked ? '' : 'none';
-    };
-
-    // ── 이벤트 ────────────────────────────────────────────────
-    inputEl.oninput = onInput;
-    inputEl.onkeydown = (e) => { if (e.key === 'Enter' && !e.isComposing) send(); };
-    sendBtn.onclick = send;
-    document.getElementById('replyCloseBtn').onclick = clearReply;
-
-    function clearReply() {
-      currentReplyTo = null;
-      document.getElementById('replyPreview').style.display = 'none';
-    }
-
-    function setHeader(users) {
-      roomSub.innerHTML = `<span class="pill">🟢 온라인: ${users.join(', ') || myNick}</span>`;
-    }
-
-    function showTypingBar(t) {
-      typingBar.style.display = t ? 'flex' : 'none';
-      typingBar.textContent = t;
-    }
-
-    // ── 초기화 ────────────────────────────────────────────────
-    // [FIX #13] UID localStorage 영속화 + Firebase Auth Persistence
-    async function init() {
-      try {
+    // ── 초기화 ─────────────────────────────────────────────────────
+    async function init(){
+      try{
         await firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-        let cred;
-        const savedUid = localStorage.getItem('chat_uid');
-        // 이미 로그인된 사용자 재사용
-        const current = firebase.auth().currentUser;
-        if (current) {
-          cred = { user: current };
-        } else {
-          cred = await firebase.auth().signInAnonymously();
-        }
-        myUid = cred.user.uid;
-        localStorage.setItem('chat_uid', myUid);
-      } catch(e) {
-        showToast('인증 오류: ' + e.message);
-        return;
+        const cur=firebase.auth().currentUser;
+        const cred=cur?{user:cur}:await firebase.auth().signInAnonymously();
+        myUid=cred.user.uid; localStorage.setItem('chat_uid',myUid);
+      } catch(e){ showToast('인증 오류: '+e.message); return; }
+      myNick=localStorage.getItem('chat_nick')||'익명_'+myUid.slice(0,4);
+      document.getElementById('homeNick').value=myNick;
+      if(localStorage.getItem('chat_bubbleWhite')){
+        myBubbleWhite=true;
+        document.documentElement.style.setProperty('--me','#ffffff');
+        document.documentElement.style.setProperty('--meText','#111827');
+        document.getElementById('mMyBubbleWhiteState').textContent='✅';
       }
-
-      myNick = localStorage.getItem('chat_nick') || '익명_' + myUid.slice(0, 4);
-      document.getElementById('homeNick').value = myNick;
-
-      // 말풍선 흰색 설정 복원
-      if (localStorage.getItem('chat_bubbleWhite')) {
-        myBubbleWhite = true;
-        document.documentElement.style.setProperty('--me', '#ffffff');
-        document.documentElement.style.setProperty('--meText', '#111827');
-        document.getElementById('mMyBubbleWhiteState').textContent = '✅';
-      }
-
-      const urlRoomId = new URLSearchParams(location.search).get('roomId');
-      if (urlRoomId) {
-        enterRoomLocal(urlRoomId);
-      } else {
-        refreshRooms();
-      }
+      const urlRoomId=new URLSearchParams(location.search).get('roomId');
+      if(urlRoomId) enterRoomLocal(urlRoomId);
+      else refreshRooms();
     }
-
-    // 뒤로가기 처리
-    window.onpopstate = () => {
-      const rid = new URLSearchParams(location.search).get('roomId');
-      if (rid) enterRoomLocal(rid);
-      else showHome();
+    window.onpopstate=()=>{
+      const rid=new URLSearchParams(location.search).get('roomId');
+      if(rid) enterRoomLocal(rid); else showHome();
     };
-
     init();
   </script>
 </body>
