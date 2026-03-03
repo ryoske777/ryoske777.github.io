@@ -549,10 +549,6 @@
       flex:1;
     }
 
-
-
-
-
     /* ===== 메시지 컨텍스트 메뉴 (수정/삭제/리액션) ===== */
     .msgCtxMenu{
       position:fixed;
@@ -715,8 +711,6 @@
       -webkit-box-orient:vertical;
     }
 
-
-
     /* ===== 답글(Reply) ===== */
     .replyPreview{
       position:absolute;
@@ -841,7 +835,6 @@ try{
             <button id="mEnableNoti"><span>알림 켜기</span><span id="mEnableNotiState">›</span></button>
             <button id="mSound"><span>소리(삐) 켜기</span><span id="mSoundState">›</span></button>
 
-            <!-- 추가: 내 말풍선 색상 토글 -->
             <button id="mMyBubbleWhite"><span>내 말풍선 흰색(상대와 동일)</span><span id="mMyBubbleWhiteState">›</span></button>
 
             <button id="mNick"><span>닉네임 변경</span><span>›</span></button>
@@ -925,7 +918,6 @@ try{
   </div>
 
 
-  <!-- ===== 메시지 컨텍스트 메뉴 (수정/삭제/리액션) ===== -->
   <div class="msgCtxMenu" id="msgCtxMenu">
     <div class="quickReact" id="quickReactBar">
       <span data-e="👍">👍</span>
@@ -940,10 +932,8 @@ try{
     <button id="ctxDelete" class="danger">🗑 삭제</button>
   </div>
 
-  <!-- ===== 토스트 알림 ===== -->
   <div class="toast" id="toast"></div>
 
-    <!-- ===== 비밀번호 모달 ===== -->
     <div class="modalOverlay" id="passModal" aria-hidden="true">
       <div class="modalCard" role="dialog" aria-modal="true" aria-labelledby="passModalTitle">
         <div class="modalTitle" id="passModalTitle">비밀번호</div>
@@ -1615,6 +1605,7 @@ window.__schedulePushSync = schedulePushSync;
         document.title = flip ? `(${unread}) 새 메시지` : TITLE_BASE;
       }, 900);
     }
+    
     function stopTitleBlink(){
       if (titleBlinkTimer){
         clearInterval(titleBlinkTimer);
@@ -1622,6 +1613,7 @@ window.__schedulePushSync = schedulePushSync;
       }
       document.title = TITLE_BASE;
     }
+
     function bumpUnread(){
       unread = Math.min(999, unread + 1);
       // 탭이 비활성일 때만 타이틀 깜빡임(활성 탭에서는 깜빡이지 않음)
@@ -1631,11 +1623,22 @@ window.__schedulePushSync = schedulePushSync;
         stopTitleBlink();
       }
       setHeader();
+
+      // [추가된 부분] PWA 앱 아이콘 배지 업데이트
+      if (navigator.setAppBadge) {
+        navigator.setAppBadge(unread).catch(()=>{});
+      }
     }
+
     function clearUnread(){
       unread = 0;
       stopTitleBlink();
       setHeader();
+
+      // [추가된 부분] PWA 앱 아이콘 배지 초기화
+      if (navigator.clearAppBadge) {
+        navigator.clearAppBadge().catch(()=>{});
+      }
     }
 
     // 포커스/가시성 복귀 시 타이틀/미확인 카운트 정리(크롬 타이틀 깜빡임 방지)
