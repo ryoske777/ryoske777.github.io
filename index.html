@@ -150,7 +150,7 @@
         <div class="sectionTitle">방 ID로 참여</div>
         <div class="joinRow">
           <input id="joinRoomIdInput" type="text" placeholder="방 ID 입력" />
-          <button class="ghostBtn" id="btnJoin" style="flex:0;width:auto;padding:0 16px;">참여하기</button>
+          <button class="ghostBtn" id="btnJoin" style="flex:0;min-width:80px;width:80px;padding:0;white-space:nowrap;">참여하기</button>
         </div>
       </div>
     </div>
@@ -873,8 +873,8 @@
         entries.forEach(([id, r]) => {
           const item = document.createElement('div');
           item.className = 'roomItem clickable';
-          const lock = r.password ? ' 🔒' : '';
-          item.innerHTML = `<div><b>${escapeHtml(r.roomName)}${lock}</b><div style="font-size:11px;color:var(--muted);margin-top:2px;">ID: ${id.slice(0,12)}…</div></div><button class="ghostBtn" style="flex:0;width:auto;padding:0 14px;height:36px;font-size:13px;">입장</button>`;
+          const lockIcon = (r.password && r.password !== null) ? ' 🔒' : '';
+          item.innerHTML = `<div style="flex:1;min-width:0;"><b>${escapeHtml(r.roomName)}${lockIcon}</b><div style="font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">ID: ${id.slice(0,12)}…</div></div><button class="ghostBtn" style="flex:0;min-width:52px;width:52px;height:36px;padding:0;font-size:13px;white-space:nowrap;">입장</button>`;
           item.onclick = () => enterRoomLocal(id, r);
           list.appendChild(item);
         });
