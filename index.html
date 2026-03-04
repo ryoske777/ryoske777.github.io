@@ -340,9 +340,11 @@ let roomId = '';
 let roomName = '';
 let ownerUid = '';
 
-// Message subscription — ONE ref, ONE subscribeId to handle stale closures
+// ★ 수정: _subId 전역 카운터 대신 구독 토큰 객체 사용
+// 각 subscribeMessages 호출이 고유한 토큰을 가지며,
+// stopMessages() 시 토큰을 무효화하여 오래된 콜백을 안전하게 차단
 let _msgRef = null;
-let _subId = 0;
+let _msgToken = null; // { alive: true/false } — 현재 활성 구독 토큰
 
 // Presence
 let _presRef = null;
@@ -361,14 +363,14 @@ let _readsRef = null;
 let _readsInterval = null;
 let _readsCache = {};
 
-// Reactions — single room-level watcher (optimization)
+// Reactions — single room-level watcher
 let _rxRoomRef = null;
 let _rxRoomCache = {};
-let _rxCallbacks = new Map(); // mid → callback fn
+let _rxCallbacks = new Map();
 
 // Message state
-const seen = new Map(); // mid → {seq, metaEl, senderId, wrapEl, bubbleEl, text, replyTo}
-const pending = new Map(); // mid → {text, createdAt}
+const seen = new Map();
+const pending = new Map();
 let afterSeq = 0;
 
 // Unread / notifications
@@ -382,6 +384,9 @@ let currentReplyTo = null;
 
 // Context menu
 let ctxMid = null, ctxSenderId = null, ctxWrap = null, ctxBubble = null;
+
+// enterRoom 중복 진입 방지 플래그
+let _enteringRoom = false;
 
 // ================================================================
 // UTILS
@@ -398,20 +403,23 @@ function inFrame() { try { return window.top !== window.self; } catch(e) { retur
 function getRoomUrlId() { return (new URLSearchParams(location.search).get('roomId') || '').trim(); }
 
 // ================================================================
-// APP BADGE
+// APP BADGE — iOS PWA(16.4+) 및 안드로이드 PWA 배지 지원
 // ================================================================
 function setAppBadge(n) {
   try {
     if (!('setAppBadge' in navigator)) return;
-    if (n > 0) navigator.setAppBadge(Math.min(n, 99)).catch(() => {});
-    else navigator.clearAppBadge().catch(() => {});
+    if (n > 0) {
+      navigator.setAppBadge(Math.min(n, 99)).catch(() => {});
+    } else {
+      navigator.clearAppBadge().catch(() => {});
+    }
   } catch(e) {}
 }
 
 // ================================================================
 // PUSH
 // ================================================================
-function pushToSubs(ids, title, body, rid) {
+function pushToSubs(ids, title, body, rid, badgeCount) {
   if (!ids.length || !PUSH_WEBHOOK_URL) return;
   try {
     fetch(PUSH_WEBHOOK_URL, {
@@ -423,20 +431,21 @@ function pushToSubs(ids, title, body, rid) {
         title: String(title || 'Chat').slice(0, 100),
         body: String(body || '').slice(0, 200),
         url: NAV_URL + '?roomId=' + encodeURIComponent(rid),
+        // ★ iOS 아이콘 배지: 누적 증가 방식
         ios_badgeType: 'Increase',
-        ios_badgeCount: 1
+        ios_badgeCount: 1,
+        // 안드로이드 배지
+        android_badge_count: typeof badgeCount === 'number' ? badgeCount : 1
       })
     }).catch(() => {});
   } catch(e) {}
 }
 
 // ================================================================
-// AUTH — 핵심 수정: onAuthStateChanged 패턴으로 기존 세션 재사용
+// AUTH
 // ================================================================
 function waitForAuth() {
   return new Promise((resolve) => {
-    // Firebase auth state가 결정될 때까지 기다림
-    // 기존 익명 세션이 있으면 재사용, 없으면 새로 생성
     const unsub = firebase.auth().onAuthStateChanged(user => {
       unsub();
       if (user && user.uid) {
@@ -448,7 +457,6 @@ function waitForAuth() {
           .catch(() => resolve(false));
       }
     });
-    // 10초 타임아웃
     setTimeout(() => resolve(false), 10000);
   });
 }
@@ -597,7 +605,18 @@ function bumpUnread() {
   if (document.hidden || !document.hasFocus()) startBlink(); else stopBlink();
   setHeader();
 }
-function clearUnread() { unread=0; setAppBadge(0); stopBlink(); setHeader(); }
+function clearUnread() {
+  unread=0;
+  setAppBadge(0);
+  stopBlink();
+  setHeader();
+  // ★ OneSignal 배지도 함께 초기화 (앱 열었을 때 배지 클리어)
+  try {
+    if (window.__OS && window.__OS.Notifications) {
+      window.__OS.Notifications.setBadgeCount && window.__OS.Notifications.setBadgeCount(0);
+    }
+  } catch(e) {}
+}
 
 window.addEventListener('focus', () => { if (roomId) clearUnread(); firebase.database().goOnline(); });
 document.addEventListener('visibilitychange', () => { if (!document.hidden && roomId) clearUnread(); });
@@ -610,7 +629,8 @@ function notifyMsg(msg) {
     if (!notifyEnabled || !('Notification' in window) || Notification.permission!=='granted') return;
     const n = new Notification(roomName||'채팅', {
       body: `${msg.senderNick||'상대'}: ${String(msg.text||'').slice(0,140)}`,
-      tag: 'room_'+(roomId||''), renotify: true
+      tag: 'room_'+(roomId||''), renotify: true,
+      badge: '/icon-badge.png' // PWA 배지 아이콘 (있을 경우)
     });
     n.onclick = () => { try { window.focus(); } catch(e) {} };
   } catch(e) {}
@@ -714,7 +734,7 @@ async function renderLinkPreview(url, container) {
 }
 
 // ================================================================
-// REACTIONS — 방 단위 단일 구독으로 최적화
+// REACTIONS — 방 단위 단일 구독
 // ================================================================
 function initRxWatcher(rid) {
   stopRxWatcher();
@@ -872,23 +892,42 @@ function updateReadBadges() {
 }
 
 // ================================================================
-// ★ 핵심 수정: subscribeMessages
-// child_added 로 모든 메시지 처리 (skip 없음)
-// once('value') 는 초기배치 완료 감지용으로만 사용
-// subscribeId 로 오래된 콜백 무효화
+// ★ 핵심 수정 1: subscribeMessages — 토큰 기반 구독 관리
+//
+// 문제: 기존 _subId(전역 카운터) 방식은 stopMessages()가 여러 곳에서
+// 중복 호출될 때 카운터가 꼬여 신규 구독의 콜백까지 차단되는 버그 발생.
+//
+// 해결: 구독마다 고유한 { alive: true } 토큰 객체를 클로저로 캡처.
+// stopMessages()는 토큰의 alive를 false로만 바꾸고 ref.off()를 호출.
+// 콜백은 토큰의 alive 여부로만 유효성 검사 → 전역 상태 의존 제거.
 // ================================================================
 function stopMessages() {
-  _subId++; // 기존 콜백 무효화
-  if (_msgRef) { try { _msgRef.off(); } catch(e) {} _msgRef=null; }
+  // 현재 토큰 무효화
+  if (_msgToken) {
+    _msgToken.alive = false;
+    _msgToken = null;
+  }
+  // Firebase 리스너 해제
+  if (_msgRef) {
+    try { _msgRef.off(); } catch(e) {}
+    _msgRef = null;
+  }
 }
 
 function subscribeMessages(rid) {
+  // 기존 구독 중단 (토큰 무효화 + 리스너 해제)
   stopMessages();
   stopRxWatcher();
 
-  const mySubId = _subId; // 현재 구독 ID 캡처
+  // DOM 및 상태 완전 초기화
+  logEl.innerHTML = '';
+  seen.clear();
+  pending.clear();
+  afterSeq = 0;
 
-  logEl.innerHTML=''; seen.clear(); pending.clear(); afterSeq=0;
+  // ★ 이번 구독 전용 토큰 생성 (클로저로 캡처)
+  const token = { alive: true };
+  _msgToken = token;
 
   initRxWatcher(rid);
 
@@ -897,9 +936,10 @@ function subscribeMessages(rid) {
 
   let initialBatchDone = false;
 
-  // ── child_added: 기존+신규 모든 메시지 처리 (skip 없음) ──
+  // ── child_added: 기존 + 신규 메시지 처리 ──
   ref.on('child_added', snap => {
-    if (_subId !== mySubId) return; // 오래된 구독 무시
+    // ★ 전역 카운터 대신 토큰으로 유효성 검사
+    if (!token.alive) return;
     const m = snap.val(); if (!m) return;
 
     const msg = {
@@ -929,20 +969,26 @@ function subscribeMessages(rid) {
 
   // ── child_changed: 수정/삭제 반영 ──
   ref.on('child_changed', snap => {
-    if (_subId !== mySubId) return;
+    if (!token.alive) return;
     const m = snap.val(); if (!m) return;
-    applyMsgUpdate({messageId:String(m.messageId||snap.key||''),text:String(m.text||''),deleted:!!m.deleted,edited:!!m.edited});
+    applyMsgUpdate({
+      messageId: String(m.messageId||snap.key||''),
+      text:      String(m.text||''),
+      deleted:   !!m.deleted,
+      edited:    !!m.edited
+    });
   });
 
   // ── once('value'): 기존 child_added가 모두 완료된 뒤 발화
-  //    → 여기서 initialBatchDone=true 로 변경 + 스크롤 ──
+  //    initialBatchDone = true로 변경 후 스크롤/읽음 처리 ──
   ref.once('value', () => {
-    if (_subId !== mySubId) return; // 오래된 구독 무시
+    if (!token.alive) return;
     initialBatchDone = true;
     requestAnimationFrame(() => {
+      if (!token.alive) return;
       logEl.scrollTop = logEl.scrollHeight;
       setTimeout(() => {
-        if (_subId !== mySubId) return;
+        if (!token.alive) return;
         logEl.scrollTop = logEl.scrollHeight;
         markRead(); updateBadges(); updateReadBadges();
       }, 200);
@@ -1133,19 +1179,27 @@ async function joinFlow(rid) {
 }
 
 // ================================================================
-// ENTER ROOM
+// ★ 핵심 수정 2: enterRoom — 중복 진입 방지 및 구독 단일화
+//
+// 문제: 기존 _enterDebounce(setTimeout 0) 패턴은 빠른 연속 호출 시
+// 첫 번째 호출의 Promise가 영원히 resolve되지 않는 버그 발생.
+// 또한 enterRoom과 subscribeMessages 양쪽에서 stopMessages()를 호출해
+// _subId가 과도하게 증가하여 신규 구독 콜백까지 차단.
+//
+// 해결:
+// 1. _enteringRoom 플래그로 중복 진입만 방지 (setTimeout 제거)
+// 2. enterRoom에서 stopMessages() 제거 → subscribeMessages 내부에서만 호출
 // ================================================================
-let _enterDebounce = null;
-
 async function enterRoom(rid, infoOpt) {
   rid = String(rid||'').trim(); if (!rid) return;
 
-  // 동일 방 중복 진입 방지
-  if (_enterDebounce) clearTimeout(_enterDebounce);
-  await new Promise(r => { _enterDebounce = setTimeout(r, 0); });
+  // 이미 진입 중이면 무시 (중복 클릭 방지)
+  if (_enteringRoom) return;
+  _enteringRoom = true;
 
   try {
-    stopMessages(); stopPresence(); stopTyping(); stopReads();
+    // ★ stopMessages는 subscribeMessages 안에서만 호출 (중복 제거)
+    stopPresence(); stopTyping(); stopReads();
 
     const info = infoOpt || await loadRoomInfo(rid).catch(() => null);
     if (!info) { showHome(); return; }
@@ -1167,9 +1221,12 @@ async function enterRoom(rid, infoOpt) {
     startPresence(roomId);
     startTyping(roomId);
     startReads(roomId);
+    // ★ subscribeMessages가 내부에서 stopMessages() 호출 → 이전 구독 정리 후 새 구독
     subscribeMessages(roomId);
   } catch(e) {
     console.error('enterRoom error:', e);
+  } finally {
+    _enteringRoom = false;
   }
 }
 
@@ -1178,9 +1235,11 @@ function showChat() {
   refreshLayout(); inputEl.focus(); refreshLayout();
 }
 function showHome() {
+  // stopMessages는 subscribeMessages가 관리하므로 여기서도 직접 호출
   stopMessages(); stopPresence(); stopTyping(); stopReads(); stopRxWatcher();
   clearUnread(); try{clearReply();}catch(e){}
   roomId=''; roomName=''; ownerUid='';
+  _enteringRoom = false;
   header.style.display='none'; logEl.style.display='none'; composer.style.display='none';
   showTyping(''); home.style.display='block';
   refreshLayout(); refreshRooms();
@@ -1199,7 +1258,6 @@ mNick.addEventListener('click',async()=>{
   setHeader([]);
 });
 
-// 누구나 방 이름 변경 가능 (방장 체크 제거)
 mRoomName.addEventListener('click',async()=>{
   closeMenu(); if(!roomId) return;
   const n=prompt('새 방 이름',roomName||''); if(!n) return;
@@ -1208,7 +1266,6 @@ mRoomName.addEventListener('click',async()=>{
   catch(e){alert('변경 실패: '+(e&&e.message||''));}
 });
 
-// 누구나 비밀번호 설정/변경 가능 (방장 체크 제거)
 mRoomPass.addEventListener('click',async()=>{
   closeMenu(); if(!roomId) return;
   let info; try{info=await loadRoomInfo(roomId);}catch(e){alert('방 정보를 불러오지 못했습니다.');return;}
@@ -1243,7 +1300,7 @@ async function sendToFirebase(mid, text, replyToData) {
     if(replyToData) msg.replyTo=replyToData;
     await db.ref('messages/'+roomId).push(msg);
     await db.ref('rooms/'+roomId).update({updatedAt:SV.TIMESTAMP,lastMsgTs:SV.TIMESTAMP});
-    try{const ids=await collectSubIds(roomId);if(ids.length)pushToSubs(ids,roomName||'Chat',String(text||'').slice(0,120),roomId);}catch(e){}
+    try{const ids=await collectSubIds(roomId);if(ids.length)pushToSubs(ids,roomName||'Chat',String(text||'').slice(0,120),roomId,1);}catch(e){}
   }catch(e){updateBadges();}
 }
 function retrySend(mid) {const p=pending.get(mid);if(!p)return;p.createdAt=Date.now();pending.set(mid,p);updateBadges();sendToFirebase(mid,p.text);}
@@ -1366,35 +1423,30 @@ document.addEventListener('visibilitychange', () => {
 });
 
 // ================================================================
-// ★ iOS PWA 푸시 탭 복원 핵심 수정
-// BFCache(pageshow persisted) 및 URL 변경(popstate/focus) 모두 처리
+// iOS PWA 푸시 탭 복원 처리
 // ================================================================
 
 // BFCache 복원
 window.addEventListener('pageshow', async (e) => {
-  if (!e.persisted) return; // 신규 로드는 init()이 처리
+  if (!e.persisted) return;
 
-  // Firebase 재연결
   try { firebase.database().goOnline(); } catch(err) {}
   refreshLayout();
 
-  // auth 상태 복구 (BFCache에서 myUid가 날아간 경우 대비)
   if (!myUid) {
     const user = firebase.auth().currentUser;
     if (user && user.uid) myUid = user.uid;
     else await waitForAuth();
   }
 
-  // 닉네임이 없으면 홈으로
   if (!myNick) { showHome(); return; }
 
   const urlRid = getRoomUrlId();
   if (urlRid) {
     if (urlRid !== roomId) {
-      // 다른 방 (예: 다른 방 푸시 탭)
       await enterRoom(urlRid);
     } else {
-      // 같은 방 → 메시지 재구독으로 누락 방지
+      // 같은 방 재진입 → 구독 재시작으로 누락 메시지 보장
       subscribeMessages(roomId);
     }
   } else if (roomId) {
@@ -1432,13 +1484,15 @@ async function init() {
   myNick = (localStorage.getItem(LS_NICK) || '').trim();
   if (myNick) homeNick.value = myNick;
 
-  // ★ 핵심: onAuthStateChanged로 기존 세션 재사용
   const authOk = await waitForAuth();
   if (!authOk || !myUid) { alert('Firebase 인증 실패. 페이지를 새로고침해 주세요.'); return; }
 
   schedulePushSync();
   applyBubbleTheme();
   updateMenuStates();
+
+  // ★ 앱 시작 시 배지 초기화 (이전에 쌓인 배지 클리어)
+  setAppBadge(0);
 
   _lastFocusHref = location.href;
 
@@ -1450,7 +1504,6 @@ async function init() {
   }
 }
 
-// Firebase auth 상태 변경 리스너 (토큰 갱신 등)
 firebase.auth().onAuthStateChanged(user => {
   if (user && user.uid && !myUid) {
     myUid = user.uid;
