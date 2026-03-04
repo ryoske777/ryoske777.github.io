@@ -26,7 +26,7 @@ header{position:sticky;top:0;z-index:10;padding:12px 14px 10px;border-bottom:1px
 .headTop{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .title{font-size:16px;font-weight:800;margin:0;line-height:1.2}
 .sub{margin-top:6px;font-size:12px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap}
-.pill{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:#fff;font-size:12px;color:var(--muted)}
+.pill,.chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:#fff;font-size:12px;color:var(--muted)}
 .menuWrap{position:relative;display:flex;align-items:center;gap:8px}
 .menuBtn{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;line-height:1;user-select:none;box-shadow:0 6px 18px rgba(0,0,0,.06)}
 .menu{position:absolute;right:0;top:46px;min-width:280px;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow2);overflow:hidden;display:none}
@@ -53,7 +53,6 @@ header{position:sticky;top:0;z-index:10;padding:12px 14px 10px;border-bottom:1px
 .roomName{font-weight:900;font-size:15px;display:flex;align-items:center;gap:8px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .roomMeta{font-size:12px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap}
 .roomRight{display:flex;align-items:center;gap:8px;flex-shrink:0}
-.chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 10px;font-size:12px;color:var(--muted);display:inline-flex;align-items:center;gap:6px}
 .log{flex:1;min-height:0;overflow:auto;padding:12px 12px calc(var(--composerH) + var(--typingH) + max(0px,calc(var(--kb) + var(--safeBComp) - var(--kbFix))) + 12px);-webkit-overflow-scrolling:touch}
 .msg{display:flex;flex-direction:column;gap:4px;margin:10px 0;width:100%}
 .row{display:flex;gap:8px;width:100%}
@@ -357,11 +356,18 @@ let _typInterval = null;
 let _typListenRef = null;
 let _lastTypeAt = 0;
 let _typingOn = false;
+let _typInputHandler = null;
+let _typFocusHandler = null;
+let _typBlurHandler = null;
+let _typUnloadHandler = null;
 
 // Reads
 let _readsRef = null;
 let _readsInterval = null;
 let _readsCache = {};
+let _readsScrollHandler = null;
+let _readsVisHandler = null;
+let _readsFocusHandler = null;
 
 // Reactions — single room-level watcher
 let _rxRoomRef = null;
@@ -1028,6 +1034,10 @@ function stopTyping() {
   if(_typInterval){clearInterval(_typInterval);_typInterval=null;}
   if(_typListenRef){try{_typListenRef.off();}catch(e){}_typListenRef=null;}
   if(_typRef){try{_typRef.remove().catch(()=>{});}catch(e){}_typRef=null;}
+  if(_typInputHandler){inputEl.removeEventListener('input',_typInputHandler);_typInputHandler=null;}
+  if(_typFocusHandler){inputEl.removeEventListener('focus',_typFocusHandler);_typFocusHandler=null;}
+  if(_typBlurHandler){inputEl.removeEventListener('blur',_typBlurHandler);_typBlurHandler=null;}
+  if(_typUnloadHandler){window.removeEventListener('beforeunload',_typUnloadHandler);_typUnloadHandler=null;}
   _typingOn=false; _lastTypeAt=0; showTyping('');
 }
 function markTypeActivity() { _lastTypeAt=Date.now(); }
@@ -1047,10 +1057,14 @@ function startTyping(rid) {
     if(should){_typRef.set({nick:myNick,until:Date.now()+5500});_typingOn=true;}
     else if(_typingOn){_typRef.remove();_typingOn=false;}
   },2000);
-  inputEl.addEventListener('input',markTypeActivity);
-  inputEl.addEventListener('focus',markTypeActivity);
-  inputEl.addEventListener('blur',()=>{try{if(_typRef)_typRef.remove();}catch(e){}_typingOn=false;});
-  window.addEventListener('beforeunload',()=>{try{if(_typRef)_typRef.remove();}catch(e){}});
+  _typInputHandler = markTypeActivity;
+  _typFocusHandler = markTypeActivity;
+  _typBlurHandler = ()=>{try{if(_typRef)_typRef.remove();}catch(e){}_typingOn=false;};
+  _typUnloadHandler = ()=>{try{if(_typRef)_typRef.remove();}catch(e){}};
+  inputEl.addEventListener('input',_typInputHandler);
+  inputEl.addEventListener('focus',_typFocusHandler);
+  inputEl.addEventListener('blur',_typBlurHandler);
+  window.addEventListener('beforeunload',_typUnloadHandler);
 }
 
 // ================================================================
@@ -1059,6 +1073,9 @@ function startTyping(rid) {
 function stopReads() {
   if(_readsRef){try{_readsRef.off();}catch(e){}_readsRef=null;}
   if(_readsInterval){clearInterval(_readsInterval);_readsInterval=null;}
+  if(_readsScrollHandler){logEl.removeEventListener('scroll',_readsScrollHandler);_readsScrollHandler=null;}
+  if(_readsVisHandler){document.removeEventListener('visibilitychange',_readsVisHandler);_readsVisHandler=null;}
+  if(_readsFocusHandler){window.removeEventListener('focus',_readsFocusHandler);_readsFocusHandler=null;}
   _readsCache={};
 }
 function canRead() { return !!(roomId&&!document.hidden&&document.hasFocus()&&logEl.style.display!=='none'&&isNearBottom()); }
@@ -1072,9 +1089,12 @@ function startReads(rid) {
   _readsRef=db.ref('reads/'+rid);
   _readsRef.on('value',snap=>{_readsCache=snap.val()||{};updateReadBadges();});
   _readsInterval=setInterval(markRead,2500);
-  logEl.addEventListener('scroll',()=>setTimeout(()=>{markRead();if(canRead())clearUnread();},120));
-  document.addEventListener('visibilitychange',()=>{if(!document.hidden)markRead();});
-  window.addEventListener('focus',()=>markRead());
+  _readsScrollHandler=()=>setTimeout(()=>{markRead();if(canRead())clearUnread();},120);
+  _readsVisHandler=()=>{if(!document.hidden)markRead();};
+  _readsFocusHandler=()=>markRead();
+  logEl.addEventListener('scroll',_readsScrollHandler);
+  document.addEventListener('visibilitychange',_readsVisHandler);
+  window.addEventListener('focus',_readsFocusHandler);
 }
 
 // ================================================================
