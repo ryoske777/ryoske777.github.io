@@ -254,7 +254,6 @@ OneSignalDeferred.push(async function(OneSignal) {
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-storage-compat.js"></script>
 <script>
 // ================================================================
 // CONFIG
@@ -273,7 +272,6 @@ firebase.initializeApp({
   appId:"1:694962613962:web:764e45b00345a8a27f4e33"
 });
 const db = firebase.database();
-const storage = firebase.storage();
 const SV = firebase.database.ServerValue;
 const NAV_URL = location.origin + location.pathname;
 
@@ -1350,18 +1348,18 @@ async function sendToFirebase(mid, text, replyToData, imageUrl) {
   }catch(e){updateBadges();}
 }
 
-async function compressImage(file) {
+async function compressToBase64(file) {
   return new Promise(resolve => {
     const img=new Image(), url=URL.createObjectURL(file);
     img.onload=()=>{
-      const MAX=1200; let w=img.width, h=img.height;
+      const MAX=800; let w=img.width, h=img.height;
       if(w>MAX||h>MAX){if(w>h){h=Math.round(h*MAX/w);w=MAX;}else{w=Math.round(w*MAX/h);h=MAX;}}
       const c=document.createElement('canvas');c.width=w;c.height=h;
       c.getContext('2d').drawImage(img,0,0,w,h);
       URL.revokeObjectURL(url);
-      c.toBlob(b=>resolve(b),'image/jpeg',0.82);
+      resolve(c.toDataURL('image/jpeg',0.72));
     };
-    img.onerror=()=>{URL.revokeObjectURL(url);resolve(file);};
+    img.onerror=()=>{URL.revokeObjectURL(url);resolve(null);};
     img.src=url;
   });
 }
@@ -1369,21 +1367,19 @@ async function compressImage(file) {
 async function sendImage(file) {
   if(!file||!roomId) return;
   if(!file.type.startsWith('image/'))return showToast('이미지 파일만 전송할 수 있어요');
-  if(file.size>20*1024*1024)return showToast('20MB 이하 이미지만 전송 가능해요');
+  if(file.size>15*1024*1024)return showToast('15MB 이하 이미지만 전송 가능해요');
   const mid=uuid();
   renderMessage({messageId:mid,senderId:myUid,senderNick:myNick,text:'',ts:Date.now(),seq:0,replyTo:null,imageUrl:'__uploading__'},true);
   scrollToBottom(true);
   pending.set(mid,{text:'',createdAt:Date.now()}); updateBadges();
   try {
-    const blob=await compressImage(file);
-    const ref=storage.ref('images/'+roomId+'/'+mid+'.jpg');
-    await ref.put(blob,{contentType:'image/jpeg'});
-    const imageUrl=await ref.getDownloadURL();
+    const imageUrl=await compressToBase64(file);
+    if(!imageUrl) throw new Error('변환 실패');
     await sendToFirebase(mid,'',null,imageUrl);
   } catch(e) {
     pending.delete(mid);
     const obj=seen.get(mid);
-    if(obj&&obj.bubbleEl){obj.bubbleEl.innerHTML='';obj.bubbleEl.className='bubble deletedBubble';obj.bubbleEl.textContent='업로드 실패';}
+    if(obj&&obj.bubbleEl){obj.bubbleEl.innerHTML='';obj.bubbleEl.className='bubble deletedBubble';obj.bubbleEl.textContent='전송 실패';}
     updateBadges(); showToast('사진 전송 실패');
   }
 }
