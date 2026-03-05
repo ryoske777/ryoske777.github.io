@@ -2,6 +2,10 @@
 <html lang="ko">
 <head>
 <link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icon-192x192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Chat">
 <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,viewport-fit=cover,shrink-to-fit=no"/>
@@ -217,8 +221,8 @@ OneSignalDeferred.push(async function(OneSignal) {
       <button class="replyCloseBtn" id="replyCloseBtn">✕</button>
     </div>
     <div class="emojiBtn clickable" id="emojiBtn">😊</div>
-    <div class="photoBtn" id="photoBtn">📷</div>
-    <input type="file" id="imgInput" accept="image/*" style="display:none"/>
+    <label class="photoBtn" id="photoBtn" for="imgInput">📷</label>
+    <input type="file" id="imgInput" accept="image/*" style="position:absolute;width:0;height:0;opacity:0;overflow:hidden"/>
     <div class="inputWrap"><input id="input" type="text" autocomplete="off" placeholder="메시지를 입력하세요"/></div>
     <button class="sendBtn" id="send" disabled>전송</button>
   </div>
@@ -1494,13 +1498,7 @@ document.addEventListener('click',e=>{if(!emojiBtn.contains(e.target)&&!emojiPan
 // ================================================================
 // PHOTO UPLOAD
 // ================================================================
-const photoBtnEl = document.getElementById('photoBtn');
 const imgInputEl = document.getElementById('imgInput');
-let _phTouched=false;
-photoBtnEl.addEventListener('touchstart',e=>{e.preventDefault();_phTouched=false;},{passive:false});
-photoBtnEl.addEventListener('touchend',e=>{e.preventDefault();_phTouched=true;imgInputEl.click();},{passive:false});
-photoBtnEl.addEventListener('mousedown',e=>e.preventDefault());
-photoBtnEl.addEventListener('click',e=>{e.preventDefault();if(_phTouched){_phTouched=false;return;}imgInputEl.click();});
 imgInputEl.addEventListener('change',()=>{if(imgInputEl.files[0]){sendImage(imgInputEl.files[0]);imgInputEl.value='';}});
 document.addEventListener('paste',e=>{
   if(!roomId)return;
