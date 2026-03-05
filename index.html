@@ -136,6 +136,19 @@ input[type="text"]{width:100%;border:0;outline:none;font-size:16px;background:tr
 .imgUploading{width:180px;height:110px;border-radius:12px;background:#f3f4f6;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-size:13px;color:var(--muted);border:1px solid var(--line)}
 .imgUploadSpinner{width:22px;height:22px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+.loginScreen{flex:1;min-height:0;overflow:auto;padding:24px 16px 40px;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg)}
+.loginCard{width:100%;max-width:400px;background:#fff;border:1px solid var(--line);border-radius:28px;padding:32px 24px 28px;box-shadow:var(--shadow2);text-align:center}
+.loginLogo{width:148px;height:148px;object-fit:contain;margin:0 auto 16px;display:block;border-radius:24px}
+.loginTitle{font-size:24px;font-weight:900;margin:0 0 4px;color:var(--text)}
+.loginSub{font-size:13px;color:var(--muted);margin:0 0 22px;line-height:1.5}
+.loginError{color:var(--danger);font-size:13px;min-height:16px;margin:4px 0 0;text-align:left;padding:0 2px}
+.loginHint{font-size:11px;color:var(--muted);margin-top:14px;line-height:1.6}
+.lastRoomBar{background:#f0fdf4;border:1px solid rgba(34,197,94,.25);border-radius:14px;padding:12px 14px;margin-top:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer}
+.lastRoomBar:hover{background:#dcfce7}
+.lastRoomInfo{display:flex;flex-direction:column;gap:2px;min-width:0}
+.lastRoomName{font-weight:800;font-size:14px;color:#166534;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lastRoomLabel{font-size:11px;color:var(--muted)}
+.lastRoomBtn{flex-shrink:0;padding:6px 14px;background:#22c55e;color:#fff;border:0;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer}
 </style>
 <script>
 window.OneSignalDeferred = window.OneSignalDeferred || [];
@@ -172,13 +185,29 @@ OneSignalDeferred.push(async function(OneSignal) {
           <button id="mRoomName"><span>방 이름 변경</span><span>›</span></button>
           <button id="mRoomPass"><span>비밀번호 설정/변경</span><span>›</span></button>
           <button id="mLeave"><span>나가기</span><span>›</span></button>
+          <button id="mLogout" style="color:var(--danger)"><span>로그아웃</span><span>›</span></button>
           <div class="hint" id="menuHint"></div>
         </div>
       </div>
     </div>
   </header>
 
-  <div class="home" id="home">
+  <div class="loginScreen" id="loginScreen" style="display:none">
+    <div class="loginCard">
+      <img src="/icon-512x512.png" class="loginLogo" alt="Chat" draggable="false"/>
+      <div class="loginTitle">Chat</div>
+      <div class="loginSub">계정을 만들거나 로그인하세요</div>
+      <div class="field" style="text-align:left"><label>계정명</label><input id="loginUser" type="text" placeholder="예: ryoske" autocomplete="username" spellcheck="false"/></div>
+      <div class="field" style="text-align:left"><label>비밀번호 (6자 이상)</label><input id="loginPass" type="password" placeholder="비밀번호" autocomplete="current-password"/></div>
+      <div class="loginError" id="loginError"></div>
+      <div class="rowBtns" style="margin-top:14px">
+        <button class="primaryBtn" id="btnLoginSubmit">로그인 / 가입</button>
+      </div>
+      <div class="loginHint">처음 입력하면 자동으로 계정이 만들어집니다<br>같은 계정·비밀번호로 어디서든 로그인 가능</div>
+    </div>
+  </div>
+
+  <div class="home" id="home" style="display:none">
     <div class="homeCard">
       <div class="homeTitle">대기실</div>
       <div class="field"><label>내 닉네임</label><input id="homeNick" type="text" placeholder="예: 송대호"/></div>
@@ -199,6 +228,16 @@ OneSignalDeferred.push(async function(OneSignal) {
       <div class="sectionTitle">채팅방 목록</div>
       <div class="roomList" id="roomList"></div>
       <div class="rowBtns"><button class="ghostBtn" id="btnJoin">참여하기</button></div>
+      <div id="lastRoomSection" style="display:none">
+        <div class="sectionTitle">이전 방</div>
+        <div class="lastRoomBar clickable" id="lastRoomBar">
+          <div class="lastRoomInfo">
+            <div class="lastRoomLabel">마지막으로 입장한 방</div>
+            <div class="lastRoomName" id="lastRoomName">-</div>
+          </div>
+          <button class="lastRoomBtn" id="btnLastRoom">돌아가기</button>
+        </div>
+      </div>
       <div class="sectionTitle">안내</div>
       <div class="roomMeta"><span class="pill">누구나 편하게 대화할 수 있는 채팅방입니다.</span></div>
     </div>
@@ -284,11 +323,21 @@ const LS_NOTI = 'chat_notify_enabled_v1';
 const LS_SOUND = 'chat_beep_enabled_v1';
 const LS_ROOM_AUTH = 'chat_room_auth_v1_';
 const LS_BUBBLE = 'chat_my_bubble_white_v1';
+const LS_ACCOUNT = 'chat_account_v1'; // 계정명 캐시 (자동 로그인 input 복원용)
 
 // ================================================================
 // DOM REFS
 // ================================================================
 const appEl = document.getElementById('app');
+const loginScreen = document.getElementById('loginScreen');
+const loginUserEl = document.getElementById('loginUser');
+const loginPassEl = document.getElementById('loginPass');
+const btnLoginSubmit = document.getElementById('btnLoginSubmit');
+const loginErrorEl = document.getElementById('loginError');
+const lastRoomSection = document.getElementById('lastRoomSection');
+const lastRoomNameEl = document.getElementById('lastRoomName');
+const btnLastRoom = document.getElementById('btnLastRoom');
+const mLogout = document.getElementById('mLogout');
 const header = document.getElementById('header');
 const roomTitle = document.getElementById('roomTitle');
 const roomSub = document.getElementById('roomSub');
@@ -460,8 +509,54 @@ function pushToSubs(ids, title, body, rid, badgeCount) {
 }
 
 // ================================================================
-// AUTH
+// AUTH — 계정 기반 Firebase Email/Password Auth
 // ================================================================
+
+// 계정명을 Firebase Email 형식으로 변환 (한글/특수문자 지원)
+function usernameToEmail(username) {
+  try {
+    const bytes = new TextEncoder().encode(username.toLowerCase().trim());
+    let binary = '';
+    bytes.forEach(b => binary += String.fromCharCode(b));
+    const b64 = btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    return b64.slice(0, 50) + '@chatapp.local';
+  } catch(e) {
+    return username.toLowerCase().replace(/[^a-z0-9]/g, '') + '@chatapp.local';
+  }
+}
+
+// 로그인 시도 → 없으면 자동 회원가입
+async function loginOrRegister(username, password) {
+  const email = usernameToEmail(username);
+  // 1차: 로그인 시도
+  try {
+    const cred = await firebase.auth().signInWithEmailAndPassword(email, password);
+    return { ok: true, uid: cred.user.uid };
+  } catch(signInErr) {
+    const code = signInErr.code || '';
+    // 계정 없음 → 회원가입
+    if (code === 'auth/user-not-found' || code === 'auth/invalid-credential' || code === 'auth/invalid-email') {
+      try {
+        const cred = await firebase.auth().createUserWithEmailAndPassword(email, password);
+        return { ok: true, uid: cred.user.uid };
+      } catch(createErr) {
+        const cc = createErr.code || '';
+        if (cc === 'auth/weak-password') return { ok: false, error: '비밀번호는 6자 이상이어야 합니다.' };
+        if (cc === 'auth/email-already-in-use') return { ok: false, error: '비밀번호가 올바르지 않습니다.' };
+        return { ok: false, error: '가입 실패: ' + (createErr.message || cc) };
+      }
+    }
+    if (code === 'auth/wrong-password' || code === 'auth/invalid-login-credentials') {
+      return { ok: false, error: '비밀번호가 올바르지 않습니다.' };
+    }
+    if (code === 'auth/too-many-requests') {
+      return { ok: false, error: '잠시 후 다시 시도해 주세요.' };
+    }
+    return { ok: false, error: signInErr.message || '로그인 실패' };
+  }
+}
+
+// 현재 Firebase 세션 확인 (앱 시작 시)
 function waitForAuth() {
   return new Promise((resolve) => {
     const unsub = firebase.auth().onAuthStateChanged(user => {
@@ -470,12 +565,10 @@ function waitForAuth() {
         myUid = user.uid;
         resolve(true);
       } else {
-        firebase.auth().signInAnonymously()
-          .then(cred => { myUid = (cred && cred.user) ? cred.user.uid : ''; resolve(!!myUid); })
-          .catch(() => resolve(false));
+        resolve(false);
       }
     });
-    setTimeout(() => resolve(false), 10000);
+    setTimeout(() => resolve(false), 8000);
   });
 }
 
@@ -1127,13 +1220,19 @@ function startReads(rid) {
 // ================================================================
 // PUSH SUBSCRIPTION SYNC
 // ================================================================
-function syncPushSub() {
+async function syncPushSub() {
   try {
     if(!window.__OS||!myUid) return;
-    const subId=window.__OS.User.PushSubscription.id||'';
-    if(!window.__OS.User.PushSubscription.optedIn||!subId) return;
-    db.ref('pushSubs/'+myUid+'/'+subId).set({onesignalId:window.__OS.User.onesignalId||null,nick:myNick||'',updatedAt:SV.TIMESTAMP}).catch(()=>{});
-  } catch(e){}
+    const subId = window.__OS.User.PushSubscription.id || '';
+    if(!window.__OS.User.PushSubscription.optedIn || !subId) return;
+    // 기존 subId 모두 제거 후 현재 subId만 유지 → 중복 push 방지
+    const snap = await db.ref('pushSubs/'+myUid).once('value');
+    const existing = snap.val() || {};
+    const updates = {};
+    Object.keys(existing).forEach(id => { if(id !== subId) updates[id] = null; });
+    updates[subId] = { onesignalId: window.__OS.User.onesignalId||null, nick: myNick||'', updatedAt: SV.TIMESTAMP };
+    await db.ref('pushSubs/'+myUid).update(updates);
+  } catch(e) {}
 }
 let _pushSyncT=null;
 function schedulePushSync() { if(_pushSyncT)clearTimeout(_pushSyncT); _pushSyncT=setTimeout(syncPushSub,400); }
@@ -1262,6 +1361,8 @@ async function enterRoom(rid, infoOpt) {
     ownerUid = info.ownerUid;
 
     db.ref('roomMembers/'+roomId+'/'+myUid).set({nick:myNick,joinedAt:SV.TIMESTAMP}).catch(()=>{});
+    // 계정 단위로 마지막 방 기억
+    saveUserSettings({ lastRoom: { roomId: rid, roomName: info.roomName, ts: Date.now() } });
     clearUnread();
     showChat();
     setHeader([]);
@@ -1278,18 +1379,57 @@ async function enterRoom(rid, infoOpt) {
 }
 
 function showChat() {
-  home.style.display='none'; header.style.display='block'; logEl.style.display='block'; composer.style.display='flex';
+  loginScreen.style.display='none'; home.style.display='none';
+  header.style.display='block'; logEl.style.display='block'; composer.style.display='flex';
   refreshLayout(); inputEl.focus(); refreshLayout();
 }
 function showHome() {
-  // stopMessages는 subscribeMessages가 관리하므로 여기서도 직접 호출
   stopMessages(); stopPresence(); stopTyping(); stopReads(); stopRxWatcher();
   clearUnread(); try{clearReply();}catch(e){}
   roomId=''; roomName=''; ownerUid='';
   _enteringRoom = false;
+  loginScreen.style.display='none';
   header.style.display='none'; logEl.style.display='none'; composer.style.display='none';
   showTyping(''); home.style.display='block';
-  refreshLayout(); refreshRooms();
+  refreshLayout(); refreshRooms(); loadLastRoom();
+}
+function showLogin() {
+  stopMessages(); stopPresence(); stopTyping(); stopReads(); stopRxWatcher();
+  clearUnread(); try{clearReply();}catch(e){}
+  roomId=''; roomName=''; ownerUid=''; myUid='';
+  _enteringRoom = false;
+  home.style.display='none';
+  header.style.display='none'; logEl.style.display='none'; composer.style.display='none';
+  showTyping('');
+  // 저장된 계정명 복원
+  const savedAccount = localStorage.getItem(LS_ACCOUNT) || '';
+  if (savedAccount) loginUserEl.value = savedAccount;
+  loginErrorEl.textContent = '';
+  loginScreen.style.display='flex';
+  refreshLayout();
+  setTimeout(() => { try { (savedAccount ? loginPassEl : loginUserEl).focus(); } catch(e){} }, 80);
+}
+
+// ================================================================
+// USER SETTINGS — 계정 단위 설정 저장 (lastRoomId 등)
+// ================================================================
+async function saveUserSettings(obj) {
+  if (!myUid) return;
+  try { await db.ref('userSettings/'+myUid).update({...obj, updatedAt: SV.TIMESTAMP}); } catch(e) {}
+}
+async function loadLastRoom() {
+  lastRoomSection.style.display = 'none';
+  if (!myUid) return;
+  try {
+    const snap = await db.ref('userSettings/'+myUid+'/lastRoom').once('value');
+    const d = snap.val();
+    if (d && d.roomId && d.roomName) {
+      lastRoomNameEl.textContent = d.roomName;
+      lastRoomSection.style.display = 'block';
+      btnLastRoom.onclick = () => joinFlow(d.roomId);
+      lastRoomSection.onclick = () => joinFlow(d.roomId);
+    }
+  } catch(e) {}
 }
 
 // ================================================================
@@ -1297,11 +1437,24 @@ function showHome() {
 // ================================================================
 mLeave.addEventListener('click',()=>{closeMenu();history.pushState({},'',NAV_URL);showHome();});
 
+mLogout.addEventListener('click', async () => {
+  closeMenu();
+  if (!confirm('로그아웃 하시겠습니까?')) return;
+  history.pushState({}, '', NAV_URL);
+  try { await firebase.auth().signOut(); } catch(e) {}
+  localStorage.removeItem(LS_NICK);
+  myNick = ''; homeNick.value = '';
+  showLogin();
+});
+
 mNick.addEventListener('click',async()=>{
   closeMenu();
   const n=prompt('새 닉네임',myNick||''); if(!n||!setNick(n)) return;
   homeNick.value=myNick;
   if(roomId){try{db.ref('presence/'+roomId+'/'+myUid).update({nick:myNick,lastActive:SV.TIMESTAMP});db.ref('reads/'+roomId+'/'+myUid).update({nick:myNick}).catch(()=>{});}catch(e){}}
+  // 계정 단위로 닉네임 저장
+  saveUserSettings({ nick: myNick });
+  schedulePushSync();
   setHeader([]);
 });
 
@@ -1324,6 +1477,46 @@ mRoomPass.addEventListener('click',async()=>{
     else if(res.action==='ok'){const pw=(res.value||'').trim();if(!pw){alert('비밀번호를 입력해 주세요.');return;}await setRoomPassword(roomId,pw);showToast('비밀번호 설정 완료');}
   }catch(e){alert('처리 실패: '+(e&&e.message||''));}
 });
+
+// ================================================================
+// LOGIN SCREEN EVENTS
+// ================================================================
+async function doLogin() {
+  const username = (loginUserEl.value || '').trim();
+  const password = (loginPassEl.value || '').trim();
+  loginErrorEl.textContent = '';
+  if (!username) { loginErrorEl.textContent = '계정명을 입력해 주세요.'; loginUserEl.focus(); return; }
+  if (!password) { loginErrorEl.textContent = '비밀번호를 입력해 주세요.'; loginPassEl.focus(); return; }
+  if (password.length < 6) { loginErrorEl.textContent = '비밀번호는 6자 이상이어야 합니다.'; loginPassEl.focus(); return; }
+  btnLoginSubmit.disabled = true;
+  btnLoginSubmit.textContent = '처리 중...';
+  const result = await loginOrRegister(username, password);
+  btnLoginSubmit.disabled = false;
+  btnLoginSubmit.textContent = '로그인 / 가입';
+  if (!result.ok) { loginErrorEl.textContent = result.error || '로그인 실패'; loginPassEl.focus(); return; }
+  myUid = result.uid;
+  // 계정명 저장 + 닉네임 초기화
+  localStorage.setItem(LS_ACCOUNT, username);
+  if (!myNick) {
+    myNick = username;
+    localStorage.setItem(LS_NICK, myNick);
+    homeNick.value = myNick;
+  }
+  schedulePushSync();
+  applyBubbleTheme();
+  updateMenuStates();
+  setAppBadge(0);
+  _lastFocusHref = location.href;
+  const urlRid = getRoomUrlId();
+  if (urlRid) {
+    await enterRoom(urlRid);
+  } else {
+    showHome();
+  }
+}
+btnLoginSubmit.addEventListener('click', doLogin);
+loginPassEl.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+loginUserEl.addEventListener('keydown', e => { if (e.key === 'Enter') loginPassEl.focus(); });
 
 // ================================================================
 // SEND
@@ -1534,7 +1727,7 @@ window.addEventListener('pageshow', async (e) => {
   if (!myUid) {
     const user = firebase.auth().currentUser;
     if (user && user.uid) myUid = user.uid;
-    else await waitForAuth();
+    else { showLogin(); return; }
   }
 
   if (!myNick) { showHome(); return; }
@@ -1582,16 +1775,21 @@ async function init() {
   myNick = (localStorage.getItem(LS_NICK) || '').trim();
   if (myNick) homeNick.value = myNick;
 
-  const authOk = await waitForAuth();
-  if (!authOk || !myUid) { alert('Firebase 인증 실패. 페이지를 새로고침해 주세요.'); return; }
-
-  schedulePushSync();
   applyBubbleTheme();
+
+  // 기존 Firebase 세션 확인 (자동 로그인)
+  const authOk = await waitForAuth();
+
+  if (!authOk || !myUid) {
+    // 세션 없음 → 로그인 화면
+    showLogin();
+    return;
+  }
+
+  // 세션 있음 → 정상 진입
+  schedulePushSync();
   updateMenuStates();
-
-  // ★ 앱 시작 시 배지 초기화 (이전에 쌓인 배지 클리어)
   setAppBadge(0);
-
   _lastFocusHref = location.href;
 
   const urlRid = getRoomUrlId();
@@ -1606,6 +1804,10 @@ firebase.auth().onAuthStateChanged(user => {
   if (user && user.uid && !myUid) {
     myUid = user.uid;
     schedulePushSync();
+  } else if (!user && myUid) {
+    // 세션 만료 → 로그인 화면으로
+    myUid = '';
+    if (loginScreen.style.display === 'none' || !loginScreen.style.display) showLogin();
   }
 });
 
