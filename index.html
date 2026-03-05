@@ -861,7 +861,7 @@ function renderMessage(m, isPending) {
 
 function applyMsgUpdate(m) {
   const obj=seen.get(m.messageId); if(!obj) return;
-  rebuildBubble(obj.bubbleEl, {text:String(m.text||''),deleted:!!m.deleted,edited:!!m.edited,replyTo:obj.replyTo||null});
+  rebuildBubble(obj.bubbleEl, {text:String(m.text||''),deleted:!!m.deleted,edited:!!m.edited,replyTo:obj.replyTo||null,imageUrl:obj.imageUrl||null});
   obj.text=String(m.text||'');
 }
 
@@ -884,6 +884,7 @@ function mergeServerMsg(m) {
     obj.seq=Number(m.seq||obj.seq||0);
     if (m.text!==undefined) obj.text=String(m.text||'');
     if (m.replyTo!==undefined) obj.replyTo=m.replyTo||null;
+    if (m.imageUrl!==undefined) obj.imageUrl=m.imageUrl||null;
   }
   updateBadges(); updateReadBadges();
 }
