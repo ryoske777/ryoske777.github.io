@@ -126,6 +126,12 @@ input[type="text"]{width:100%;border:0;outline:none;font-size:16px;background:tr
 .replyQuoteText{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .toast{position:fixed;bottom:calc(var(--composerH) + max(0px,calc(var(--kb) + var(--safeBComp) - var(--kbFix))) + 12px);left:50%;transform:translateX(-50%) translateY(20px);background:#111827;color:#fff;padding:9px 18px;border-radius:999px;font-size:13px;font-weight:700;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;z-index:400;white-space:nowrap}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.photoBtn{width:48px;height:48px;border-radius:14px;border:1px solid var(--line);background:#fff;font-size:22px;display:flex;align-items:center;justify-content:center;user-select:none;box-shadow:0 6px 18px rgba(0,0,0,.06);cursor:pointer;flex-shrink:0}
+.imgMsg{display:block;max-width:240px;border-radius:12px;overflow:hidden;cursor:pointer;margin:2px 0;border:1px solid var(--line)}
+.imgMsg img{width:100%;display:block;border-radius:12px;max-height:320px;object-fit:cover}
+.imgUploading{width:180px;height:110px;border-radius:12px;background:#f3f4f6;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-size:13px;color:var(--muted);border:1px solid var(--line)}
+.imgUploadSpinner{width:22px;height:22px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 </style>
 <script>
 window.OneSignalDeferred = window.OneSignalDeferred || [];
@@ -211,6 +217,8 @@ OneSignalDeferred.push(async function(OneSignal) {
       <button class="replyCloseBtn" id="replyCloseBtn">✕</button>
     </div>
     <div class="emojiBtn clickable" id="emojiBtn">😊</div>
+    <div class="photoBtn" id="photoBtn">📷</div>
+    <input type="file" id="imgInput" accept="image/*" style="display:none"/>
     <div class="inputWrap"><input id="input" type="text" autocomplete="off" placeholder="메시지를 입력하세요"/></div>
     <button class="sendBtn" id="send" disabled>전송</button>
   </div>
@@ -246,6 +254,7 @@ OneSignalDeferred.push(async function(OneSignal) {
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-storage-compat.js"></script>
 <script>
 // ================================================================
 // CONFIG
@@ -264,6 +273,7 @@ firebase.initializeApp({
   appId:"1:694962613962:web:764e45b00345a8a27f4e33"
 });
 const db = firebase.database();
+const storage = firebase.storage();
 const SV = firebase.database.ServerValue;
 const NAV_URL = location.origin + location.pathname;
 
@@ -795,7 +805,20 @@ function rebuildBubble(bubble, m) {
   if (m.deleted){bubble.className='bubble deletedBubble';bubble.textContent='삭제된 메시지입니다.';return;}
   bubble.className='bubble';
   if (m.replyTo&&m.replyTo.text) bubble.appendChild(buildQuoteEl(m.replyTo));
-  bubble.appendChild(document.createTextNode(String(m.text||'')));
+  if (m.imageUrl==='__uploading__') {
+    const d=document.createElement('div');d.className='imgUploading';
+    const sp=document.createElement('div');sp.className='imgUploadSpinner';
+    const tx=document.createElement('span');tx.textContent='업로드 중...';
+    d.appendChild(sp);d.appendChild(tx);bubble.appendChild(d);
+  } else if (m.imageUrl) {
+    const a=document.createElement('a');a.className='imgMsg';a.href=m.imageUrl;a.target='_blank';a.rel='noopener noreferrer';
+    const img=document.createElement('img');img.src=m.imageUrl;img.alt='사진';img.loading='lazy';
+    img.addEventListener('click',e=>{e.preventDefault();const ov=document.createElement('div');ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:999;display:flex;align-items:center;justify-content:center;cursor:zoom-out';const fi=document.createElement('img');fi.src=m.imageUrl;fi.style.cssText='max-width:94vw;max-height:90vh;border-radius:10px;object-fit:contain';ov.appendChild(fi);ov.addEventListener('click',()=>ov.remove());document.body.appendChild(ov);});
+    a.appendChild(img);bubble.appendChild(a);
+    if (m.text) { bubble.appendChild(document.createElement('br')); bubble.appendChild(document.createTextNode(String(m.text))); }
+  } else {
+    bubble.appendChild(document.createTextNode(String(m.text||'')));
+  }
   if (m.edited){const em=document.createElement('span');em.className='editedMark';em.textContent='(수정됨)';bubble.appendChild(em);}
 }
 
@@ -807,7 +830,7 @@ function renderMessage(m, isPending) {
   const row=document.createElement('div'); row.className='row '+(mine?'me':'other');
   const bubble=document.createElement('div'); rebuildBubble(bubble,m);
 
-  if (!isPending && !m.deleted) {
+  if (!isPending && !m.deleted && !m.imageUrl) {
     const url=extractUrl(String(m.text||'')); if(url) renderLinkPreview(url,wrap);
   }
   row.appendChild(bubble); wrap.appendChild(row);
@@ -835,7 +858,7 @@ function renderMessage(m, isPending) {
   }
 
   logEl.appendChild(wrap);
-  seen.set(m.messageId, {seq:Number(m.seq||0),metaEl:meta,senderId:m.senderId,wrapEl:wrap,bubbleEl:bubble,text:String(m.text||''),replyTo:m.replyTo||null});
+  seen.set(m.messageId, {seq:Number(m.seq||0),metaEl:meta,senderId:m.senderId,wrapEl:wrap,bubbleEl:bubble,text:String(m.text||''),replyTo:m.replyTo||null,imageUrl:m.imageUrl||null});
 }
 
 function applyMsgUpdate(m) {
@@ -957,7 +980,8 @@ function subscribeMessages(rid) {
       seq:       Number(m.seq||0),
       deleted:   !!m.deleted,
       edited:    !!m.edited,
-      replyTo:   m.replyTo||null
+      replyTo:   m.replyTo||null,
+      imageUrl:  m.imageUrl||null
     };
 
     afterSeq = Math.max(afterSeq, msg.seq);
@@ -1311,17 +1335,57 @@ document.addEventListener('focusin',e=>{if(e&&e.target===inputEl)refreshLayout()
 
 ['touchend','mouseup'].forEach(evt=>logEl.addEventListener(evt,()=>{if(document.activeElement===inputEl)refreshLayout();},{passive:true}));
 
-async function sendToFirebase(mid, text, replyToData) {
+async function sendToFirebase(mid, text, replyToData, imageUrl) {
   if(!roomId) return;
   try {
     const tx=await db.ref('rooms/'+roomId+'/lastSeq').transaction(v=>(Number(v||0)+1));
     const seq=Number((tx&&tx.snapshot&&tx.snapshot.val())||0);
     const msg={messageId:mid,senderId:myUid,senderNick:myNick,text:String(text||'').slice(0,4000),ts:SV.TIMESTAMP,seq};
     if(replyToData) msg.replyTo=replyToData;
+    if(imageUrl) msg.imageUrl=imageUrl;
     await db.ref('messages/'+roomId).push(msg);
     await db.ref('rooms/'+roomId).update({updatedAt:SV.TIMESTAMP,lastMsgTs:SV.TIMESTAMP});
-    try{const ids=await collectSubIds(roomId);if(ids.length)pushToSubs(ids,roomName||'Chat',String(text||'').slice(0,120),roomId,1);}catch(e){}
+    const notifyText=imageUrl?'📷 사진':String(text||'').slice(0,120);
+    try{const ids=await collectSubIds(roomId);if(ids.length)pushToSubs(ids,roomName||'Chat',notifyText,roomId,1);}catch(e){}
   }catch(e){updateBadges();}
+}
+
+async function compressImage(file) {
+  return new Promise(resolve => {
+    const img=new Image(), url=URL.createObjectURL(file);
+    img.onload=()=>{
+      const MAX=1200; let w=img.width, h=img.height;
+      if(w>MAX||h>MAX){if(w>h){h=Math.round(h*MAX/w);w=MAX;}else{w=Math.round(w*MAX/h);h=MAX;}}
+      const c=document.createElement('canvas');c.width=w;c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      URL.revokeObjectURL(url);
+      c.toBlob(b=>resolve(b),'image/jpeg',0.82);
+    };
+    img.onerror=()=>{URL.revokeObjectURL(url);resolve(file);};
+    img.src=url;
+  });
+}
+
+async function sendImage(file) {
+  if(!file||!roomId) return;
+  if(!file.type.startsWith('image/'))return showToast('이미지 파일만 전송할 수 있어요');
+  if(file.size>20*1024*1024)return showToast('20MB 이하 이미지만 전송 가능해요');
+  const mid=uuid();
+  renderMessage({messageId:mid,senderId:myUid,senderNick:myNick,text:'',ts:Date.now(),seq:0,replyTo:null,imageUrl:'__uploading__'},true);
+  scrollToBottom(true);
+  pending.set(mid,{text:'',createdAt:Date.now()}); updateBadges();
+  try {
+    const blob=await compressImage(file);
+    const ref=storage.ref('images/'+roomId+'/'+mid+'.jpg');
+    await ref.put(blob,{contentType:'image/jpeg'});
+    const imageUrl=await ref.getDownloadURL();
+    await sendToFirebase(mid,'',null,imageUrl);
+  } catch(e) {
+    pending.delete(mid);
+    const obj=seen.get(mid);
+    if(obj&&obj.bubbleEl){obj.bubbleEl.innerHTML='';obj.bubbleEl.className='bubble deletedBubble';obj.bubbleEl.textContent='업로드 실패';}
+    updateBadges(); showToast('사진 전송 실패');
+  }
 }
 function retrySend(mid) {const p=pending.get(mid);if(!p)return;p.createdAt=Date.now();pending.set(mid,p);updateBadges();sendToFirebase(mid,p.text);}
 
@@ -1429,6 +1493,25 @@ emojiBtn.addEventListener('touchend',e=>{e.preventDefault();_emjTouched=true;tog
 emojiBtn.addEventListener('mousedown',e=>e.preventDefault());
 emojiBtn.addEventListener('click',e=>{e.preventDefault();if(_emjTouched){_emjTouched=false;return;}toggleEmoji();});
 document.addEventListener('click',e=>{if(!emojiBtn.contains(e.target)&&!emojiPanel.contains(e.target)){emojiPanel.classList.remove('open');emojiPanel.setAttribute('aria-hidden','true');}});
+
+// ================================================================
+// PHOTO UPLOAD
+// ================================================================
+const photoBtnEl = document.getElementById('photoBtn');
+const imgInputEl = document.getElementById('imgInput');
+let _phTouched=false;
+photoBtnEl.addEventListener('touchstart',e=>{e.preventDefault();_phTouched=false;},{passive:false});
+photoBtnEl.addEventListener('touchend',e=>{e.preventDefault();_phTouched=true;imgInputEl.click();},{passive:false});
+photoBtnEl.addEventListener('mousedown',e=>e.preventDefault());
+photoBtnEl.addEventListener('click',e=>{e.preventDefault();if(_phTouched){_phTouched=false;return;}imgInputEl.click();});
+imgInputEl.addEventListener('change',()=>{if(imgInputEl.files[0]){sendImage(imgInputEl.files[0]);imgInputEl.value='';}});
+document.addEventListener('paste',e=>{
+  if(!roomId)return;
+  const items=e.clipboardData&&e.clipboardData.items; if(!items)return;
+  for(const item of items){
+    if(item.type.startsWith('image/')){e.preventDefault();sendImage(item.getAsFile());return;}
+  }
+});
 
 // ================================================================
 // VISIBILITY RESTORE (iOS GPU / 검은화면 방지)
