@@ -1158,12 +1158,17 @@ function subscribeMessages(rid) {
 function stopPresence() {
   if (_presInterval) { clearInterval(_presInterval); _presInterval=null; }
   if (_presListenRef) { try{_presListenRef.off();}catch(e){} _presListenRef=null; }
-  if (_presRef) { try{_presRef.remove().catch(()=>{});_presRef.onDisconnect().cancel();}catch(e){} _presRef=null; }
+  if (_presRef) {
+    // 즉시 lastActive를 0으로 만들어 collectSubIds가 "방 밖"으로 인식하게 함
+    try { _presRef.update({ lastActive: 0, vis: 'hidden' }).catch(()=>{}); } catch(e) {}
+    try { _presRef.onDisconnect().cancel(); } catch(e) {}
+    _presRef = null;
+  }
 }
 function startPresence(rid) {
   stopPresence();
   _presRef = db.ref('presence/'+rid+'/'+myUid);
-  const write = () => _presRef.set({nick:myNick,lastActive:SV.TIMESTAMP,vis:document.visibilityState}).catch(()=>{});
+  const write = () => _presRef.set({nick:myNick,lastActive:SV.TIMESTAMP}).catch(()=>{});
   _presRef.onDisconnect().remove();
   write();
   _presInterval = setInterval(write, 30000);
@@ -1175,7 +1180,8 @@ function startPresence(rid) {
     setHeader(uniq.slice(0,12));
   });
 }
-document.addEventListener('visibilitychange', () => { if(_presRef) _presRef.update({vis:document.visibilityState,lastActive:SV.TIMESTAMP,nick:myNick}).catch(()=>{}); });
+// visibilitychange: lastActive 갱신 (vis 필드는 push 판별에서 제거했으므로 lastActive만 갱신)
+document.addEventListener('visibilitychange', () => { if(_presRef) _presRef.update({lastActive:SV.TIMESTAMP,nick:myNick}).catch(()=>{}); });
 
 // ================================================================
 // TYPING
@@ -1270,16 +1276,42 @@ window.__schedulePushSync=schedulePushSync;
 
 async function collectSubIds(rid) {
   try {
-    const mSnap=await db.ref('roomMembers/'+rid).once('value');
-    let uids=Object.keys(mSnap.val()||{}).filter(u=>u!==myUid);
-    if(!uids.length) return [];
-    const pSnap=await db.ref('presence/'+rid).once('value');
-    const pres=pSnap.val()||{}, now=Date.now();
-    uids=uids.filter(u=>{ const p=pres[u]||{},ts=Number(p.lastActive||0); return !((p.vis==='visible')&&ts&&(now-ts)<=40000); });
-    if(!uids.length) return [];
-    const ss=await Promise.all(uids.map(u=>db.ref('pushSubs/'+u).once('value')));
-    return Array.from(new Set(ss.flatMap(s=>Object.keys(s.val()||{})).filter(Boolean)));
-  } catch(e){return[];}
+    // members + presence 동시에 읽어 타이밍 오차 최소화
+    const [mSnap, pSnap] = await Promise.all([
+      db.ref('roomMembers/'+rid).once('value'),
+      db.ref('presence/'+rid).once('value'),
+    ]);
+    const members = mSnap.val() || {};
+    const pres    = pSnap.val() || {};
+    const now     = Date.now();
+
+    // ─── 90초 이내 활동 기록이 있으면 "방 안에 있는 중"으로 판단 → push 제외
+    // (vis 체크 제거: 모바일에서 백그라운드가 돼도 vis='hidden'이 돼버려 신뢰 불가)
+    const ACTIVE_MS = 90_000;           // 90초
+    const STALE_MS  = 30 * 86400_000;  // 30일 이상 된 구독은 stale로 무시
+
+    const uids = Object.keys(members).filter(u => {
+      if (u === myUid) return false;           // 본인 제외
+      const ts = Number((pres[u] || {}).lastActive || 0);
+      return !(ts && (now - ts) <= ACTIVE_MS); // 90초 이내 활동 = 방 보는 중 → 제외
+    });
+
+    if (!uids.length) return [];
+
+    const ss = await Promise.all(uids.map(u => db.ref('pushSubs/'+u).once('value')));
+    const ids = [];
+    ss.forEach(s => {
+      Object.entries(s.val() || {}).forEach(([subId, data]) => {
+        if (!subId) return;
+        // 30일 이상 된 stale 구독 무시 → 오래된 anonymous UID 구독 차단
+        const updated = Number((data && data.updatedAt) || 0);
+        if (updated && (now - updated) > STALE_MS) return;
+        ids.push(subId);
+      });
+    });
+
+    return Array.from(new Set(ids)); // 중복 subId 최종 제거
+  } catch(e) { return []; }
 }
 
 // ================================================================
