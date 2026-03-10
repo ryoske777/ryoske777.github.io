@@ -131,6 +131,10 @@ input[type="text"]{width:100%;border:0;outline:none;font-size:16px;background:tr
 .reactChip:hover{background:#f0fdf4;border-color:var(--accent)}
 .reactChip.mine{background:#f0fdf4;border-color:var(--accent)}
 .reactCount{font-size:11px;color:var(--muted);font-weight:700}
+.msgLink{color:inherit;text-decoration:underline;text-underline-offset:2px;word-break:break-all;-webkit-tap-highlight-color:rgba(34,197,94,.18)}
+.row.me .bubble .msgLink{color:#d1fae5}
+.shareRoomBtn{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(0,0,0,.06);padding:0;flex-shrink:0}
+.shareRoomBtn svg{display:block}
 .linkPreview{margin-top:8px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#f8fafc;cursor:pointer;text-decoration:none;color:inherit;display:block;max-width:100%}
 .linkPreview:hover{background:#f0f4f8}
 .lpImg{width:100%;max-height:140px;object-fit:cover;display:block}
@@ -197,8 +201,12 @@ OneSignalDeferred.push(async function(OneSignal) {
         <div class="sub" id="roomSub"></div>
       </div>
       <div class="menuWrap">
+        <button class="shareRoomBtn clickable" id="shareRoomBtn" aria-label="채팅방 공유" style="display:none">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        </button>
         <div class="menuBtn clickable" id="menuBtn">…</div>
         <div class="menu" id="menu">
+          <button id="mShareRoom"><span>채팅방 링크 공유</span><span>⎋</span></button>
           <button id="mEnableNoti"><span>알림 켜기</span><span id="mEnableNotiState">›</span></button>
           <button id="mSound"><span>소리(삐) 켜기</span><span id="mSoundState">›</span></button>
           <button id="mMyBubbleWhite"><span>내 말풍선 흰색</span><span id="mMyBubbleWhiteState">›</span></button>
@@ -891,9 +899,23 @@ function showTyping(text) {
 }
 
 // ================================================================
-// LINK PREVIEW
+// LINK PREVIEW & LINKIFY
 // ================================================================
 function extractUrl(t) { try { const m=String(t||'').match(/https?:\/\/[^\s]+/); return m?m[0]:null; } catch(e){return null;} }
+function linkifyText(text) {
+  const frag=document.createDocumentFragment();
+  const re=/(https?:\/\/[^\s]+)/g;
+  let last=0, m;
+  while((m=re.exec(text))!==null){
+    if(m.index>last) frag.appendChild(document.createTextNode(text.slice(last,m.index)));
+    const a=document.createElement('a');
+    a.href=m[0]; a.target='_blank'; a.rel='noopener noreferrer'; a.className='msgLink'; a.textContent=m[0];
+    a.addEventListener('click',e=>e.stopPropagation());
+    frag.appendChild(a); last=m.index+m[0].length;
+  }
+  if(last<text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+  return frag;
+}
 async function renderLinkPreview(url, container) {
   try {
     const res = await fetch('https://api.allorigins.win/get?url='+encodeURIComponent(url), {signal:AbortSignal.timeout(5000)});
@@ -985,9 +1007,9 @@ function rebuildBubble(bubble, m) {
     const img=document.createElement('img');img.src=m.imageUrl;img.alt='사진';img.loading='lazy';
     img.addEventListener('click',e=>{e.preventDefault();const ov=document.createElement('div');ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:999;display:flex;align-items:center;justify-content:center;cursor:zoom-out';const fi=document.createElement('img');fi.src=m.imageUrl;fi.style.cssText='max-width:94vw;max-height:90vh;border-radius:10px;object-fit:contain';ov.appendChild(fi);ov.addEventListener('click',()=>ov.remove());document.body.appendChild(ov);});
     a.appendChild(img);bubble.appendChild(a);
-    if (m.text) { bubble.appendChild(document.createElement('br')); bubble.appendChild(document.createTextNode(String(m.text))); }
+    if (m.text) { bubble.appendChild(document.createElement('br')); bubble.appendChild(linkifyText(String(m.text))); }
   } else {
-    bubble.appendChild(document.createTextNode(String(m.text||'')));
+    bubble.appendChild(linkifyText(String(m.text||'')));
   }
   if (m.edited){const em=document.createElement('span');em.className='editedMark';em.textContent='(수정됨)';bubble.appendChild(em);}
 }
@@ -1488,6 +1510,7 @@ async function enterRoom(rid, infoOpt) {
 function showChat() {
   loginScreen.style.display='none'; home.style.display='none';
   header.style.display='block'; logEl.style.display='block'; composer.style.display='flex';
+  document.getElementById('shareRoomBtn').style.display='flex';
   refreshLayout(); inputEl.focus(); refreshLayout();
 }
 function showHome() {
@@ -1497,6 +1520,7 @@ function showHome() {
   _enteringRoom = false;
   loginScreen.style.display='none';
   header.style.display='none'; logEl.style.display='none'; composer.style.display='none';
+  document.getElementById('shareRoomBtn').style.display='none';
   showTyping(''); home.style.display='block';
   refreshLayout(); refreshRooms(); loadLastRoom();
 }
@@ -1542,6 +1566,17 @@ async function loadLastRoom() {
 // ================================================================
 // MENU ACTIONS
 // ================================================================
+async function shareRoom() {
+  const url = location.origin+location.pathname+'?roomId='+encodeURIComponent(roomId);
+  if (navigator.share) {
+    try { await navigator.share({title:roomName||'채팅방',text:(roomName||'채팅방')+' 에 초대합니다!',url}); } catch(e){}
+  } else {
+    try { await navigator.clipboard.writeText(url); showToast('링크가 복사되었습니다!'); } catch(e){ showToast('링크: '+url,4000); }
+  }
+  closeMenu();
+}
+document.getElementById('mShareRoom').addEventListener('click', shareRoom);
+document.getElementById('shareRoomBtn').addEventListener('click', shareRoom);
 mLeave.addEventListener('click',()=>{closeMenu();history.pushState({},'',NAV_URL);showHome();});
 
 // ================================================================
