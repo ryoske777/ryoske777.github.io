@@ -133,8 +133,13 @@ input[type="text"]{width:100%;border:0;outline:none;font-size:16px;background:tr
 .reactCount{font-size:11px;color:var(--muted);font-weight:700}
 .msgLink{color:inherit;text-decoration:underline;text-underline-offset:2px;word-break:break-all;-webkit-tap-highlight-color:rgba(34,197,94,.18)}
 .row.me .bubble .msgLink{color:#d1fae5}
-.shareRoomBtn{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(0,0,0,.06);padding:0;flex-shrink:0}
-.shareRoomBtn svg{display:block}
+.shareIncomingBanner{background:#f0fdf4;border:1px solid rgba(34,197,94,.3);border-radius:14px;padding:12px 14px;margin-bottom:12px;display:none}
+.shareIncomingBanner.active{display:block}
+.shareIncomingTop{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.shareIncomingIcon{font-size:18px;flex-shrink:0}
+.shareIncomingLabel{font-size:13px;font-weight:800;color:#166534;flex:1}
+.shareIncomingText{font-size:12px;color:var(--muted);margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.shareIncomingHint{font-size:11px;color:#16a34a}
 .linkPreview{margin-top:8px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#f8fafc;cursor:pointer;text-decoration:none;color:inherit;display:block;max-width:100%}
 .linkPreview:hover{background:#f0f4f8}
 .lpImg{width:100%;max-height:140px;object-fit:cover;display:block}
@@ -201,12 +206,8 @@ OneSignalDeferred.push(async function(OneSignal) {
         <div class="sub" id="roomSub"></div>
       </div>
       <div class="menuWrap">
-        <button class="shareRoomBtn clickable" id="shareRoomBtn" aria-label="채팅방 공유" style="display:none">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-        </button>
         <div class="menuBtn clickable" id="menuBtn">…</div>
         <div class="menu" id="menu">
-          <button id="mShareRoom"><span>채팅방 링크 공유</span><span>⎋</span></button>
           <button id="mEnableNoti"><span>알림 켜기</span><span id="mEnableNotiState">›</span></button>
           <button id="mSound"><span>소리(삐) 켜기</span><span id="mSoundState">›</span></button>
           <button id="mMyBubbleWhite"><span>내 말풍선 흰색</span><span id="mMyBubbleWhiteState">›</span></button>
@@ -263,6 +264,11 @@ OneSignalDeferred.push(async function(OneSignal) {
             </button>
           </div>
         </div>
+      </div>
+      <div class="shareIncomingBanner" id="shareIncomingBanner">
+        <div class="shareIncomingTop"><span class="shareIncomingIcon">📤</span><span class="shareIncomingLabel">공유된 내용이 있습니다</span></div>
+        <div class="shareIncomingText" id="shareIncomingText"></div>
+        <div class="shareIncomingHint">채팅방을 선택하면 자동으로 입력창에 넣어드립니다.</div>
       </div>
       <div class="field"><label>내 닉네임</label><input id="homeNick" type="text" placeholder="예: 송대호"/></div>
       <div class="sectionTitle">방 만들기</div>
@@ -1510,8 +1516,9 @@ async function enterRoom(rid, infoOpt) {
 function showChat() {
   loginScreen.style.display='none'; home.style.display='none';
   header.style.display='block'; logEl.style.display='block'; composer.style.display='flex';
-  document.getElementById('shareRoomBtn').style.display='flex';
   refreshLayout(); inputEl.focus(); refreshLayout();
+  // 공유 대기 내용이 있으면 입력창에 자동 적용
+  applyPendingShare();
 }
 function showHome() {
   stopMessages(); stopPresence(); stopTyping(); stopReads(); stopRxWatcher();
@@ -1520,8 +1527,9 @@ function showHome() {
   _enteringRoom = false;
   loginScreen.style.display='none';
   header.style.display='none'; logEl.style.display='none'; composer.style.display='none';
-  document.getElementById('shareRoomBtn').style.display='none';
   showTyping(''); home.style.display='block';
+  // 공유 배너 갱신
+  showShareBanner();
   refreshLayout(); refreshRooms(); loadLastRoom();
 }
 function showLogin() {
@@ -1564,19 +1572,48 @@ async function loadLastRoom() {
 }
 
 // ================================================================
+// WEB SHARE TARGET — 다른 앱에서 공유하기로 우리 앱 선택 시 처리
+// ================================================================
+let pendingShareText = '';
+function initShareTarget() {
+  const p = new URLSearchParams(location.search);
+  if (!p.has('share')) return;
+  const parts = [p.get('title')||'', p.get('text')||'', p.get('url')||''].map(s=>s.trim()).filter(Boolean);
+  // 중복 제거 (text 안에 url이 이미 포함된 경우)
+  const url = p.get('url')||'';
+  const text = p.get('text')||'';
+  const title = p.get('title')||'';
+  let composed = text;
+  if (url && !text.includes(url)) composed = (composed ? composed+'\n' : '') + url;
+  if (title && !composed.includes(title)) composed = (title ? title+'\n' : '') + composed;
+  pendingShareText = composed.trim();
+  if (!pendingShareText) return;
+  // URL에서 share 파라미터 제거 (새로고침 시 재공유 방지)
+  try { history.replaceState({}, '', location.pathname + (p.get('roomId') ? '?roomId='+encodeURIComponent(p.get('roomId')) : '')); } catch(e){}
+}
+function showShareBanner() {
+  const banner = document.getElementById('shareIncomingBanner');
+  const textEl = document.getElementById('shareIncomingText');
+  if (pendingShareText) {
+    textEl.textContent = pendingShareText.length > 80 ? pendingShareText.slice(0,80)+'…' : pendingShareText;
+    banner.classList.add('active');
+  } else {
+    banner.classList.remove('active');
+  }
+}
+function applyPendingShare() {
+  if (!pendingShareText) return;
+  inputEl.value = pendingShareText;
+  inputEl.dispatchEvent(new Event('input'));
+  pendingShareText = '';
+  showShareBanner();
+  setTimeout(()=>inputEl.focus(),100);
+  showToast('공유된 내용이 입력창에 넣어졌습니다');
+}
+
+// ================================================================
 // MENU ACTIONS
 // ================================================================
-async function shareRoom() {
-  const url = location.origin+location.pathname+'?roomId='+encodeURIComponent(roomId);
-  if (navigator.share) {
-    try { await navigator.share({title:roomName||'채팅방',text:(roomName||'채팅방')+' 에 초대합니다!',url}); } catch(e){}
-  } else {
-    try { await navigator.clipboard.writeText(url); showToast('링크가 복사되었습니다!'); } catch(e){ showToast('링크: '+url,4000); }
-  }
-  closeMenu();
-}
-document.getElementById('mShareRoom').addEventListener('click', shareRoom);
-document.getElementById('shareRoomBtn').addEventListener('click', shareRoom);
 mLeave.addEventListener('click',()=>{closeMenu();history.pushState({},'',NAV_URL);showHome();});
 
 // ================================================================
@@ -1994,6 +2031,7 @@ firebase.auth().onAuthStateChanged(user => {
   }
 });
 
+initShareTarget();
 init();
 </script>
 </body>
