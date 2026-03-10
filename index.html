@@ -494,7 +494,7 @@ let _titleTimer = null;
 let notifyEnabled = (localStorage.getItem(LS_NOTI) === '1');
 let soundEnabled  = (localStorage.getItem(LS_SOUND) === '1');
 let myBubbleWhite = (localStorage.getItem(LS_BUBBLE) === '1');
-let chatFontSize  = Math.min(24, Math.max(12, parseInt(localStorage.getItem(LS_FONT_SIZE)||'16',10)));
+let chatFontSize  = Math.min(24, Math.max(6, parseInt(localStorage.getItem(LS_FONT_SIZE)||'16',10)));
 let onlineNicksCache = [];
 let currentReplyTo = null;
 
@@ -808,7 +808,7 @@ applyBubbleTheme();
 function applyFontSize() {
   document.documentElement.style.setProperty('--bubbleFontSize', chatFontSize+'px');
   mFontSizeVal.textContent = chatFontSize;
-  mFontDec.disabled = chatFontSize <= 12;
+  mFontDec.disabled = chatFontSize <= 6;
   mFontInc.disabled = chatFontSize >= 24;
 }
 applyFontSize();
@@ -853,7 +853,7 @@ mMyBubbleWhite.addEventListener('click', () => {
 });
 mFontDec.addEventListener('click', e => {
   e.stopPropagation();
-  if (chatFontSize > 12) { chatFontSize -= 1; localStorage.setItem(LS_FONT_SIZE, chatFontSize); applyFontSize(); }
+  if (chatFontSize > 6) { chatFontSize -= 1; localStorage.setItem(LS_FONT_SIZE, chatFontSize); applyFontSize(); }
 });
 mFontInc.addEventListener('click', e => {
   e.stopPropagation();
