@@ -19,6 +19,7 @@
   --safeT:env(safe-area-inset-top,0px);--kb:0px;--kbFix:40px;
   --appH:100dvh;--composerH:64px;--typingH:34px;
   --shadow:0 10px 30px rgba(0,0,0,.06);--shadow2:0 14px 40px rgba(0,0,0,.12);
+  --bubbleFontSize:16px;
 }
 *{box-sizing:border-box}
 html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",Arial,sans-serif;overflow:hidden}
@@ -38,6 +39,11 @@ header{position:sticky;top:0;z-index:10;padding:12px 14px 10px;border-bottom:1px
 .menu button{width:100%;padding:12px;border:0;background:#fff;text-align:left;font-size:14px;display:flex;justify-content:space-between;align-items:center}
 .menu button:hover{background:#f8fafc}
 .menu .hint{font-size:12px;color:var(--muted);padding:10px 12px;border-top:1px solid var(--line);line-height:1.35;white-space:pre-wrap}
+.mFontSizeRow{width:100%;padding:10px 12px;border:0;background:#fff;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;font-size:14px}
+.fontSizeCtrl{display:flex;align-items:center;gap:8px}
+.fontSizeCtrl button{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:#f8fafc;font-size:16px;line-height:1;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer;font-weight:700;color:var(--text)}
+.fontSizeCtrl button:hover{background:#e5e7eb}
+.fontSizeCtrl span{min-width:36px;text-align:center;font-size:14px;font-weight:700;color:var(--text)}
 .home{flex:1;min-height:0;overflow:auto;padding:16px;-webkit-overflow-scrolling:touch}
 .homeCard{width:100%;max-width:720px;margin:0 auto;background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:var(--shadow)}
 .homeTitle{font-weight:900;font-size:18px;margin:0 0 10px}
@@ -75,7 +81,7 @@ header{position:sticky;top:0;z-index:10;padding:12px 14px 10px;border-bottom:1px
 .row{display:flex;gap:8px;width:100%}
 .row.me{justify-content:flex-end}
 .row.other{justify-content:flex-start}
-.bubble{max-width:82%;padding:12px;border-radius:16px;border:1px solid var(--line);background:var(--other);color:var(--otherText);white-space:pre-wrap;word-break:break-word;font-size:16px;line-height:1.35}
+.bubble{max-width:82%;padding:12px;border-radius:16px;border:1px solid var(--line);background:var(--other);color:var(--otherText);white-space:pre-wrap;word-break:break-word;font-size:var(--bubbleFontSize,16px);line-height:1.35}
 .row.me .bubble{background:var(--me);color:var(--meText);border-color:transparent;border-bottom-right-radius:6px;box-shadow:none}
 .row.other .bubble{border-bottom-left-radius:6px}
 .meta{font-size:11px;color:var(--muted);display:flex;gap:8px;align-items:center}
@@ -199,6 +205,14 @@ OneSignalDeferred.push(async function(OneSignal) {
           <button id="mRoomPass"><span>비밀번호 설정/변경</span><span>›</span></button>
           <button id="mLeave"><span>나가기</span><span>›</span></button>
           <button id="mLogout" style="color:var(--danger)"><span>로그아웃</span><span>›</span></button>
+          <div class="mFontSizeRow">
+            <span>글씨 크기</span>
+            <div class="fontSizeCtrl">
+              <button id="mFontDec" type="button">－</button>
+              <span id="mFontSizeVal">16</span>
+              <button id="mFontInc" type="button">＋</button>
+            </div>
+          </div>
           <div class="hint" id="menuHint"></div>
         </div>
       </div>
@@ -354,6 +368,7 @@ const LS_SOUND = 'chat_beep_enabled_v1';
 const LS_ROOM_AUTH = 'chat_room_auth_v1_';
 const LS_BUBBLE = 'chat_my_bubble_white_v1';
 const LS_ACCOUNT = 'chat_account_v1'; // 계정명 캐시 (자동 로그인 input 복원용)
+const LS_FONT_SIZE = 'chat_font_size_v1';
 
 // ================================================================
 // DOM REFS
@@ -384,6 +399,9 @@ const mNick = document.getElementById('mNick');
 const mRoomName = document.getElementById('mRoomName');
 const mRoomPass = document.getElementById('mRoomPass');
 const mLeave = document.getElementById('mLeave');
+const mFontDec = document.getElementById('mFontDec');
+const mFontInc = document.getElementById('mFontInc');
+const mFontSizeVal = document.getElementById('mFontSizeVal');
 const home = document.getElementById('home');
 const homeNick = document.getElementById('homeNick');
 const homeRoomName = document.getElementById('homeRoomName');
@@ -476,6 +494,7 @@ let _titleTimer = null;
 let notifyEnabled = (localStorage.getItem(LS_NOTI) === '1');
 let soundEnabled  = (localStorage.getItem(LS_SOUND) === '1');
 let myBubbleWhite = (localStorage.getItem(LS_BUBBLE) === '1');
+let chatFontSize  = Math.min(24, Math.max(12, parseInt(localStorage.getItem(LS_FONT_SIZE)||'16',10)));
 let onlineNicksCache = [];
 let currentReplyTo = null;
 
@@ -786,6 +805,14 @@ function applyBubbleTheme() {
 }
 applyBubbleTheme();
 
+function applyFontSize() {
+  document.documentElement.style.setProperty('--bubbleFontSize', chatFontSize+'px');
+  mFontSizeVal.textContent = chatFontSize;
+  mFontDec.disabled = chatFontSize <= 12;
+  mFontInc.disabled = chatFontSize >= 24;
+}
+applyFontSize();
+
 function updateMenuStates() {
   const nosup = isIOS() && !isPWA();
   let notiTxt = '꺼짐';
@@ -823,6 +850,14 @@ mSound.addEventListener('click', async () => {
 mMyBubbleWhite.addEventListener('click', () => {
   closeMenu(); myBubbleWhite=!myBubbleWhite; localStorage.setItem(LS_BUBBLE,myBubbleWhite?'1':'0');
   applyBubbleTheme(); updateMenuStates();
+});
+mFontDec.addEventListener('click', e => {
+  e.stopPropagation();
+  if (chatFontSize > 12) { chatFontSize -= 1; localStorage.setItem(LS_FONT_SIZE, chatFontSize); applyFontSize(); }
+});
+mFontInc.addEventListener('click', e => {
+  e.stopPropagation();
+  if (chatFontSize < 24) { chatFontSize += 1; localStorage.setItem(LS_FONT_SIZE, chatFontSize); applyFontSize(); }
 });
 
 // ================================================================
