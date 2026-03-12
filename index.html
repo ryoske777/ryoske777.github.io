@@ -733,7 +733,7 @@ function updateKb() {
   document.documentElement.style.setProperty('--safeBComp', kb>80 ? '0px' : 'env(safe-area-inset-bottom,0px)');
 }
 function refreshLayout() { updateKb(); requestAnimationFrame(updateKb); [60,140,260,420].forEach(t => setTimeout(updateKb, t)); }
-if (window.visualViewport) { window.visualViewport.addEventListener('resize', updateKb); window.visualViewport.addEventListener('scroll', updateKb); }
+if (window.visualViewport) { window.visualViewport.addEventListener('resize', updateKb); }
 window.addEventListener('resize', refreshLayout);
 window.addEventListener('orientationchange', () => setTimeout(refreshLayout, 180));
 refreshLayout();
