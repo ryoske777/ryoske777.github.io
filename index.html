@@ -90,7 +90,7 @@ header{position:sticky;top:0;z-index:10;padding:12px 14px 10px;border-bottom:1px
 .badgeFail{color:var(--danger);font-weight:900;cursor:pointer}
 .readBadge{font-weight:900;opacity:.85}
 .typingBar{order:2;flex-shrink:0;height:var(--typingH);display:none;align-items:center;padding:0 12px;font-size:12px;color:var(--muted);background:rgba(255,255,255,.95);backdrop-filter:blur(12px);border-top:1px solid var(--line);z-index:19}
-.composer{order:3;flex-shrink:0;padding:10px 12px;padding-bottom:calc(10px + var(--safeBComp));border-top:1px solid var(--line);background:rgba(255,255,255,.95);backdrop-filter:blur(12px);display:flex;gap:10px;align-items:center;z-index:20}
+.composer{order:3;flex-shrink:0;padding:10px 12px;border-top:1px solid var(--line);background:rgba(255,255,255,.95);backdrop-filter:blur(12px);display:flex;gap:10px;align-items:center;z-index:20}
 .emojiBtn{width:48px;height:48px;border-radius:14px;border:1px solid var(--line);background:#fff;font-size:22px;display:flex;align-items:center;justify-content:center;user-select:none;box-shadow:0 6px 18px rgba(0,0,0,.06)}
 .inputWrap{flex:1;height:48px;border-radius:14px;border:1px solid var(--line);background:#fff;display:flex;align-items:center;padding:0 12px}
 input[type="text"]{width:100%;border:0;outline:none;font-size:16px;background:transparent}
@@ -719,8 +719,7 @@ async function removeRoomPassword(rid) {
 // VIEWPORT / KEYBOARD
 // ================================================================
 function syncViewH() {
-  let h = window.innerHeight || 0;
-  if (window.visualViewport) h = Math.round((window.visualViewport.height||0) + (window.visualViewport.offsetTop||0)) || h;
+  const h = window.visualViewport ? Math.round(window.visualViewport.height) : (window.innerHeight || 0);
   document.documentElement.style.setProperty('--appH', h+'px');
   if (appEl) appEl.style.height = h+'px';
 }
@@ -728,7 +727,7 @@ function updateKb() {
   syncViewH();
   if (!window.visualViewport) { document.documentElement.style.setProperty('--kb','0px'); document.documentElement.style.setProperty('--safeBComp','env(safe-area-inset-bottom,0px)'); return; }
   const vv = window.visualViewport;
-  const kb = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
+  const kb = Math.max(0, Math.round(window.innerHeight - vv.height));
   document.documentElement.style.setProperty('--kb', kb+'px');
   document.documentElement.style.setProperty('--safeBComp', kb>80 ? '0px' : 'env(safe-area-inset-bottom,0px)');
 }
