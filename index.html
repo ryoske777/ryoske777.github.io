@@ -26,7 +26,7 @@ html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-famil
 button,.clickable{-webkit-tap-highlight-color:transparent;touch-action:manipulation;cursor:pointer;transition:transform .08s,box-shadow .18s,filter .18s,background .18s,border-color .18s}
 button:active,.clickable:active{transform:translateY(1px) scale(.99)}
 button:focus-visible{outline:3px solid rgba(34,197,94,.35);outline-offset:2px}
-.app{height:100vh;height:100dvh;height:var(--appH,100dvh);display:flex;flex-direction:column;min-height:0;overflow:hidden;padding-top:var(--safeT);background:var(--bg);-webkit-transform:translateZ(0);transform:translateZ(0)}
+.app{height:100vh;height:100dvh;display:flex;flex-direction:column;min-height:0;overflow:hidden;padding-top:var(--safeT);background:var(--bg);will-change:transform}
 header{position:sticky;top:0;z-index:10;padding:12px 14px 10px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.92);backdrop-filter:blur(12px)}
 .headTop{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .title{font-size:16px;font-weight:800;margin:0;line-height:1.2}
@@ -76,7 +76,7 @@ header{position:sticky;top:0;z-index:10;padding:12px 14px 10px;border-bottom:1px
 .roomName{font-weight:900;font-size:15px;display:flex;align-items:center;gap:8px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .roomMeta{font-size:12px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap}
 .roomRight{display:flex;align-items:center;gap:8px;flex-shrink:0}
-.log{flex:1;min-height:0;overflow:auto;padding:12px 12px calc(var(--composerH) + var(--typingH) + 12px);-webkit-overflow-scrolling:touch}
+.log{flex:1;min-height:0;overflow:auto;padding:12px 12px calc(var(--composerH) + var(--typingH) + var(--kb) + 12px);-webkit-overflow-scrolling:touch}
 .msg{display:flex;flex-direction:column;gap:4px;margin:10px 0;width:100%}
 .row{display:flex;gap:8px;width:100%}
 .row.me{justify-content:flex-end}
@@ -718,18 +718,13 @@ async function removeRoomPassword(rid) {
 // ================================================================
 // VIEWPORT / KEYBOARD
 // ================================================================
-function syncViewH() {
-  const h = window.visualViewport ? Math.round(window.visualViewport.height) : (window.innerHeight || 0);
-  document.documentElement.style.setProperty('--appH', h+'px');
-  if (appEl) appEl.style.height = h+'px';
-}
+function syncViewH() {}
 let _lastVvH = 0;
 function updateKb() {
-  if (!window.visualViewport) { syncViewH(); document.documentElement.style.setProperty('--kb','0px'); document.documentElement.style.setProperty('--safeBComp','env(safe-area-inset-bottom,0px)'); return; }
+  if (!window.visualViewport) { document.documentElement.style.setProperty('--kb','0px'); document.documentElement.style.setProperty('--safeBComp','env(safe-area-inset-bottom,0px)'); return; }
   const vv = window.visualViewport;
   if (Math.abs(vv.height - _lastVvH) < 20) return;
   _lastVvH = vv.height;
-  syncViewH();
   const kb = Math.max(0, Math.round(window.innerHeight - vv.height));
   document.documentElement.style.setProperty('--kb', kb+'px');
   document.documentElement.style.setProperty('--safeBComp', kb>80 ? '0px' : 'env(safe-area-inset-bottom,0px)');
