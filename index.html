@@ -1,1735 +1,2035 @@
 <!doctype html>
 <html lang="ko">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>단어 일치 검수</title>
-  <style>
-    :root {
-      --bg: #0d1117;
-      --surface: rgba(255,255,255,0.03);
-      --surface2: rgba(255,255,255,0.06);
-      --border: rgba(255,255,255,0.08);
-      --border2: rgba(255,255,255,0.14);
-      --text: #e6edf3;
-      --muted: #7d8590;
-      --accent: #58a6ff;
-      --warn: #ffa657;
-      --ok: #3fb950;
-      --err: #ff7b72;
-      --violet: #c084fc;
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; }
-
-    body {
-      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", Arial, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      font-size: 13px;
-      line-height: 1.5;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .drop-overlay {
-      position: fixed; inset: 0; z-index: 9999;
-      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
-      background: rgba(13,17,23,0.92);
-      border: 3px dashed rgba(88,166,255,0.55);
-      margin: 10px; border-radius: 16px;
-      pointer-events: none; opacity: 0; transition: opacity .15s;
-    }
-    .drop-overlay.active { opacity: 1; }
-    .drop-overlay-icon { font-size: 40px; }
-    .drop-overlay-txt { font-size: 18px; font-weight: 800; color: var(--accent); }
-
-    .nav {
-      flex-shrink: 0;
-      position: sticky; top: 0; z-index: 200;
-      display: flex; align-items: center; gap: 6px;
-      height: 44px; padding: 0 16px;
-      background: rgba(13,17,23,0.94);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--border);
-    }
-    .nav-brand { font-weight: 900; font-size: 13px; color: var(--text); margin-right: 6px; }
-    .nav a {
-      text-decoration: none; font-size: 12px; font-weight: 700;
-      color: var(--muted); padding: 5px 10px;
-      border-radius: 8px; border: 1px solid transparent; transition: .1s;
-    }
-    .nav a:hover { color: var(--text); background: var(--surface2); }
-    .nav a.active { color: var(--accent); border-color: rgba(88,166,255,0.35); background: rgba(88,166,255,0.1); }
-
-    .toolbar {
-      flex-shrink: 0;
-      display: flex; align-items: center; gap: 6px;
-      padding: 8px 16px; flex-wrap: wrap;
-      background: rgba(255,255,255,0.015);
-      border-bottom: 1px solid var(--border);
-    }
-    .sep { width: 1px; height: 20px; background: var(--border2); margin: 0 2px; }
-
-    .btn {
-      display: inline-flex; align-items: center;
-      padding: 6px 14px; border-radius: 8px;
-      border: 1px solid var(--border2); background: var(--surface2);
-      color: var(--text); font-size: 12px; font-weight: 700;
-      cursor: pointer; white-space: nowrap; transition: .1s;
-    }
-    .btn:hover { background: rgba(255,255,255,0.1); }
-    .btn.success { background: rgba(63,185,80,0.15); border-color: rgba(63,185,80,0.4); color: #56d364; }
-    .btn.success:hover { background: rgba(63,185,80,0.25); }
-    .btn[disabled] { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
-    .upload-label { cursor: pointer; }
-    .upload-label input[type="file"] { display: none; }
-
-    .mode-group { display: flex; border: 1px solid var(--border2); border-radius: 8px; }
-    .mode-group label {
-      display: flex; align-items: center;
-      padding: 5px 11px; font-size: 12px; font-weight: 700;
-      color: var(--muted); cursor: pointer; user-select: none;
-      border-right: 1px solid var(--border); transition: .1s;
-    }
-    .mode-group label:first-child { border-radius: 7px 0 0 7px; }
-    .mode-group label:last-child { border-right: 0; border-radius: 0 7px 7px 0; }
-    .mode-group label.active { background: rgba(88,166,255,0.12); color: #79c0ff; }
-    .mode-group label:not(.active):hover { background: var(--surface2); color: var(--text); }
-    .mode-group input[type="radio"] { display: none; }
-
-    .stat {
-      display: inline-flex; align-items: center; gap: 5px;
-      padding: 4px 8px; border-radius: 999px;
-      border: 1px solid var(--border); font-size: 11px; color: var(--muted);
-    }
-    .dot-w { width: 6px; height: 6px; border-radius: 50%; background: var(--warn); display: inline-block; }
-    .dot-m { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); display: inline-block; }
-
-    [data-tip] { position: relative; }
-    [data-tip]::after {
-      content: attr(data-tip);
-      position: absolute; bottom: calc(100% + 7px); left: 50%;
-      transform: translateX(-50%);
-      max-width: 340px; white-space: normal; text-align: left;
-      padding: 6px 9px; border-radius: 8px;
-      border: 1px solid rgba(255,255,255,0.12);
-      background: rgba(10,14,22,0.97);
-      color: rgba(230,237,243,0.92); font-size: 11px; line-height: 1.45;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-      opacity: 0; pointer-events: none; transition: opacity .1s; z-index: 9999;
-    }
-    [data-tip]:hover::after { opacity: 1; }
-    .toolbar [data-tip]::after { bottom: auto; top: calc(100% + 7px); }
-
-    .setup {
-      flex-shrink: 0;
-      display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap;
-      padding: 10px 16px;
-      border-bottom: 1px solid var(--border);
-      background: rgba(255,255,255,0.01);
-    }
-    .setup.hidden { display: none; }
-    .setup-item { display: flex; flex-direction: column; gap: 4px; }
-    .setup-lbl { font-size: 11px; font-weight: 800; color: var(--muted); letter-spacing: .4px; }
-    .setup-note { font-size: 10px; color: var(--muted); }
-
-    select {
-      background: var(--surface2); color: var(--text);
-      border: 1px solid var(--border2); border-radius: 8px;
-      padding: 5px 9px; font-size: 12px; cursor: pointer;
-      min-width: 160px;
-    }
-    select:focus { outline: none; border-color: var(--accent); }
-    select option { background: #161b22; }
-
-    .ms-wrap { position: relative; }
-    .ms-btn {
-      display: inline-flex; align-items: center; justify-content: space-between; gap: 8px;
-      min-width: 240px; padding: 5px 9px;
-      background: var(--surface2); color: var(--text);
-      border: 1px solid var(--border2); border-radius: 8px;
-      font-size: 12px; font-weight: 700; cursor: pointer; transition: .1s;
-      white-space: nowrap;
-    }
-    .ms-btn:hover { background: rgba(255,255,255,0.1); }
-    .ms-btn.open { border-color: rgba(255,166,87,0.5); background: rgba(255,166,87,0.07); }
-    .ms-btn .ms-arrow { font-size: 9px; color: var(--muted); transition: transform .15s; }
-    .ms-btn.open .ms-arrow { transform: rotate(180deg); }
-    .ms-btn .ms-label { flex: 1; text-align: left; overflow: hidden; text-overflow: ellipsis; }
-
-    .ms-panel {
-      position: absolute; top: calc(100% + 4px); left: 0; z-index: 300;
-      min-width: 270px; max-height: 320px; overflow-y: auto;
-      background: rgba(16,20,28,0.99); border: 1px solid var(--border2);
-      border-radius: 10px; padding: 4px;
-      box-shadow: 0 8px 28px rgba(0,0,0,0.55);
-      display: none;
-    }
-    .ms-panel.open { display: block; }
-    .ms-header {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 5px 8px 7px; border-bottom: 1px solid var(--border); margin-bottom: 3px;
-    }
-    .ms-header-txt { font-size: 10px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; }
-    .ms-all-btn { font-size: 11px; font-weight: 700; color: var(--accent); cursor: pointer; }
-    .ms-all-btn:hover { color: #79c0ff; }
-    .ms-item {
-      display: flex; align-items: center; gap: 7px;
-      padding: 6px 8px; border-radius: 6px; cursor: pointer;
-      font-size: 12px; color: var(--muted); transition: .1s;
-    }
-    .ms-item:hover { background: var(--surface2); color: var(--text); }
-    .ms-item.on { color: var(--warn); }
-    .ms-item.disabled {
-      opacity: .35;
-      cursor: not-allowed;
-      pointer-events: none;
-    }
-    .ms-check {
-      width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0;
-      border: 1px solid var(--border2);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 9px; font-weight: 900;
-    }
-    .ms-item.on .ms-check {
-      background: rgba(255,166,87,0.25);
-      border-color: rgba(255,166,87,0.6);
-      color: var(--warn);
-    }
-
-    .btn.analyze {
-      background: rgba(88,166,255,0.15); border-color: rgba(88,166,255,0.4); color: #79c0ff;
-      padding: 6px 18px; font-size: 13px;
-    }
-    .btn.analyze:hover { background: rgba(88,166,255,0.25); }
-
-    .content {
-      flex: 1; overflow-y: auto;
-      padding: 14px 16px 40px;
-    }
-
-    .content-empty {
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      gap: 8px; padding: 60px 20px;
-      color: var(--muted); font-size: 13px; text-align: center;
-    }
-    .content-empty .ci-icon { font-size: 36px; opacity: .4; }
-
-    .summary-bar {
-      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-      padding-bottom: 12px;
-    }
-    .s-chip {
-      display: inline-flex; align-items: center; gap: 5px;
-      padding: 4px 10px; border-radius: 999px;
-      font-size: 11px; font-weight: 700;
-      border: 1px solid rgba(255,166,87,0.3);
-      background: rgba(255,166,87,0.08); color: var(--warn);
-    }
-    .s-chip.ok { border-color: rgba(63,185,80,0.3); background: rgba(63,185,80,0.08); color: #56d364; }
-    .s-chip.info { border-color: rgba(88,166,255,0.3); background: rgba(88,166,255,0.08); color: var(--accent); }
-    .s-chip.violet { border-color: rgba(192,132,252,0.35); background: rgba(192,132,252,0.08); color: var(--violet); }
-
-    .issue-card {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 12px; margin-bottom: 12px; overflow: hidden;
-    }
-    .icard-head {
-      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-      padding: 9px 14px;
-      background: rgba(255,166,87,0.06);
-      border-bottom: 1px solid var(--border);
-    }
-    .icard-colname { font-size: 12px; font-weight: 800; color: var(--warn); }
-    .icard-count { font-size: 11px; color: var(--muted); }
-    .icard-ok { font-size: 12px; font-weight: 700; color: #56d364; }
-
-    .icard-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-    .icard-table thead th {
-      padding: 7px 14px; text-align: left;
-      font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .3px;
-      color: var(--muted); background: rgba(0,0,0,0.15);
-      border-bottom: 1px solid var(--border);
-    }
-    .icard-table tbody tr { border-bottom: 1px solid rgba(255,255,255,0.04); }
-    .icard-table tbody tr:last-child { border-bottom: 0; }
-    .icard-table td {
-      padding: 7px 14px; vertical-align: top;
-      word-break: break-word;
-    }
-
-    .td-kind { width: 120px; }
-    .td-cat { width: 96px; color: #a5d6ff; font-weight: 700; }
-    .td-pri { width: 56px; color: var(--muted); font-weight: 700; }
-    .td-src {
-      font-family: ui-monospace, Consolas, monospace;
-      font-weight: 700; color: var(--text);
-      width: 230px;
-    }
-    .td-first {
-      color: #56d364; font-weight: 700;
-      width: 220px;
-    }
-    .td-bad { color: var(--warn); font-weight: 700; }
-    .td-note { color: var(--muted); font-size: 11px; margin-top: 3px; }
-    .td-rows { width: 170px; color: var(--muted); font-size: 11px; }
-
-    .badge-first,
-    .badge-bad,
-    .badge-kind {
-      display: inline-flex; align-items: center;
-      font-size: 10px; font-weight: 700;
-      padding: 1px 6px; border-radius: 4px; margin-right: 4px;
-    }
-    .badge-first {
-      background: rgba(63,185,80,0.12);
-      border: 1px solid rgba(63,185,80,0.35);
-      color: #56d364;
-    }
-    .badge-bad {
-      background: rgba(255,166,87,0.12);
-      border: 1px solid rgba(255,166,87,0.4);
-      color: var(--warn);
-    }
-    .badge-kind.full {
-      background: rgba(88,166,255,0.12);
-      border: 1px solid rgba(88,166,255,0.35);
-      color: #79c0ff;
-    }
-    .badge-kind.base {
-      background: rgba(192,132,252,0.12);
-      border: 1px solid rgba(192,132,252,0.35);
-      color: var(--violet);
-    }
-    .badge-kind.sentence {
-      background: rgba(255,123,114,0.12);
-      border: 1px solid rgba(255,123,114,0.35);
-      color: #ff9b95;
-    }
-  </style>
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icon-192x192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Chat">
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,viewport-fit=cover,shrink-to-fit=no"/>
+<title>Chat</title>
+<style>
+:root{
+  --bg:#f3f4f6;--card:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;
+  --me:#374151;--meText:#ffffff;--other:#ffffff;--otherText:#111827;
+  --accent:#22c55e;--danger:#ef4444;
+  --safeB:env(safe-area-inset-bottom,0px);--safeBComp:var(--safeB);
+  --safeT:env(safe-area-inset-top,0px);--kb:0px;--kbFix:40px;
+  --appH:100dvh;--composerH:64px;--typingH:34px;
+  --shadow:0 10px 30px rgba(0,0,0,.06);--shadow2:0 14px 40px rgba(0,0,0,.12);
+  --bubbleFontSize:16px;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",Arial,sans-serif;overflow:hidden}
+button,.clickable{-webkit-tap-highlight-color:transparent;touch-action:manipulation;cursor:pointer;transition:transform .08s,box-shadow .18s,filter .18s,background .18s,border-color .18s}
+button:active,.clickable:active{transform:translateY(1px) scale(.99)}
+button:focus-visible{outline:3px solid rgba(34,197,94,.35);outline-offset:2px}
+.app{height:100vh;height:100dvh;display:flex;flex-direction:column;min-height:0;overflow:hidden;padding-top:var(--safeT);background:var(--bg);will-change:transform}
+header{position:sticky;top:0;z-index:10;padding:12px 14px 10px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.92);backdrop-filter:blur(12px)}
+.headTop{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.title{font-size:16px;font-weight:800;margin:0;line-height:1.2}
+.sub{margin-top:6px;font-size:12px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap}
+.pill,.chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:#fff;font-size:12px;color:var(--muted)}
+.menuWrap{position:relative;display:flex;align-items:center;gap:8px}
+.menuBtn{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;line-height:1;user-select:none;box-shadow:0 6px 18px rgba(0,0,0,.06)}
+.menu{position:absolute;right:0;top:46px;min-width:280px;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow2);overflow:hidden;display:none}
+.menu.open{display:block}
+.menu button{width:100%;padding:12px;border:0;background:#fff;text-align:left;font-size:14px;display:flex;justify-content:space-between;align-items:center}
+.menu button:hover{background:#f8fafc}
+.menu .hint{font-size:12px;color:var(--muted);padding:10px 12px;border-top:1px solid var(--line);line-height:1.35;white-space:pre-wrap}
+.mFontSizeRow{width:100%;padding:10px 12px;border:0;background:#fff;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;font-size:14px}
+.fontSizeCtrl{display:flex;align-items:center;gap:8px}
+.fontSizeCtrl button{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:#f8fafc;font-size:16px;line-height:1;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer;font-weight:700;color:var(--text)}
+.fontSizeCtrl button:hover{background:#e5e7eb}
+.fontSizeCtrl span{min-width:36px;text-align:center;font-size:14px;font-weight:700;color:var(--text)}
+.home{flex:1;min-height:0;overflow:auto;padding:16px;-webkit-overflow-scrolling:touch}
+.homeCard{width:100%;max-width:720px;margin:0 auto;background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:var(--shadow)}
+.homeTitle{font-weight:900;font-size:18px;margin:0 0 10px}
+.homeTitleRow{display:flex;align-items:center;justify-content:space-between;margin:0 0 10px}
+.homeTitleRow .homeTitle{margin:0}
+.homeMenuWrap{position:relative;flex-shrink:0}
+.homeMenuBtn{width:34px;height:34px;border:0;background:transparent;cursor:pointer;border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--muted);transition:background .15s;padding:0}
+.homeMenuBtn:hover{background:var(--hover)}
+.homeMenuBtn svg{display:block}
+.homeDropdown{position:absolute;top:calc(100% + 6px);right:0;background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow2);min-width:220px;z-index:200;overflow:hidden;display:none}
+.homeDropdown.open{display:block}
+.homeDropdownAccount{padding:14px 16px 12px;border-bottom:1px solid var(--line)}
+.homeDropdownAccountLabel{font-size:11px;color:var(--muted);margin-bottom:3px}
+.homeDropdownAccountName{font-size:15px;font-weight:900;color:var(--text)}
+.homeDropdownLogout{width:100%;border:0;background:transparent;text-align:left;padding:12px 16px;font-size:14px;font-weight:700;color:var(--danger);cursor:pointer;display:flex;align-items:center;gap:8px}
+.homeDropdownLogout:hover{background:#fff1f2}
+.sectionTitle{font-size:12px;color:var(--muted);font-weight:800;margin:14px 0 8px}
+.field{display:flex;flex-direction:column;gap:8px;margin:10px 0}
+.field label{font-size:12px;color:var(--muted)}
+.field input{height:46px;border-radius:14px;border:1px solid var(--line);padding:0 12px;font-size:16px;outline:none;transition:box-shadow .18s,border-color .18s}
+.field input:focus{border-color:rgba(34,197,94,.6);box-shadow:0 0 0 4px rgba(34,197,94,.12)}
+.rowBtns{display:flex;gap:10px;margin-top:10px}
+.primaryBtn{flex:1;height:46px;border-radius:14px;border:0;background:#111827;color:#fff;font-size:15px;font-weight:900;box-shadow:0 10px 18px rgba(17,24,39,.14)}
+.ghostBtn{flex:1;height:46px;border-radius:14px;border:1px solid var(--line);background:#fff;color:#111827;font-size:15px;font-weight:800}
+.ghostBtn:hover{background:#f8fafc}
+.roomList{display:flex;flex-direction:column;gap:10px}
+.roomItem{border:1px solid var(--line);border-radius:16px;padding:12px;background:#fff;box-shadow:0 6px 18px rgba(0,0,0,.04);display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer}
+.roomItem:hover{background:#f8fafc}
+.roomLeft{display:flex;flex-direction:column;gap:6px;min-width:0}
+.roomName{font-weight:900;font-size:15px;display:flex;align-items:center;gap:8px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.roomMeta{font-size:12px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap}
+.roomRight{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.log{flex:1;min-height:0;overflow:auto;padding:12px 12px calc(var(--composerH) + var(--typingH) + var(--kb) + 12px);-webkit-overflow-scrolling:touch}
+.msg{display:flex;flex-direction:column;gap:4px;margin:10px 0;width:100%}
+.row{display:flex;gap:8px;width:100%}
+.row.me{justify-content:flex-end}
+.row.other{justify-content:flex-start}
+.bubble{max-width:82%;padding:12px;border-radius:16px;border:1px solid var(--line);background:var(--other);color:var(--otherText);white-space:pre-wrap;word-break:break-word;font-size:var(--bubbleFontSize,16px);line-height:1.35}
+.row.me .bubble{background:var(--me);color:var(--meText);border-color:transparent;border-bottom-right-radius:6px;box-shadow:none}
+.row.other .bubble{border-bottom-left-radius:6px}
+.meta{font-size:11px;color:var(--muted);display:flex;gap:8px;align-items:center}
+.meta.me{justify-content:flex-end}
+.badgePending{opacity:.78}
+.badgeFail{color:var(--danger);font-weight:900;cursor:pointer}
+.readBadge{font-weight:900;opacity:.85}
+.typingBar{position:fixed;left:0;right:0;bottom:var(--composerH);height:var(--typingH);display:none;align-items:center;padding:0 12px;font-size:12px;color:var(--muted);background:rgba(255,255,255,.95);backdrop-filter:blur(12px);border-top:1px solid var(--line);z-index:19}
+.composer{position:fixed;left:0;right:0;bottom:0;height:var(--composerH);padding:10px 12px;border-top:1px solid var(--line);background:rgba(255,255,255,.95);backdrop-filter:blur(12px);display:flex;gap:10px;align-items:center;z-index:20}
+.emojiBtn{width:48px;height:48px;border-radius:14px;border:1px solid var(--line);background:#fff;font-size:22px;display:flex;align-items:center;justify-content:center;user-select:none;box-shadow:0 6px 18px rgba(0,0,0,.06)}
+.inputWrap{flex:1;height:48px;border-radius:14px;border:1px solid var(--line);background:#fff;display:flex;align-items:center;padding:0 12px}
+input[type="text"]{width:100%;border:0;outline:none;font-size:16px;background:transparent}
+.sendBtn{width:64px;height:48px;border-radius:14px;border:0;background:#111827;color:#fff;font-size:15px;font-weight:900;box-shadow:0 10px 18px rgba(17,24,39,.14)}
+.sendBtn:disabled{opacity:.45;box-shadow:none}
+.emojiPanel{position:fixed;left:12px;right:12px;bottom:calc(var(--composerH) + 10px);background:#fff;border:1px solid var(--line);border-radius:16px;padding:10px;box-shadow:var(--shadow);display:none;z-index:30}
+.emojiPanel.open{display:block}
+.emojiGrid{display:grid;grid-template-columns:repeat(8,1fr);gap:8px}
+.emoji{height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;user-select:none;border:1px solid transparent}
+.emoji:hover{background:#f8fafc}
+@media(max-width:420px){.bubble{max-width:88%}.emojiGrid{grid-template-columns:repeat(7,1fr)}}
+.modalOverlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:16px;z-index:50}
+.modalOverlay.open{display:flex}
+.modalCard{width:100%;max-width:420px;background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow2);padding:14px}
+.modalTitle{font-size:16px;font-weight:900;margin:4px 0 8px}
+.modalBody{font-size:13px;color:var(--muted);line-height:1.45;margin-bottom:10px;white-space:pre-wrap}
+.modalCard input{width:100%;height:46px;border-radius:14px;border:1px solid var(--line);padding:0 12px;font-size:16px;outline:none;transition:box-shadow .18s,border-color .18s}
+.modalCard input:focus{border-color:rgba(34,197,94,.6);box-shadow:0 0 0 4px rgba(34,197,94,.12)}
+.modalBtnsRow{display:flex;gap:10px;margin-top:10px}
+.modalBtnsRow .primaryBtn,.modalBtnsRow .ghostBtn{flex:1}
+.msgCtxMenu{position:fixed;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 14px 40px rgba(0,0,0,.14);overflow:hidden;z-index:200;min-width:160px;display:none}
+.msgCtxMenu.open{display:block}
+.msgCtxMenu button{width:100%;padding:11px 14px;border:0;background:#fff;text-align:left;font-size:14px;display:flex;align-items:center;gap:10px;cursor:pointer}
+.msgCtxMenu button:hover{background:#f8fafc}
+.msgCtxMenu button.danger{color:var(--danger)}
+.quickReact{display:flex;gap:4px;padding:8px 10px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.quickReact span{font-size:20px;cursor:pointer;padding:2px 4px;border-radius:8px;line-height:1.2;transition:transform .1s}
+.quickReact span:hover{transform:scale(1.3)}
+.editWrap{display:flex;gap:6px;align-items:center;margin-top:6px;flex-wrap:wrap}
+.editInput{flex:1;min-width:0;border:1px solid rgba(34,197,94,.5);border-radius:10px;padding:6px 10px;font-size:14px;outline:none;box-shadow:0 0 0 3px rgba(34,197,94,.1)}
+.editSave,.editCancel{padding:5px 12px;border-radius:8px;border:0;font-size:13px;font-weight:700;cursor:pointer}
+.editSave{background:#111827;color:#fff}
+.editCancel{background:#f3f4f6;color:#374151}
+.deletedBubble{font-style:italic;color:var(--muted);font-size:13px}
+.editedMark{font-size:10px;color:var(--muted);margin-left:4px}
+.reactionsBar{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.reactChip{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:999px;border:1px solid var(--line);background:#fff;font-size:13px;cursor:pointer;transition:background .15s,border-color .15s;user-select:none}
+.reactChip:hover{background:#f0fdf4;border-color:var(--accent)}
+.reactChip.mine{background:#f0fdf4;border-color:var(--accent)}
+.reactCount{font-size:11px;color:var(--muted);font-weight:700}
+.msgLink{color:inherit;text-decoration:underline;text-underline-offset:2px;word-break:break-all;-webkit-tap-highlight-color:rgba(34,197,94,.18)}
+.row.me .bubble .msgLink{color:#d1fae5}
+.shareIncomingBanner{background:#f0fdf4;border:1px solid rgba(34,197,94,.3);border-radius:14px;padding:12px 14px;margin-bottom:12px;display:none}
+.shareIncomingBanner.active{display:block}
+.shareIncomingTop{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.shareIncomingIcon{font-size:18px;flex-shrink:0}
+.shareIncomingLabel{font-size:13px;font-weight:800;color:#166534;flex:1}
+.shareIncomingText{font-size:12px;color:var(--muted);margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.shareIncomingHint{font-size:11px;color:#16a34a}
+.linkPreview{margin-top:8px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#f8fafc;cursor:pointer;text-decoration:none;color:inherit;display:block;max-width:100%}
+.linkPreview:hover{background:#f0f4f8}
+.lpImg{width:100%;max-height:140px;object-fit:cover;display:block}
+.lpBody{padding:10px 12px}
+.lpSite{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.lpTitle{font-size:13px;font-weight:700;line-height:1.3;word-break:break-word;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.lpDesc{font-size:11px;color:var(--muted);margin-top:3px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.replyPreview{position:absolute;bottom:calc(100% + 2px);left:0;right:0;background:rgba(255,255,255,.97);border-top:1px solid var(--line);padding:8px 12px;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);backdrop-filter:blur(8px);z-index:21}
+.replyPreviewBar{width:3px;height:100%;min-height:28px;background:var(--accent);border-radius:2px;flex-shrink:0}
+.replyPreviewText{flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.replyPreviewName{font-weight:700;color:var(--accent);margin-bottom:2px}
+.replyCloseBtn{border:0;background:none;font-size:18px;cursor:pointer;color:var(--muted);flex-shrink:0;padding:0 4px;line-height:1}
+.replyQuote{border-left:3px solid var(--accent);padding:5px 10px;border-radius:0 8px 8px 0;background:rgba(34,197,94,.07);margin-bottom:6px;font-size:12px;color:var(--muted);cursor:pointer;max-width:100%;overflow:hidden}
+.replyQuote:hover{background:rgba(34,197,94,.12)}
+.replyQuoteName{font-weight:700;color:var(--accent);margin-bottom:2px}
+.replyQuoteText{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.replyQuoteRow{display:flex;align-items:center;gap:6px}
+.replyQuoteImg{width:32px;height:32px;object-fit:cover;border-radius:4px;flex-shrink:0}
+.toast{position:fixed;bottom:calc(var(--composerH) + 12px);left:50%;transform:translateX(-50%) translateY(20px);background:#111827;color:#fff;padding:9px 18px;border-radius:999px;font-size:13px;font-weight:700;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;z-index:400;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.photoBtn{width:48px;height:48px;border-radius:14px;border:1px solid var(--line);background:#fff;font-size:22px;display:flex;align-items:center;justify-content:center;user-select:none;box-shadow:0 6px 18px rgba(0,0,0,.06);cursor:pointer;flex-shrink:0}
+.imgMsg{display:block;max-width:240px;border-radius:12px;overflow:hidden;cursor:pointer;margin:2px 0;border:1px solid var(--line)}
+.imgMsg img{width:100%;display:block;border-radius:12px;max-height:320px;object-fit:cover}
+.imgUploading{width:180px;height:110px;border-radius:12px;background:#f3f4f6;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-size:13px;color:var(--muted);border:1px solid var(--line)}
+.imgUploadSpinner{width:22px;height:22px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loginScreen{flex:1;min-height:0;overflow:auto;padding:24px 16px 40px;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg)}
+.loginCard{width:100%;max-width:400px;background:#fff;border:1px solid var(--line);border-radius:28px;padding:32px 24px 28px;box-shadow:var(--shadow2);text-align:center}
+.loginLogo{width:148px;height:148px;object-fit:contain;margin:0 auto 16px;display:block;border-radius:24px}
+.loginTitle{font-size:24px;font-weight:900;margin:0 0 4px;color:var(--text)}
+.loginSub{font-size:13px;color:var(--muted);margin:0 0 22px;line-height:1.5}
+.loginError{color:var(--danger);font-size:13px;min-height:16px;margin:4px 0 0;text-align:left;padding:0 2px}
+.loginHint{font-size:11px;color:var(--muted);margin-top:14px;line-height:1.6}
+.lastRoomBar{background:#f0fdf4;border:1px solid rgba(34,197,94,.25);border-radius:14px;padding:12px 14px;margin-top:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer}
+.lastRoomBar:hover{background:#dcfce7}
+.lastRoomInfo{display:flex;flex-direction:column;gap:2px;min-width:0}
+.lastRoomName{font-weight:800;font-size:14px;color:#166534;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lastRoomLabel{font-size:11px;color:var(--muted)}
+.lastRoomBtn{flex-shrink:0;padding:6px 14px;background:#22c55e;color:#fff;border:0;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer}
+</style>
+<script>
+window.OneSignalDeferred = window.OneSignalDeferred || [];
+OneSignalDeferred.push(async function(OneSignal) {
+  await OneSignal.init({
+    appId: "90c2ab9b-c948-4b4d-8f1e-56326f9b7aea",
+    serviceWorkerParam: { scope: "/" }
+  });
+  window._OS = window.__OS = OneSignal;
+  try {
+    OneSignal.User.PushSubscription.addEventListener("change", function() {
+      window.__schedulePushSync && window.__schedulePushSync();
+    });
+    window.__schedulePushSync && window.__schedulePushSync();
+  } catch(e) {}
+});
+</script>
 </head>
 <body>
-
-<div class="drop-overlay" id="dropOverlay">
-  <div class="drop-overlay-icon">📂</div>
-  <div class="drop-overlay-txt">xlsx / xls 파일을 여기에 놓으세요</div>
-</div>
-
-<nav class="nav">
-  <span class="nav-brand">TOOLS</span>
-  <a href="review.html" data-page="review.html">번역 검수</a>
-  <a href="strscan.html" data-page="strscan.html">문자열 탐지</a>
-  <a href="placeholder.html" data-page="placeholder.html">플레이스홀더</a>
-  <a href="wordcheck.html" data-page="wordcheck.html">단어 일치 검수</a>
-</nav>
-
-<div class="toolbar">
-  <label class="btn upload-label" id="uploadLabel" data-tip="클릭하거나 파일을 드래그해서 업로드">
-    엑셀 업로드
-    <input type="file" id="fileInput" accept=".xlsx,.xls">
-  </label>
-  <span id="fileNameBadge" style="font-size:11px;color:var(--muted);max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
-
-  <div class="sep"></div>
-
-  <span style="font-size:11px;font-weight:800;color:var(--muted)">검사 방식</span>
-  <div class="mode-group">
-    <label data-tip="분류 + 우선순위를 반영합니다. P1/P2는 전체 원문 기준 검수, P2 중심으로 대표어(base) 검수, P3는 문장 내 기준 용어 포함 여부를 검사합니다.">
-      <input type="radio" name="mode" value="auto" checked> 자동 검수
-    </label>
-    <label data-tip="우선순위/분류 특수 처리를 하지 않고 같은 기준값의 전체 셀 번역만 비교합니다.">
-      <input type="radio" name="mode" value="cell"> 단순 셀 전체
-    </label>
-  </div>
-
-  <div class="sep"></div>
-
-  <span class="stat"><span class="dot-w"></span><span id="statIssue">불일치 0</span></span>
-  <span class="stat" id="statRows" style="display:none"><span class="dot-m"></span><span id="statRowsText"></span></span>
-
-  <div class="sep"></div>
-
-  <button class="btn success" id="downloadBtn" disabled data-tip="불일치 셀 색칠 + 결과 열이 추가된 xlsx 파일로 내보냅니다">엑셀 내보내기</button>
-</div>
-
-<div class="setup hidden" id="setupArea">
-  <div class="setup-item">
-    <span class="setup-lbl">① 원본 열 (기준)</span>
-    <select id="srcColSelect"></select>
-  </div>
-
-  <div class="setup-item">
-    <span class="setup-lbl">② 우선순위 열</span>
-    <select id="priorityColSelect"></select>
-    <span class="setup-note">예: 우선순위</span>
-  </div>
-
-  <div class="setup-item">
-    <span class="setup-lbl">③ 분류 열</span>
-    <select id="categoryColSelect"></select>
-    <span class="setup-note">예: 분류</span>
-  </div>
-
-  <div class="setup-item">
-    <span class="setup-lbl">④ 비교 열 (번역 결과, 복수 선택)</span>
-    <div class="ms-wrap" id="msWrap">
-      <button class="ms-btn" id="msBtn" type="button">
-        <span class="ms-label" id="msBtnLabel">열을 선택하세요</span>
-        <span class="ms-arrow">▼</span>
-      </button>
-      <div class="ms-panel" id="msPanel">
-        <div class="ms-header">
-          <span class="ms-header-txt">비교 열 선택</span>
-          <span class="ms-all-btn" id="msAllBtn">전체 선택</span>
-        </div>
-        <div id="msItems"></div>
+<div class="app" id="app">
+  <header id="header" style="display:none">
+    <div class="headTop">
+      <div>
+        <div class="title" id="roomTitle">채팅방</div>
+        <div class="sub" id="roomSub"></div>
       </div>
+      <div class="menuWrap">
+        <div class="menuBtn clickable" id="menuBtn">…</div>
+        <div class="menu" id="menu">
+          <button id="mEnableNoti"><span>알림 켜기</span><span id="mEnableNotiState">›</span></button>
+          <button id="mSound"><span>소리(삐) 켜기</span><span id="mSoundState">›</span></button>
+          <button id="mMyBubbleWhite"><span>내 말풍선 흰색</span><span id="mMyBubbleWhiteState">›</span></button>
+          <button id="mNick"><span>닉네임 변경</span><span>›</span></button>
+          <button id="mRoomName"><span>방 이름 변경</span><span>›</span></button>
+          <button id="mRoomPass"><span>비밀번호 설정/변경</span><span>›</span></button>
+          <button id="mLeave"><span>나가기</span><span>›</span></button>
+          <button id="mLogout" style="color:var(--danger)"><span>로그아웃</span><span>›</span></button>
+          <div class="mFontSizeRow">
+            <span>글씨 크기</span>
+            <div class="fontSizeCtrl">
+              <button id="mFontDec" type="button">－</button>
+              <span id="mFontSizeVal">16</span>
+              <button id="mFontInc" type="button">＋</button>
+            </div>
+          </div>
+          <div class="hint" id="menuHint"></div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="loginScreen" id="loginScreen" style="display:none">
+    <div class="loginCard">
+      <img src="/icon-512x512.png" class="loginLogo" alt="Chat" draggable="false"/>
+      <div class="loginTitle">Chat</div>
+      <div class="loginSub">계정을 만들거나 로그인하세요</div>
+      <div class="field" style="text-align:left"><label>계정명</label><input id="loginUser" type="text" placeholder="예: ryoske" autocomplete="username" spellcheck="false"/></div>
+      <div class="field" style="text-align:left"><label>비밀번호 (6자 이상)</label><input id="loginPass" type="password" placeholder="비밀번호" autocomplete="current-password"/></div>
+      <div class="loginError" id="loginError"></div>
+      <div class="rowBtns" style="margin-top:14px">
+        <button class="primaryBtn" id="btnLoginSubmit">로그인 / 가입</button>
+      </div>
+      <div class="loginHint">처음 입력하면 자동으로 계정이 만들어집니다<br>같은 계정·비밀번호로 어디서든 로그인 가능</div>
     </div>
   </div>
 
-  <div class="setup-item" style="padding-bottom:1px">
-    <span class="setup-lbl" style="visibility:hidden">분석</span>
-    <button class="btn analyze" id="analyzeBtn" disabled>⑤ 분석</button>
+  <div class="home" id="home" style="display:none">
+    <div class="homeCard">
+      <div class="homeTitleRow">
+        <div class="homeTitle">대기실</div>
+        <div class="homeMenuWrap">
+          <button class="homeMenuBtn" id="homeMenuBtn" aria-label="메뉴">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="3" cy="9" r="1.6" fill="currentColor"/><circle cx="9" cy="9" r="1.6" fill="currentColor"/><circle cx="15" cy="9" r="1.6" fill="currentColor"/></svg>
+          </button>
+          <div class="homeDropdown" id="homeDropdown">
+            <div class="homeDropdownAccount">
+              <div class="homeDropdownAccountLabel">로그인된 계정</div>
+              <div class="homeDropdownAccountName" id="homeDropdownAccountName">-</div>
+            </div>
+            <button class="homeDropdownLogout" id="homeDropdownLogout">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 14H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M11 11l3-3-3-3M14 8H6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              로그아웃
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="shareIncomingBanner" id="shareIncomingBanner">
+        <div class="shareIncomingTop"><span class="shareIncomingIcon">📤</span><span class="shareIncomingLabel">공유된 내용이 있습니다</span></div>
+        <div class="shareIncomingText" id="shareIncomingText"></div>
+        <div class="shareIncomingHint">채팅방을 선택하면 자동으로 입력창에 넣어드립니다.</div>
+      </div>
+      <div class="field"><label>내 닉네임</label><input id="homeNick" type="text" placeholder="예: 송대호"/></div>
+      <div class="sectionTitle">방 만들기</div>
+      <div class="field"><label>방 이름</label><input id="homeRoomName" type="text" placeholder="예: 테스트방"/></div>
+      <div class="field">
+        <label style="display:flex;align-items:center;gap:8px">
+          <input id="homeUsePass" type="checkbox" style="width:18px;height:18px"/>비밀번호 사용(선택)
+        </label>
+      </div>
+      <div class="field" id="homePassField" style="display:none">
+        <label>방 비밀번호</label><input id="homeRoomPass" type="password" placeholder="예: 1234"/>
+      </div>
+      <div class="rowBtns">
+        <button class="primaryBtn" id="btnCreate">방 만들기</button>
+        <button class="ghostBtn" id="btnRefresh">새로고침</button>
+      </div>
+      <div class="sectionTitle">채팅방 목록</div>
+      <div class="roomList" id="roomList"></div>
+      <div class="rowBtns"><button class="ghostBtn" id="btnJoin">참여하기</button></div>
+      <div id="lastRoomSection" style="display:none">
+        <div class="sectionTitle">이전 방</div>
+        <div class="lastRoomBar clickable" id="lastRoomBar">
+          <div class="lastRoomInfo">
+            <div class="lastRoomLabel">마지막으로 입장한 방</div>
+            <div class="lastRoomName" id="lastRoomName">-</div>
+          </div>
+          <button class="lastRoomBtn" id="btnLastRoom">돌아가기</button>
+        </div>
+      </div>
+      <div class="sectionTitle">안내</div>
+      <div class="roomMeta"><span class="pill">누구나 편하게 대화할 수 있는 채팅방입니다.</span></div>
+    </div>
+  </div>
+
+  <div class="typingBar" id="typingBar" aria-hidden="true"></div>
+  <div class="log" id="log" style="display:none"></div>
+
+  <div class="emojiPanel" id="emojiPanel" aria-hidden="true">
+    <div class="emojiGrid" id="emojiGrid"></div>
+  </div>
+
+  <div class="composer" id="composer" style="display:none">
+    <div class="replyPreview" id="replyPreview" style="display:none">
+      <div class="replyPreviewBar"></div>
+      <div class="replyPreviewText">
+        <div class="replyPreviewName" id="replyPreviewName"></div>
+        <div id="replyPreviewMsg"></div>
+      </div>
+      <button class="replyCloseBtn" id="replyCloseBtn">✕</button>
+    </div>
+    <div class="emojiBtn clickable" id="emojiBtn">😊</div>
+    <label class="photoBtn" id="photoBtn" for="imgInput">📷</label>
+    <input type="file" id="imgInput" accept="image/*" style="position:absolute;width:0;height:0;opacity:0;overflow:hidden"/>
+    <div class="inputWrap"><input id="input" type="text" autocomplete="off" placeholder="메시지를 입력하세요"/></div>
+    <button class="sendBtn" id="send" disabled>전송</button>
   </div>
 </div>
 
-<div class="content" id="content">
-  <div class="content-empty" id="emptyState">
-    <div class="ci-icon">📋</div>
-    <div>엑셀 파일을 업로드하고 열을 선택한 뒤 분석 버튼을 누르세요.</div>
+<div class="msgCtxMenu" id="msgCtxMenu">
+  <div class="quickReact" id="quickReactBar">
+    <span data-e="👍">👍</span><span data-e="❤️">❤️</span><span data-e="😂">😂</span>
+    <span data-e="😮">😮</span><span data-e="😢">😢</span><span data-e="🔥">🔥</span>
   </div>
-  <div id="issueArea" style="display:none"></div>
+  <button id="ctxReply">↩️ 답글</button>
+  <button id="ctxEdit">✏️ 수정</button>
+  <button id="ctxDelete" class="danger">🗑 삭제</button>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/exceljs@4.3.0/dist/exceljs.min.js"></script>
+<div class="toast" id="toast"></div>
+
+<div class="modalOverlay" id="passModal" aria-hidden="true">
+  <div class="modalCard" role="dialog" aria-modal="true">
+    <div class="modalTitle" id="passModalTitle">비밀번호</div>
+    <div class="modalBody" id="passModalBody"></div>
+    <input id="passModalInput" type="password" autocomplete="off" placeholder="비밀번호"/>
+    <div class="modalBtnsRow">
+      <button class="primaryBtn" id="passModalOk">확인</button>
+      <button class="ghostBtn" id="passModalCancel">취소</button>
+    </div>
+    <div class="modalBtnsRow" id="passModalOwnerRow" style="display:none">
+      <button class="ghostBtn" id="passModalRemove">비밀번호 제거</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
 <script>
-const $ = id => document.getElementById(id);
-
-let headers = [];
-let dataRows = [];
-let analysisResult = null; // Map<tgtColName, { issues, tgtColIdx, summary }>
-let badSet = null;         // Map<rowIdx, Set<tgtColIdx>>
-let resultMap = null;      // Map<rowIdx, Map<tgtColIdx, string[]>>
-let msAllState = false;
-
-const PRIORITY_HEADER_HINTS = [/^우선순위$/i, /^priority$/i, /우선순위/i, /priority/i];
-const CATEGORY_HEADER_HINTS = [/^분류$/i, /^category$/i, /^type$/i, /분류/i, /category/i, /type/i];
-const ISSUE_TYPE_ORDER = { base: 0, full: 1, sentence: 2 };
-
-function escHtml(s) {
-  return String(s ?? '')
-    .replace(/&/g,'&amp;')
-    .replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;')
-    .replace(/'/g,'&#39;');
-}
-
-function cellStr(v) {
-  return String(v ?? '').trim();
-}
-
-function safeLocale(a, b) {
-  return String(a ?? '').localeCompare(String(b ?? ''), 'ko');
-}
-
-function uniq(arr) {
-  return [...new Set(arr)];
-}
-
-function detectHeaderIndex(hints) {
-  for (let i = 0; i < headers.length; i++) {
-    const h = cellStr(headers[i]);
-    if (hints.some(re => re.test(h))) return i;
-  }
-  return -1;
-}
-
-function parsePriorityCell(v) {
-  const s = String(v ?? '').trim();
-  if (/^1$/.test(s)) return 1;
-  if (/^2$/.test(s)) return 2;
-  if (/^3$/.test(s)) return 3;
-  return null;
-}
-
-function normalizeCategoryValue(v) {
-  const s = String(v ?? '').trim().toLowerCase();
-  return s || '__all__';
-}
-
-function formatCategory(cat) {
-  return cat && cat !== '__all__' ? cat : '미분류';
-}
-
-function normalizeComparableText(s) {
-  let t = String(s ?? '').normalize('NFKC').trim();
-  if (!t) return '';
-  t = t
-    .replace(/\u00A0/g, ' ')
-    .replace(/[“”]/g, '"')
-    .replace(/[‘’]/g, "'")
-    .replace(/[（]/g, '(').replace(/[）]/g, ')')
-    .replace(/[［]/g, '[').replace(/[］]/g, ']')
-    .replace(/[｛]/g, '{').replace(/[｝]/g, '}')
-    .replace(/[‐-‒–—―]/g, '-')
-    .replace(/\s+/g, ' ')
-    .trim();
-  if (/[A-Za-z]/.test(t)) t = t.toLowerCase();
-  return t;
-}
-
-function normalizeContainText(s) {
-  return normalizeComparableText(s).replace(/\s+/g, '');
-}
-
-function normalizeSourceKey(s) {
-  return normalizeComparableText(s);
-}
-
-function stripTrailingBracketInfoDisplay(s) {
-  let t = cellStr(s);
-  if (!t) return '';
-  let prev = null;
-  while (t && t !== prev) {
-    prev = t;
-    t = t.replace(/\s*[\(\[\{（［｛][^()\[\]{}（）［］｛｝]{0,80}[\)\]\}）］｝]\s*$/u, '').trim();
-  }
-  return t;
-}
-
-function extractBaseInfo(sourceText) {
-  const raw = cellStr(sourceText);
-  if (!raw) {
-    return {
-      fullText: '',
-      fullNorm: '',
-      baseText: '',
-      baseNorm: '',
-      variantText: '',
-      hasVariant: false,
-      sourceContainKey: ''
-    };
-  }
-
-  const m = raw.match(/^(.*?)(?:\s*[\(\[\{（［｛]\s*(.*?)\s*[\)\]\}）］｝])?\s*$/u);
-  let baseText = raw;
-  let variantText = '';
-
-  if (m) {
-    baseText = cellStr(m[1]) || raw;
-    variantText = cellStr(m[2]);
-  }
-
-  return {
-    fullText: raw,
-    fullNorm: normalizeSourceKey(raw),
-    baseText,
-    baseNorm: normalizeSourceKey(baseText),
-    variantText,
-    hasVariant: !!variantText,
-    sourceContainKey: normalizeContainText(raw)
-  };
-}
-
-function buildFamilyKey(normText) {
-  const t = normalizeComparableText(normText);
-  if (!t) return '__EMPTY__';
-
-  if (/[A-Za-z]/.test(t) && /\s/.test(t)) {
-    const tokens = t.split(/\s+/).filter(Boolean).slice(0, 2);
-    return tokens.join(' ');
-  }
-
-  const compact = t.replace(/\s+/g, '');
-  if (!compact) return '__EMPTY__';
-  return compact.slice(0, Math.min(4, compact.length));
-}
-
-function parseTargetCell(v) {
-  const rawText = cellStr(v);
-  const fullNorm = normalizeComparableText(rawText);
-  const strippedDisplay = stripTrailingBracketInfoDisplay(rawText) || rawText;
-  const strippedNorm = normalizeComparableText(strippedDisplay);
-  const containNorm = normalizeContainText(rawText);
-  const familyKey = buildFamilyKey(strippedNorm || fullNorm);
-
-  return {
-    rawText,
-    fullNorm,
-    strippedDisplay,
-    strippedNorm,
-    containNorm,
-    familyKey
-  };
-}
-
-function containsComparable(sentenceNorm, termNorm) {
-  if (!sentenceNorm || !termNorm) return false;
-
-  if (/[a-z]/i.test(termNorm)) {
-    const s = ` ${sentenceNorm} `;
-    const t = ` ${termNorm} `;
-    return s.includes(t);
-  }
-  return sentenceNorm.includes(termNorm);
-}
-
-function addRowMessage(rowMap, rowIdx, message) {
-  if (!rowMap.has(rowIdx)) rowMap.set(rowIdx, []);
-  rowMap.get(rowIdx).push(message);
-}
-
-function mergeColRowMessages(globalRowMap, colRowMessages, tgtColIdx) {
-  for (const [rowIdx, msgs] of colRowMessages) {
-    if (!globalRowMap.has(rowIdx)) globalRowMap.set(rowIdx, new Map());
-    if (!globalRowMap.get(rowIdx).has(tgtColIdx)) globalRowMap.get(rowIdx).set(tgtColIdx, []);
-    globalRowMap.get(rowIdx).get(tgtColIdx).push(...msgs);
-  }
-}
-
-function mergeBadRows(globalBad, rowIdxSet, tgtColIdx) {
-  for (const rowIdx of rowIdxSet) {
-    if (!globalBad.has(rowIdx)) globalBad.set(rowIdx, new Set());
-    globalBad.get(rowIdx).add(tgtColIdx);
-  }
-}
-
-function pickDominantFromCounter(counterMap) {
-  const arr = [...counterMap.entries()].map(([key, obj]) => ({ key, ...obj }));
-  arr.sort((a, b) =>
-    (b.count - a.count) ||
-    (a.firstOrder - b.firstOrder) ||
-    safeLocale(a.display, b.display)
-  );
-  return arr;
-}
-
-function longestCommonPrefix(arr) {
-  if (!arr.length) return '';
-  let prefix = arr[0] || '';
-  for (let i = 1; i < arr.length; i++) {
-    const cur = arr[i] || '';
-    while (prefix && !cur.startsWith(prefix)) {
-      prefix = prefix.slice(0, -1);
-    }
-    if (!prefix) break;
-  }
-  return prefix;
-}
-
-function cleanupPrefix(prefix, referenceList) {
-  let p = String(prefix || '').trim();
-  if (!p) return '';
-
-  p = p.replace(/[\s\-–—_:|/\\,.;·•]+$/u, '').trim();
-  p = p.replace(/[\(\[\{]+$/u, '').trim();
-
-  if (!p) return '';
-
-  if (/[A-Za-z]/.test(p)) {
-    const exact = referenceList.some(v => v === p);
-    if (!exact && !/[ \-–—_:|/\\]$/.test(prefix)) {
-      p = p.replace(/\S+$/u, '').trim();
-    }
-  }
-
-  return p.trim();
-}
-
-function isUsefulBasePrefix(prefix) {
-  const p = String(prefix || '').trim();
-  if (!p) return false;
-  const compact = p.replace(/\s+/g, '');
-  if (/[A-Za-z]/.test(p)) {
-    if (p.includes(' ')) return compact.length >= 4;
-    return compact.length >= 6;
-  }
-  return compact.length >= 2;
-}
-
-function formatRowsExcel(rowIdxArr) {
-  const nums = rowIdxArr.slice(0, 12).map(i => i + 2).join(', ');
-  return nums + (rowIdxArr.length > 12 ? ` 외 ${rowIdxArr.length - 12}건` : '');
-}
-
-function getMode() {
-  return document.querySelector('input[name="mode"]:checked')?.value ?? 'auto';
-}
-
-function getOptionalColIdx(selectId) {
-  const v = $(selectId).value;
-  return v === '' ? -1 : parseInt(v, 10);
-}
-
-function getSrcColIdx() {
-  return parseInt($('srcColSelect').value, 10);
-}
-
-function getExcludedColIdxSet() {
-  const set = new Set();
-  const srcIdx = getSrcColIdx();
-  const priIdx = getOptionalColIdx('priorityColSelect');
-  const catIdx = getOptionalColIdx('categoryColSelect');
-  if (srcIdx >= 0) set.add(srcIdx);
-  if (priIdx >= 0) set.add(priIdx);
-  if (catIdx >= 0) set.add(catIdx);
-  return set;
-}
-
-function getTgtColIdxArr() {
-  const excluded = getExcludedColIdxSet();
-  return [...$('msItems').querySelectorAll('.ms-item.on')]
-    .map(el => parseInt(el.dataset.idx, 10))
-    .filter(idx => !excluded.has(idx));
-}
-
-function prepareRows(rows, srcColIdx, priorityColIdx, categoryColIdx, tgtColIdxArr) {
-  return rows.map((row, rowIdx) => {
-    const sourceInfo = extractBaseInfo(row[srcColIdx]);
-    const priority = priorityColIdx >= 0 ? (parsePriorityCell(row[priorityColIdx]) || 1) : 1;
-    const category = categoryColIdx >= 0 ? normalizeCategoryValue(row[categoryColIdx]) : '__all__';
-
-    const targetMap = new Map();
-    for (const tgtColIdx of tgtColIdxArr) {
-      targetMap.set(tgtColIdx, parseTargetCell(row[tgtColIdx]));
-    }
-
-    return {
-      rowIdx,
-      excelRow: rowIdx + 2,
-      rawRow: row,
-      category,
-      priority,
-      sourceText: sourceInfo.fullText,
-      sourceNorm: sourceInfo.fullNorm,
-      sourceContainKey: sourceInfo.sourceContainKey,
-      baseText: sourceInfo.baseText,
-      baseNorm: sourceInfo.baseNorm,
-      variantText: sourceInfo.variantText,
-      hasVariant: sourceInfo.hasVariant,
-      targets: targetMap
-    };
-  });
-}
-
-function buildStaticGroups(preparedRows) {
-  const fullGroups = new Map();
-  const baseGroups = new Map();
-
-  for (const row of preparedRows) {
-    if (!row.sourceText) continue;
-
-    const fullKey = `${row.category}||${row.priority}||${row.sourceNorm}`;
-    if (!fullGroups.has(fullKey)) {
-      fullGroups.set(fullKey, {
-        key: fullKey,
-        category: row.category,
-        priority: row.priority,
-        sourceText: row.sourceText,
-        sourceNorm: row.sourceNorm,
-        baseText: row.baseText,
-        rows: []
-      });
-    }
-    fullGroups.get(fullKey).rows.push(row.rowIdx);
-
-    if (row.baseNorm) {
-      const baseKey = `${row.category}||${row.priority}||${row.baseNorm}`;
-      if (!baseGroups.has(baseKey)) {
-        baseGroups.set(baseKey, {
-          key: baseKey,
-          category: row.category,
-          priority: row.priority,
-          baseText: row.baseText,
-          baseNorm: row.baseNorm,
-          rows: [],
-          fullSet: new Set(),
-          hasVariant: false
-        });
-      }
-      const group = baseGroups.get(baseKey);
-      group.rows.push(row.rowIdx);
-      group.fullSet.add(row.sourceNorm);
-      if (row.hasVariant) group.hasVariant = true;
-    }
-  }
-
-  return { fullGroups, baseGroups };
-}
-
-function analyzeFullGroups(preparedRows, fullGroups, tgtColIdx, includePriority3, rowMessages, badRows) {
-  const issues = [];
-
-  for (const group of fullGroups.values()) {
-    if (!includePriority3 && group.priority === 3) continue;
-    if (group.rows.length < 2) continue;
-
-    const counter = new Map();
-    for (const rowIdx of group.rows) {
-      const t = preparedRows[rowIdx].targets.get(tgtColIdx);
-      const key = t.fullNorm || '__EMPTY__';
-      if (!counter.has(key)) {
-        counter.set(key, {
-          count: 0,
-          firstOrder: rowIdx,
-          display: t.rawText || '(비어있음)',
-          rows: []
-        });
-      }
-      const entry = counter.get(key);
-      entry.count++;
-      entry.rows.push(rowIdx);
-    }
-
-    if (counter.size <= 1) continue;
-
-    const ranked = pickDominantFromCounter(counter);
-    const dominant = ranked[0];
-    const second = ranked[1];
-    const tie = !!second && second.count === dominant.count;
-
-    for (let i = 1; i < ranked.length; i++) {
-      const bad = ranked[i];
-      issues.push({
-        type: 'full',
-        typeLabel: '전체 원문',
-        category: group.category,
-        priority: group.priority,
-        basisText: group.sourceText,
-        representativeText: dominant.display,
-        problemText: bad.display,
-        note: tie ? '동률 발생 · 대표 번역은 최초 행 우선' : '',
-        rows: [...bad.rows]
-      });
-
-      for (const rowIdx of bad.rows) {
-        badRows.add(rowIdx);
-        addRowMessage(
-          rowMessages,
-          rowIdx,
-          `전체원문 불일치 [${formatCategory(group.category)}/P${group.priority}/${group.sourceText}] 대표: ${dominant.display} | 현재: ${bad.display}`
-        );
-      }
-    }
-  }
-
-  return issues;
-}
-
-function analyzeBaseGroups(preparedRows, baseGroups, tgtColIdx, hasPriorityColumn, rowMessages, badRows) {
-  const issues = [];
-
-  for (const group of baseGroups.values()) {
-    const shouldRun = hasPriorityColumn ? group.priority === 2 : true;
-    if (!shouldRun) continue;
-    if (group.rows.length < 2) continue;
-    if (group.fullSet.size < 2 && !group.hasVariant) continue;
-
-    const items = group.rows.map(rowIdx => ({
-      rowIdx,
-      row: preparedRows[rowIdx],
-      t: preparedRows[rowIdx].targets.get(tgtColIdx)
-    }));
-
-    const validItems = items.filter(item => item.t.rawText);
-    if (validItems.length < 2) continue;
-
-    const familyCounter = new Map();
-    for (const item of validItems) {
-      const key = item.t.familyKey || '__EMPTY__';
-      if (!familyCounter.has(key)) {
-        familyCounter.set(key, {
-          count: 0,
-          firstOrder: item.rowIdx,
-          display: item.t.strippedDisplay || item.t.rawText || '(비어있음)',
-          rows: []
-        });
-      }
-      const entry = familyCounter.get(key);
-      entry.count++;
-      entry.rows.push(item.rowIdx);
-    }
-
-    const rankedFamily = pickDominantFromCounter(familyCounter);
-    if (!rankedFamily.length) continue;
-
-    const dominantFamily = rankedFamily[0];
-    const secondFamily = rankedFamily[1];
-
-    if (dominantFamily.key === '__EMPTY__') continue;
-    if (dominantFamily.count < 2) continue;
-    if (secondFamily && dominantFamily.count <= secondFamily.count) continue;
-
-    const dominantItems = validItems.filter(item => item.t.familyKey === dominantFamily.key);
-    let dominantBaseNorm = '';
-    const candidateNorms = dominantItems
-      .map(item => item.t.strippedNorm || item.t.fullNorm)
-      .filter(Boolean);
-
-    if (candidateNorms.length) {
-      dominantBaseNorm = cleanupPrefix(longestCommonPrefix(candidateNorms), candidateNorms);
-      if (!isUsefulBasePrefix(dominantBaseNorm)) {
-        const tempCounter = new Map();
-        for (const value of candidateNorms) {
-          if (!tempCounter.has(value)) tempCounter.set(value, { count: 0, firstOrder: 999999, display: value });
-          tempCounter.get(value).count++;
-        }
-        const picked = [...tempCounter.entries()]
-          .map(([key, obj]) => ({ key, ...obj }))
-          .sort((a, b) => (b.count - a.count) || safeLocale(a.key, b.key))[0];
-        dominantBaseNorm = picked ? picked.key : '';
-      }
-    }
-
-    if (!dominantBaseNorm) {
-      dominantBaseNorm = dominantFamily.display || '';
-    }
-
-    const representativeText = dominantBaseNorm || dominantFamily.display || '(비어있음)';
-    const bucketMap = new Map();
-
-    for (const item of items) {
-      const normToCheck = item.t.strippedNorm || item.t.fullNorm;
-      const followsRepresentative = normToCheck && representativeText && normToCheck.startsWith(representativeText);
-      const sameFamily = item.t.familyKey === dominantFamily.key;
-      const isEmpty = !item.t.rawText;
-
-      let isIssue = false;
-      if (isEmpty) {
-        isIssue = true;
-      } else if (!(sameFamily && followsRepresentative)) {
-        isIssue = true;
-      }
-
-      if (!isIssue) continue;
-
-      const problemKey = item.t.fullNorm || '__EMPTY__';
-      const display = item.t.strippedDisplay || item.t.rawText || '(비어있음)';
-      if (!bucketMap.has(problemKey)) {
-        bucketMap.set(problemKey, {
-          display,
-          rows: []
-        });
-      }
-      bucketMap.get(problemKey).rows.push(item.rowIdx);
-    }
-
-    if (!bucketMap.size) continue;
-
-    for (const [, bucket] of bucketMap) {
-      issues.push({
-        type: 'base',
-        typeLabel: '대표어(base)',
-        category: group.category,
-        priority: group.priority,
-        basisText: group.baseText,
-        representativeText,
-        problemText: bucket.display,
-        note: `대표 ${dominantFamily.count}/${validItems.length}행 · 파생 원문 ${group.fullSet.size}종`,
-        rows: [...bucket.rows]
-      });
-
-      for (const rowIdx of bucket.rows) {
-        badRows.add(rowIdx);
-        addRowMessage(
-          rowMessages,
-          rowIdx,
-          `대표어(base) 불일치 [${formatCategory(group.category)}/P${group.priority}/base=${group.baseText}] 대표 베이스: ${representativeText} | 현재: ${bucket.display}`
-        );
-      }
-    }
-  }
-
-  return issues;
-}
-
-function buildGlossary(preparedRows, fullGroups, tgtColIdx) {
-  const glossaryByCategory = new Map();
-
-  for (const group of fullGroups.values()) {
-    if (group.priority !== 1 && group.priority !== 2) continue;
-    const sourceContainKey = normalizeContainText(group.sourceText);
-    if (!sourceContainKey || sourceContainKey.length < 2) continue;
-
-    const counter = new Map();
-    for (const rowIdx of group.rows) {
-      const t = preparedRows[rowIdx].targets.get(tgtColIdx);
-      const key = t.fullNorm || '__EMPTY__';
-      if (!counter.has(key)) {
-        counter.set(key, {
-          count: 0,
-          firstOrder: rowIdx,
-          display: t.rawText || '(비어있음)',
-          norm: t.fullNorm || '',
-          rows: []
-        });
-      }
-      const entry = counter.get(key);
-      entry.count++;
-      entry.rows.push(rowIdx);
-    }
-
-    const ranked = pickDominantFromCounter(counter);
-    if (!ranked.length) continue;
-    const dominant = ranked[0];
-    if (!dominant.norm) continue;
-
-    if (!glossaryByCategory.has(group.category)) glossaryByCategory.set(group.category, []);
-    glossaryByCategory.get(group.category).push({
-      category: group.category,
-      priority: group.priority,
-      sourceText: group.sourceText,
-      sourceContainKey,
-      targetDisplay: dominant.display,
-      targetNorm: dominant.norm,
-      variants: ranked.map(v => ({
-        display: v.display,
-        norm: counter.get(v.key)?.norm || v.key
-      }))
-    });
-  }
-
-  for (const list of glossaryByCategory.values()) {
-    list.sort((a, b) =>
-      (b.sourceContainKey.length - a.sourceContainKey.length) ||
-      safeLocale(a.sourceText, b.sourceText)
-    );
-  }
-
-  return glossaryByCategory;
-}
-
-function analyzeSentenceRows(preparedRows, glossaryByCategory, tgtColIdx, rowMessages, badRows) {
-  const issues = [];
-
-  for (const row of preparedRows) {
-    if (row.priority !== 3) continue;
-    if (!row.sourceText) continue;
-
-    const glossary = glossaryByCategory.get(row.category) || [];
-    if (!glossary.length) continue;
-
-    const matches = [];
-    for (const term of glossary) {
-      if (row.sourceContainKey.includes(term.sourceContainKey)) {
-        matches.push(term);
-      }
-    }
-    if (!matches.length) continue;
-
-    matches.sort((a, b) =>
-      (b.sourceContainKey.length - a.sourceContainKey.length) ||
-      safeLocale(a.sourceText, b.sourceText)
-    );
-
-    const selected = [];
-    for (const match of matches) {
-      if (selected.some(sel => sel.sourceContainKey.includes(match.sourceContainKey))) continue;
-      selected.push(match);
-    }
-
-    const t = row.targets.get(tgtColIdx);
-    const sentenceNorm = t.fullNorm || '';
-
-    for (const term of selected) {
-      if (containsComparable(sentenceNorm, term.targetNorm)) continue;
-
-      let foundVariant = null;
-      for (const variant of term.variants) {
-        if (!variant.norm || variant.norm === term.targetNorm) continue;
-        if (containsComparable(sentenceNorm, variant.norm)) {
-          foundVariant = variant;
-          break;
-        }
-      }
-
-      issues.push({
-        type: 'sentence',
-        typeLabel: '문장(P3)',
-        category: row.category,
-        priority: 3,
-        basisText: term.sourceText,
-        representativeText: term.targetDisplay,
-        problemText: foundVariant ? foundVariant.display : '(미포함)',
-        note: foundVariant ? '문장 내 다른 변형 사용' : '문장 내 기준 용어 미포함',
-        rows: [row.rowIdx]
-      });
-
-      badRows.add(row.rowIdx);
-
-      if (foundVariant) {
-        addRowMessage(
-          rowMessages,
-          row.rowIdx,
-          `문장 내 다른 변형 [${formatCategory(row.category)}/P3/${term.sourceText}] 기준: ${term.targetDisplay} | 발견: ${foundVariant.display}`
-        );
-      } else {
-        addRowMessage(
-          rowMessages,
-          row.rowIdx,
-          `문장 내 용어 미포함 [${formatCategory(row.category)}/P3/${term.sourceText}] 기준: ${term.targetDisplay}`
-        );
-      }
-    }
-  }
-
-  return issues;
-}
-
-function analyzeColumnAuto(preparedRows, fullGroups, baseGroups, tgtColIdx, hasPriorityColumn) {
-  const rowMessages = new Map();
-  const badRows = new Set();
-
-  const fullIssues = analyzeFullGroups(preparedRows, fullGroups, tgtColIdx, false, rowMessages, badRows);
-  const baseIssues = analyzeBaseGroups(preparedRows, baseGroups, tgtColIdx, hasPriorityColumn, rowMessages, badRows);
-
-  let sentenceIssues = [];
-  if (hasPriorityColumn) {
-    const glossaryByCategory = buildGlossary(preparedRows, fullGroups, tgtColIdx);
-    sentenceIssues = analyzeSentenceRows(preparedRows, glossaryByCategory, tgtColIdx, rowMessages, badRows);
-  }
-
-  const issues = [...baseIssues, ...fullIssues, ...sentenceIssues];
-  issues.sort((a, b) =>
-    (ISSUE_TYPE_ORDER[a.type] - ISSUE_TYPE_ORDER[b.type]) ||
-    safeLocale(formatCategory(a.category), formatCategory(b.category)) ||
-    (a.priority - b.priority) ||
-    safeLocale(a.basisText, b.basisText) ||
-    safeLocale(a.problemText, b.problemText)
-  );
-
-  return {
-    issues,
-    rowMessages,
-    badRows,
-    summary: {
-      full: fullIssues.length,
-      base: baseIssues.length,
-      sentence: sentenceIssues.length
-    }
-  };
-}
-
-function analyzeColumnCell(preparedRows, fullGroups, tgtColIdx) {
-  const rowMessages = new Map();
-  const badRows = new Set();
-  const fullIssues = analyzeFullGroups(preparedRows, fullGroups, tgtColIdx, true, rowMessages, badRows);
-
-  const issues = [...fullIssues];
-  issues.sort((a, b) =>
-    safeLocale(formatCategory(a.category), formatCategory(b.category)) ||
-    (a.priority - b.priority) ||
-    safeLocale(a.basisText, b.basisText) ||
-    safeLocale(a.problemText, b.problemText)
-  );
-
-  return {
-    issues,
-    rowMessages,
-    badRows,
-    summary: {
-      full: fullIssues.length,
-      base: 0,
-      sentence: 0
-    }
-  };
-}
-
-function analyzeConsistency(rows, headers, srcColIdx, tgtColIdxArr, priorityColIdx, categoryColIdx, mode) {
-  const preparedRows = prepareRows(rows, srcColIdx, priorityColIdx, categoryColIdx, tgtColIdxArr);
-  const { fullGroups, baseGroups } = buildStaticGroups(preparedRows);
-
-  const result = new Map();
-  const globalBad = new Map();
-  const globalRowMap = new Map();
-  const hasPriorityColumn = priorityColIdx >= 0;
-
-  for (const tgtColIdx of tgtColIdxArr) {
-    const tgtColName = headers[tgtColIdx];
-    const colResult = mode === 'auto'
-      ? analyzeColumnAuto(preparedRows, fullGroups, baseGroups, tgtColIdx, hasPriorityColumn)
-      : analyzeColumnCell(preparedRows, fullGroups, tgtColIdx);
-
-    result.set(tgtColName, {
-      issues: colResult.issues,
-      tgtColIdx,
-      summary: colResult.summary
-    });
-
-    mergeBadRows(globalBad, colResult.badRows, tgtColIdx);
-    mergeColRowMessages(globalRowMap, colResult.rowMessages, tgtColIdx);
-  }
-
-  for (const [, colMap] of globalRowMap) {
-    for (const [tgtColIdx, msgs] of colMap) {
-      colMap.set(tgtColIdx, uniq(msgs));
-    }
-  }
-
-  return {
-    result,
-    bad: globalBad,
-    rowMap: globalRowMap
-  };
-}
-
-let dragCounter = 0;
-
-document.addEventListener('dragenter', e => {
-  e.preventDefault();
-  dragCounter++;
-  $('dropOverlay').classList.add('active');
+// ================================================================
+// CONFIG
+// ================================================================
+const PUSH_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbyyEYvCwwTsmlaQwKIUsA00gHbBVNpGiHr_hRUGREUCgcquHH5lY3SHcBTlKU_v6Lqz/exec";
+const PUSH_SECRET = "ryo1234";
+const MSG_LIMIT = 100;
+
+firebase.initializeApp({
+  apiKey:"AIzaSyC6iyCkpqtaWgFXlJZiogn2SgfIz9j1I4M",
+  authDomain:"messenger-222df.firebaseapp.com",
+  databaseURL:"https://messenger-222df-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:"messenger-222df",
+  storageBucket:"messenger-222df.firebasestorage.app",
+  messagingSenderId:"694962613962",
+  appId:"1:694962613962:web:764e45b00345a8a27f4e33"
 });
+const db = firebase.database();
+const SV = firebase.database.ServerValue;
+const NAV_URL = location.origin + location.pathname;
 
-document.addEventListener('dragleave', e => {
-  e.preventDefault();
-  dragCounter--;
-  if (dragCounter <= 0) {
-    dragCounter = 0;
-    $('dropOverlay').classList.remove('active');
-  }
-});
+const LS_NICK = 'chat_nick_fb_v1';
+const LS_NOTI = 'chat_notify_enabled_v1';
+const LS_SOUND = 'chat_beep_enabled_v1';
+const LS_ROOM_AUTH = 'chat_room_auth_v1_';
+const LS_BUBBLE = 'chat_my_bubble_white_v1';
+const LS_ACCOUNT = 'chat_account_v1'; // 계정명 캐시 (자동 로그인 input 복원용)
+const LS_FONT_SIZE = 'chat_font_size_v1';
 
-document.addEventListener('dragover', e => e.preventDefault());
+// ================================================================
+// DOM REFS
+// ================================================================
+const appEl = document.getElementById('app');
+const loginScreen = document.getElementById('loginScreen');
+const loginUserEl = document.getElementById('loginUser');
+const loginPassEl = document.getElementById('loginPass');
+const btnLoginSubmit = document.getElementById('btnLoginSubmit');
+const loginErrorEl = document.getElementById('loginError');
+const lastRoomSection = document.getElementById('lastRoomSection');
+const lastRoomNameEl = document.getElementById('lastRoomName');
+const btnLastRoom = document.getElementById('btnLastRoom');
+const mLogout = document.getElementById('mLogout');
+const header = document.getElementById('header');
+const roomTitle = document.getElementById('roomTitle');
+const roomSub = document.getElementById('roomSub');
+const menuBtn = document.getElementById('menuBtn');
+const menu = document.getElementById('menu');
+const menuHint = document.getElementById('menuHint');
+const mEnableNoti = document.getElementById('mEnableNoti');
+const mEnableNotiState = document.getElementById('mEnableNotiState');
+const mSound = document.getElementById('mSound');
+const mSoundState = document.getElementById('mSoundState');
+const mMyBubbleWhite = document.getElementById('mMyBubbleWhite');
+const mMyBubbleWhiteState = document.getElementById('mMyBubbleWhiteState');
+const mNick = document.getElementById('mNick');
+const mRoomName = document.getElementById('mRoomName');
+const mRoomPass = document.getElementById('mRoomPass');
+const mLeave = document.getElementById('mLeave');
+const mFontDec = document.getElementById('mFontDec');
+const mFontInc = document.getElementById('mFontInc');
+const mFontSizeVal = document.getElementById('mFontSizeVal');
+const home = document.getElementById('home');
+const homeNick = document.getElementById('homeNick');
+const homeRoomName = document.getElementById('homeRoomName');
+const homeUsePass = document.getElementById('homeUsePass');
+const homePassField = document.getElementById('homePassField');
+const homeRoomPass = document.getElementById('homeRoomPass');
+const btnCreate = document.getElementById('btnCreate');
+const btnRefresh = document.getElementById('btnRefresh');
+const btnJoin = document.getElementById('btnJoin');
+const roomList = document.getElementById('roomList');
+const logEl = document.getElementById('log');
+const composer = document.getElementById('composer');
+const inputEl = document.getElementById('input');
+const sendBtn = document.getElementById('send');
+const emojiBtn = document.getElementById('emojiBtn');
+const emojiPanel = document.getElementById('emojiPanel');
+const emojiGrid = document.getElementById('emojiGrid');
+const typingBar = document.getElementById('typingBar');
+const passModal = document.getElementById('passModal');
+const passModalTitle = document.getElementById('passModalTitle');
+const passModalBody = document.getElementById('passModalBody');
+const passModalInput = document.getElementById('passModalInput');
+const passModalOk = document.getElementById('passModalOk');
+const passModalCancel = document.getElementById('passModalCancel');
+const passModalOwnerRow = document.getElementById('passModalOwnerRow');
+const passModalRemove = document.getElementById('passModalRemove');
+const msgCtxMenu = document.getElementById('msgCtxMenu');
+const ctxReply = document.getElementById('ctxReply');
+const ctxEdit = document.getElementById('ctxEdit');
+const ctxDelete = document.getElementById('ctxDelete');
+const quickReactBar = document.getElementById('quickReactBar');
+const replyPreviewEl = document.getElementById('replyPreview');
+const replyPreviewNameEl = document.getElementById('replyPreviewName');
+const replyPreviewMsgEl = document.getElementById('replyPreviewMsg');
+const replyCloseBtn = document.getElementById('replyCloseBtn');
+const toastEl = document.getElementById('toast');
 
-document.addEventListener('drop', e => {
-  e.preventDefault();
-  dragCounter = 0;
-  $('dropOverlay').classList.remove('active');
-  const file = e.dataTransfer?.files?.[0];
-  if (file && /\.(xlsx|xls)$/i.test(file.name)) loadFile(file);
-});
+// ================================================================
+// STATE
+// ================================================================
+let myUid = '';
+let myNick = (localStorage.getItem(LS_NICK) || '').trim();
+let roomId = '';
+let roomName = '';
+let ownerUid = '';
 
-$('fileInput').addEventListener('change', e => {
-  const file = e.target.files?.[0];
-  if (!file) return;
-  e.target.value = '';
-  loadFile(file);
-});
+// ★ 수정: _subId 전역 카운터 대신 구독 토큰 객체 사용
+// 각 subscribeMessages 호출이 고유한 토큰을 가지며,
+// stopMessages() 시 토큰을 무효화하여 오래된 콜백을 안전하게 차단
+let _msgRef = null;
+let _msgToken = null; // { alive: true/false } — 현재 활성 구독 토큰
 
-function loadFile(file) {
-  const reader = new FileReader();
-  reader.onload = ev => {
-    try {
-      const wb = XLSX.read(new Uint8Array(ev.target.result), { type: 'array' });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+// Presence
+let _presRef = null;
+let _presInterval = null;
+let _presListenRef = null;
 
-      if (!raw.length) {
-        alert('데이터가 없습니다.');
-        return;
-      }
+// Typing
+let _typRef = null;
+let _typInterval = null;
+let _typListenRef = null;
+let _lastTypeAt = 0;
+let _typingOn = false;
+let _typInputHandler = null;
+let _typFocusHandler = null;
+let _typBlurHandler = null;
+let _typUnloadHandler = null;
 
-      const maxCols = Math.max(...raw.map(r => r.length), 0);
-      headers = raw[0].map((h, i) => cellStr(h) || `열${i + 1}`);
-      while (headers.length < maxCols) headers.push(`열${headers.length + 1}`);
+// Reads
+let _readsRef = null;
+let _readsInterval = null;
+let _readsCache = {};
+let _readsScrollHandler = null;
+let _readsVisHandler = null;
+let _readsFocusHandler = null;
 
-      dataRows = raw.slice(1).map(r => {
-        const p = [...r];
-        while (p.length < headers.length) p.push('');
-        return p;
-      });
+// Reactions — single room-level watcher
+let _rxRoomRef = null;
+let _rxRoomCache = {};
+let _rxCallbacks = new Map();
 
-      $('fileNameBadge').textContent = file.name;
-      $('statRows').style.display = '';
-      $('statRowsText').textContent = `${dataRows.length}행`;
-      $('setupArea').classList.remove('hidden');
-      $('analyzeBtn').disabled = false;
+// Message state
+const seen = new Map();
+const pending = new Map();
+let afterSeq = 0;
 
-      populateColumnSelectors();
+// Unread / notifications
+let unread = 0;
+let _titleTimer = null;
+let notifyEnabled = (localStorage.getItem(LS_NOTI) === '1');
+let soundEnabled  = (localStorage.getItem(LS_SOUND) === '1');
+let myBubbleWhite = (localStorage.getItem(LS_BUBBLE) === '1');
+let chatFontSize  = Math.min(24, Math.max(6, parseInt(localStorage.getItem(LS_FONT_SIZE)||'16',10)));
+let onlineNicksCache = [];
+let currentReplyTo = null;
 
-      analysisResult = null;
-      badSet = null;
-      resultMap = null;
+// Context menu
+let ctxMid = null, ctxSenderId = null, ctxWrap = null, ctxBubble = null;
 
-      $('statIssue').textContent = '불일치 0';
-      $('downloadBtn').disabled = true;
-      $('emptyState').style.display = '';
-      $('issueArea').style.display = 'none';
-      $('issueArea').innerHTML = '';
-    } catch (err) {
-      alert('파일을 읽지 못했습니다: ' + err.message);
-    }
-  };
-  reader.readAsArrayBuffer(file);
+// enterRoom 중복 진입 방지 플래그
+let _enteringRoom = false;
+
+// ================================================================
+// UTILS
+// ================================================================
+function uuid() { return (crypto && crypto.randomUUID) ? crypto.randomUUID() : 'u' + Date.now() + Math.random().toString(16).slice(2); }
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fmt(ts) {
+  try { return new Intl.DateTimeFormat('ko-KR', {month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit'}).format(new Date(ts)); }
+  catch(e) { return new Date(ts).toLocaleString(); }
 }
+function isIOS() { return /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1); }
+function isPWA() { return (navigator.standalone===true) || (window.matchMedia && matchMedia('(display-mode:standalone)').matches); }
+function inFrame() { try { return window.top !== window.self; } catch(e) { return true; } }
+function getRoomUrlId() { return (new URLSearchParams(location.search).get('roomId') || '').trim(); }
 
-function populateColumnSelectors() {
-  const priDetected = detectHeaderIndex(PRIORITY_HEADER_HINTS);
-  const catDetected = detectHeaderIndex(CATEGORY_HEADER_HINTS);
-
-  let defaultSrc = headers.findIndex((_, i) => i !== priDetected && i !== catDetected);
-  if (defaultSrc < 0) defaultSrc = 0;
-
-  const srcSel = $('srcColSelect');
-  srcSel.innerHTML = '';
-  headers.forEach((h, i) => {
-    const opt = document.createElement('option');
-    opt.value = i;
-    opt.textContent = h;
-    srcSel.appendChild(opt);
-  });
-  srcSel.value = String(defaultSrc);
-
-  const priSel = $('priorityColSelect');
-  priSel.innerHTML = '<option value="">사용 안 함</option>';
-  headers.forEach((h, i) => {
-    const opt = document.createElement('option');
-    opt.value = i;
-    opt.textContent = h;
-    priSel.appendChild(opt);
-  });
-  if (priDetected >= 0) priSel.value = String(priDetected);
-
-  const catSel = $('categoryColSelect');
-  catSel.innerHTML = '<option value="">사용 안 함</option>';
-  headers.forEach((h, i) => {
-    const opt = document.createElement('option');
-    opt.value = i;
-    opt.textContent = h;
-    catSel.appendChild(opt);
-  });
-  if (catDetected >= 0) catSel.value = String(catDetected);
-
-  const msItems = $('msItems');
-  msItems.innerHTML = '';
-  headers.forEach((h, i) => {
-    const item = document.createElement('div');
-    item.className = 'ms-item';
-    item.dataset.idx = i;
-    item.innerHTML = `<span class="ms-check"></span><span class="ms-name">${escHtml(h)}</span>`;
-    item.addEventListener('click', () => {
-      if (item.classList.contains('disabled')) return;
-      item.classList.toggle('on');
-      item.querySelector('.ms-check').textContent = item.classList.contains('on') ? '✓' : '';
-      syncMsAllState();
-      updateMsBtnLabel();
-    });
-    msItems.appendChild(item);
-  });
-
-  msAllState = false;
-  $('msAllBtn').textContent = '전체 선택';
-  refreshMsDisabledStates();
-  updateMsBtnLabel();
-}
-
-function refreshMsDisabledStates() {
-  const excluded = getExcludedColIdxSet();
-  $('msItems').querySelectorAll('.ms-item').forEach(item => {
-    const idx = parseInt(item.dataset.idx, 10);
-    const disabled = excluded.has(idx);
-    item.classList.toggle('disabled', disabled);
-    if (disabled) {
-      item.classList.remove('on');
-      item.querySelector('.ms-check').textContent = '';
-    }
-  });
-  syncMsAllState();
-  updateMsBtnLabel();
-}
-
-function updateMsBtnLabel() {
-  const selected = [...$('msItems').querySelectorAll('.ms-item.on')];
-  const label = $('msBtnLabel');
-
-  if (!selected.length) {
-    label.textContent = '열을 선택하세요';
-    $('msBtn').style.color = 'var(--muted)';
-  } else if (selected.length === 1) {
-    label.textContent = selected[0].querySelector('.ms-name').textContent;
-    $('msBtn').style.color = 'var(--warn)';
-  } else {
-    label.textContent = `${selected.length}개 열 선택됨`;
-    $('msBtn').style.color = 'var(--warn)';
-  }
-}
-
-function syncMsAllState() {
-  const items = [...$('msItems').querySelectorAll('.ms-item:not(.disabled)')];
-  const onItems = items.filter(item => item.classList.contains('on'));
-  msAllState = items.length > 0 && onItems.length === items.length;
-  $('msAllBtn').textContent = msAllState ? '전체 해제' : '전체 선택';
-}
-
-$('srcColSelect').addEventListener('change', refreshMsDisabledStates);
-$('priorityColSelect').addEventListener('change', refreshMsDisabledStates);
-$('categoryColSelect').addEventListener('change', refreshMsDisabledStates);
-
-$('msBtn').addEventListener('click', e => {
-  e.stopPropagation();
-  const open = $('msPanel').classList.toggle('open');
-  $('msBtn').classList.toggle('open', open);
-});
-
-document.addEventListener('click', e => {
-  if (!$('msWrap').contains(e.target)) {
-    $('msPanel').classList.remove('open');
-    $('msBtn').classList.remove('open');
-  }
-});
-
-$('msAllBtn').addEventListener('click', () => {
-  msAllState = !msAllState;
-  $('msAllBtn').textContent = msAllState ? '전체 해제' : '전체 선택';
-
-  $('msItems').querySelectorAll('.ms-item').forEach(item => {
-    if (item.classList.contains('disabled')) return;
-    if (msAllState) {
-      item.classList.add('on');
-      item.querySelector('.ms-check').textContent = '✓';
+// ================================================================
+// APP BADGE — iOS PWA(16.4+) 및 안드로이드 PWA 배지 지원
+// ================================================================
+function setAppBadge(n) {
+  try {
+    if (!('setAppBadge' in navigator)) return;
+    if (n > 0) {
+      navigator.setAppBadge(Math.min(n, 99)).catch(() => {});
     } else {
-      item.classList.remove('on');
-      item.querySelector('.ms-check').textContent = '';
+      navigator.clearAppBadge().catch(() => {});
     }
-  });
+  } catch(e) {}
+}
 
-  updateMsBtnLabel();
+// ================================================================
+// PUSH
+// ================================================================
+function pushToSubs(ids, title, body, rid, badgeCount) {
+  if (!ids.length || !PUSH_WEBHOOK_URL) return;
+  try {
+    fetch(PUSH_WEBHOOK_URL, {
+      method:'POST', mode:'no-cors',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({
+        secret: PUSH_SECRET,
+        include_subscription_ids: ids.slice(0, 2000),
+        title: String(title || 'Chat').slice(0, 100),
+        body: String(body || '').slice(0, 200),
+        url: NAV_URL + '?roomId=' + encodeURIComponent(rid),
+        // ★ iOS 아이콘 배지: 누적 증가 방식
+        ios_badgeType: 'Increase',
+        ios_badgeCount: 1,
+        // 안드로이드 배지
+        android_badge_count: typeof badgeCount === 'number' ? badgeCount : 1
+      })
+    }).catch(() => {});
+  } catch(e) {}
+}
+
+// ================================================================
+// AUTH — 계정 기반 Firebase Email/Password Auth
+// ================================================================
+
+// 계정명을 Firebase Email 형식으로 변환 (한글/특수문자 지원)
+function usernameToEmail(username) {
+  try {
+    const bytes = new TextEncoder().encode(username.toLowerCase().trim());
+    let binary = '';
+    bytes.forEach(b => binary += String.fromCharCode(b));
+    const b64 = btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    return b64.slice(0, 50) + '@chatapp.local';
+  } catch(e) {
+    return username.toLowerCase().replace(/[^a-z0-9]/g, '') + '@chatapp.local';
+  }
+}
+
+// 로그인 시도 → 없으면 자동 회원가입
+async function loginOrRegister(username, password) {
+  const email = usernameToEmail(username);
+  // 1차: 로그인 시도
+  try {
+    const cred = await firebase.auth().signInWithEmailAndPassword(email, password);
+    return { ok: true, uid: cred.user.uid };
+  } catch(signInErr) {
+    const code = signInErr.code || '';
+    // 계정 없음 → 회원가입
+    if (code === 'auth/user-not-found' || code === 'auth/invalid-credential' || code === 'auth/invalid-email') {
+      try {
+        const cred = await firebase.auth().createUserWithEmailAndPassword(email, password);
+        return { ok: true, uid: cred.user.uid };
+      } catch(createErr) {
+        const cc = createErr.code || '';
+        if (cc === 'auth/weak-password') return { ok: false, error: '비밀번호는 6자 이상이어야 합니다.' };
+        if (cc === 'auth/email-already-in-use') return { ok: false, error: '비밀번호가 올바르지 않습니다.' };
+        return { ok: false, error: '가입 실패: ' + (createErr.message || cc) };
+      }
+    }
+    if (code === 'auth/wrong-password' || code === 'auth/invalid-login-credentials') {
+      return { ok: false, error: '비밀번호가 올바르지 않습니다.' };
+    }
+    if (code === 'auth/too-many-requests') {
+      return { ok: false, error: '잠시 후 다시 시도해 주세요.' };
+    }
+    return { ok: false, error: signInErr.message || '로그인 실패' };
+  }
+}
+
+// 현재 Firebase 세션 확인 (앱 시작 시)
+function waitForAuth() {
+  return new Promise((resolve) => {
+    const unsub = firebase.auth().onAuthStateChanged(user => {
+      unsub();
+      if (user && user.uid) {
+        myUid = user.uid;
+        resolve(true);
+      } else {
+        resolve(false);
+      }
+    });
+    setTimeout(() => resolve(false), 8000);
+  });
+}
+
+// ================================================================
+// PASSWORD
+// ================================================================
+function _rAuthKey(rid) { return LS_ROOM_AUTH + rid; }
+function getRoomAuth(rid) { try { return JSON.parse(localStorage.getItem(_rAuthKey(rid)) || ''); } catch(e) { return null; } }
+function setRoomAuth(rid, o) { try { localStorage.setItem(_rAuthKey(rid), JSON.stringify(o)); } catch(e) {} }
+function clearRoomAuth(rid) { try { localStorage.removeItem(_rAuthKey(rid)); } catch(e) {} }
+function randHex(n) {
+  const u = new Uint8Array(n);
+  try { crypto.getRandomValues(u); } catch(e) { u.forEach((_,i)=>u[i]=Math.floor(Math.random()*256)); }
+  return Array.from(u).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+async function sha256(s) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+async function hashPass(pass, salt) { return sha256('roompass|' + pass + '|' + salt); }
+
+let _modalRes = null;
+function openPassModal(opts) {
+  return new Promise(resolve => {
+    _modalRes = resolve;
+    const o = opts || {};
+    passModalTitle.textContent = o.title || '비밀번호';
+    passModalBody.textContent = o.body || '';
+    passModalInput.placeholder = o.placeholder || '비밀번호';
+    passModalOk.textContent = o.okText || '확인';
+    passModalOwnerRow.style.display = o.showRemove ? 'flex' : 'none';
+    passModal.classList.add('open');
+    passModal.setAttribute('aria-hidden', 'false');
+    setTimeout(() => { try { passModalInput.focus(); } catch(e) {} }, 50);
+  });
+}
+function closePassModal(r) {
+  passModal.classList.remove('open');
+  passModal.setAttribute('aria-hidden', 'true');
+  passModalInput.value = '';
+  passModalOwnerRow.style.display = 'none';
+  const fn = _modalRes; _modalRes = null;
+  if (fn) fn(r);
+}
+passModalCancel.addEventListener('click', () => closePassModal(null));
+passModalOk.addEventListener('click', () => closePassModal({action:'ok', value: passModalInput.value}));
+passModalRemove.addEventListener('click', () => closePassModal({action:'remove'}));
+passModal.addEventListener('click', e => { if (e.target === passModal) closePassModal(null); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && passModal.classList.contains('open')) closePassModal(null); });
+
+async function ensureRoomAccess(info) {
+  if (!info || !info.passEnabled) return true;
+  const rid = info.roomId, ver = info.passVer, hash = info.passHash, salt = info.passSalt;
+  if (!hash) return true;
+  const saved = getRoomAuth(rid);
+  if (saved && saved.ver === ver && saved.hash === hash) return true;
+  for (let i = 0; i < 3; i++) {
+    const res = await openPassModal({title:'비밀번호 입력', body:'이 방은 비밀번호가 필요합니다.', okText:'입장'});
+    if (!res) return false;
+    const pw = (res.value || '').trim();
+    if (!pw) { alert('비밀번호를 입력해 주세요.'); continue; }
+    if (await hashPass(pw, salt) === hash) { setRoomAuth(rid, {ver, hash, at: Date.now()}); return true; }
+    alert('비밀번호가 올바르지 않습니다.');
+  }
+  return false;
+}
+async function setRoomPassword(rid, pass) {
+  const salt = randHex(16);
+  const hash = await hashPass(pass, salt);
+  const tx = await db.ref('rooms/'+rid+'/passVer').transaction(v => (Number(v||0)+1));
+  const ver = Number((tx && tx.snapshot && tx.snapshot.val()) || 1);
+  await db.ref('rooms/'+rid).update({passEnabled:true, passSalt:salt, passHash:hash, passVer:ver, updatedAt:SV.TIMESTAMP});
+  setRoomAuth(rid, {ver, hash, at:Date.now()});
+}
+async function removeRoomPassword(rid) {
+  const tx = await db.ref('rooms/'+rid+'/passVer').transaction(v => (Number(v||0)+1));
+  const ver = Number((tx && tx.snapshot && tx.snapshot.val()) || 1);
+  await db.ref('rooms/'+rid).update({passEnabled:false, passSalt:null, passHash:null, passVer:ver, updatedAt:SV.TIMESTAMP});
+  clearRoomAuth(rid);
+}
+
+// ================================================================
+// VIEWPORT / KEYBOARD
+// ================================================================
+function syncViewH() {}
+let _lastVvH = 0;
+function updateKb() {
+  if (!window.visualViewport) { document.documentElement.style.setProperty('--kb','0px'); document.documentElement.style.setProperty('--safeBComp','env(safe-area-inset-bottom,0px)'); return; }
+  const vv = window.visualViewport;
+  if (Math.abs(vv.height - _lastVvH) < 20) return;
+  _lastVvH = vv.height;
+  const kb = Math.max(0, Math.round(window.innerHeight - vv.height));
+  document.documentElement.style.setProperty('--kb', kb+'px');
+  document.documentElement.style.setProperty('--safeBComp', kb>80 ? '0px' : 'env(safe-area-inset-bottom,0px)');
+}
+function refreshLayout() { updateKb(); requestAnimationFrame(updateKb); [60,140,260,420].forEach(t => setTimeout(updateKb, t)); }
+if (window.visualViewport) { window.visualViewport.addEventListener('resize', updateKb); }
+window.addEventListener('resize', refreshLayout);
+window.addEventListener('orientationchange', () => setTimeout(refreshLayout, 180));
+refreshLayout();
+
+// ================================================================
+// AUDIO
+// ================================================================
+let _actx = null, _audioReady = false;
+const BEEP = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=";
+async function unlockAudio() {
+  try { if (!_actx) _actx = new (window.AudioContext||window.webkitAudioContext)(); if (_actx.state!=='running') await _actx.resume(); _audioReady=true; } catch(e) { _audioReady=false; }
+  try { const a=new Audio(BEEP); a.playsInline=true; await a.play(); a.pause(); } catch(e) {}
+}
+function playBeep() {
+  if (!soundEnabled) return;
+  if (_actx && _audioReady) {
+    try {
+      const o=_actx.createOscillator(), g=_actx.createGain();
+      o.type='sine'; o.frequency.value=880; g.gain.value=0.0001;
+      o.connect(g); g.connect(_actx.destination);
+      const t=_actx.currentTime;
+      g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.15,t+.01); g.gain.exponentialRampToValueAtTime(0.0001,t+.18);
+      o.start(t); o.stop(t+.2); return;
+    } catch(e) {}
+  }
+  try { const a=new Audio(BEEP); a.playsInline=true; a.play().catch(()=>{}); } catch(e) {}
+}
+
+// ================================================================
+// TITLE BLINK / UNREAD
+// ================================================================
+function startBlink() {
+  if (_titleTimer) return;
+  let f=false;
+  _titleTimer = setInterval(() => {
+    if (!document.hidden && document.hasFocus()) { stopBlink(); return; }
+    if (unread<=0) { stopBlink(); return; }
+    document.title = (f=!f) ? `(${unread}) 새 메시지` : 'Chat';
+  }, 900);
+}
+function stopBlink() { if (_titleTimer) { clearInterval(_titleTimer); _titleTimer=null; } document.title='Chat'; }
+function bumpUnread() {
+  unread = Math.min(999, unread+1);
+  setAppBadge(unread);
+  if (document.hidden || !document.hasFocus()) startBlink(); else stopBlink();
+  setHeader();
+}
+function clearUnread() {
+  unread=0;
+  setAppBadge(0);
+  stopBlink();
+  setHeader();
+  // ★ OneSignal 배지도 함께 초기화 (앱 열었을 때 배지 클리어)
+  try {
+    if (window.__OS && window.__OS.Notifications) {
+      window.__OS.Notifications.setBadgeCount && window.__OS.Notifications.setBadgeCount(0);
+    }
+  } catch(e) {}
+}
+
+window.addEventListener('focus', () => { if (roomId) clearUnread(); firebase.database().goOnline(); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden && roomId) clearUnread(); });
+
+// ================================================================
+// NOTIFICATION
+// ================================================================
+function notifyMsg(msg) {
+  try {
+    if (!notifyEnabled || !('Notification' in window) || Notification.permission!=='granted') return;
+    const n = new Notification(roomName||'채팅', {
+      body: `${msg.senderNick||'상대'}: ${String(msg.text||'').slice(0,140)}`,
+      tag: 'room_'+(roomId||''), renotify: true,
+      badge: '/icon-badge.png' // PWA 배지 아이콘 (있을 경우)
+    });
+    n.onclick = () => { try { window.focus(); } catch(e) {} };
+  } catch(e) {}
+}
+
+// ================================================================
+// MENU / THEME
+// ================================================================
+function applyBubbleTheme() {
+  document.documentElement.style.setProperty('--me', myBubbleWhite ? '#ffffff' : '#374151');
+  document.documentElement.style.setProperty('--meText', myBubbleWhite ? '#111827' : '#ffffff');
+}
+applyBubbleTheme();
+
+function applyFontSize() {
+  document.documentElement.style.setProperty('--bubbleFontSize', chatFontSize+'px');
+  mFontSizeVal.textContent = chatFontSize;
+  mFontDec.disabled = chatFontSize <= 6;
+  mFontInc.disabled = chatFontSize >= 24;
+}
+applyFontSize();
+
+function updateMenuStates() {
+  const nosup = isIOS() && !isPWA();
+  let notiTxt = '꺼짐';
+  if (nosup || !('Notification' in window)) notiTxt='미지원';
+  else if (Notification.permission==='denied') notiTxt='차단됨';
+  else if (Notification.permission==='granted' && notifyEnabled) notiTxt='켜짐';
+  else if (Notification.permission==='default') notiTxt='요청 필요';
+  mEnableNotiState.textContent = notiTxt;
+  mSoundState.textContent = soundEnabled ? '켜짐':'꺼짐';
+  mMyBubbleWhiteState.textContent = myBubbleWhite ? '켜짐':'꺼짐';
+  menuHint.textContent = `도메인: ${location.hostname}${nosup?'\niPhone Safari: PWA(홈 화면 추가) 필요':''}`;
+}
+
+menuBtn.addEventListener('click', () => menu.classList.toggle('open'));
+document.addEventListener('click', e => { if (!menuBtn.contains(e.target) && !menu.contains(e.target)) menu.classList.remove('open'); });
+function closeMenu() { menu.classList.remove('open'); }
+
+mEnableNoti.addEventListener('click', async () => {
+  closeMenu();
+  if (isIOS() && !isPWA()) { alert('iPhone Safari에서는 알림 미지원입니다.\n홈 화면에 추가(PWA) 후 사용 가능합니다.'); return; }
+  if (!('Notification' in window)) { alert('이 브라우저는 알림을 지원하지 않습니다.'); return; }
+  if (inFrame()) { alert('임베드 페이지에서는 알림 권한 요청이 차단됩니다.\n새 탭에서 열어 주세요.'); return; }
+  const p = await Notification.requestPermission();
+  if (p==='granted') {
+    notifyEnabled=true; localStorage.setItem(LS_NOTI,'1'); await unlockAudio();
+    try { if (window.__OS) { window.__OS.User.PushSubscription.optIn(); window.__schedulePushSync && window.__schedulePushSync(); } } catch(e) {}
+    updateMenuStates(); alert('알림이 켜졌습니다.');
+  } else { notifyEnabled=false; localStorage.setItem(LS_NOTI,'0'); updateMenuStates(); alert(p==='denied'?'알림이 차단되어 있습니다. 브라우저 설정에서 허용해 주세요.':'알림이 허용되지 않았습니다.'); }
+});
+mSound.addEventListener('click', async () => {
+  closeMenu(); soundEnabled=!soundEnabled; localStorage.setItem(LS_SOUND,soundEnabled?'1':'0');
+  if (soundEnabled) { await unlockAudio(); playBeep(); }
+  updateMenuStates();
+});
+mMyBubbleWhite.addEventListener('click', () => {
+  closeMenu(); myBubbleWhite=!myBubbleWhite; localStorage.setItem(LS_BUBBLE,myBubbleWhite?'1':'0');
+  applyBubbleTheme(); updateMenuStates();
+});
+mFontDec.addEventListener('click', e => {
+  e.stopPropagation();
+  if (chatFontSize > 6) { chatFontSize -= 1; localStorage.setItem(LS_FONT_SIZE, chatFontSize); applyFontSize(); }
+});
+mFontInc.addEventListener('click', e => {
+  e.stopPropagation();
+  if (chatFontSize < 24) { chatFontSize += 1; localStorage.setItem(LS_FONT_SIZE, chatFontSize); applyFontSize(); }
 });
 
-$('analyzeBtn').addEventListener('click', doAnalyze);
+// ================================================================
+// HEADER / NICK
+// ================================================================
+function setNick(n) { myNick=String(n||'').trim(); if(!myNick) return false; localStorage.setItem(LS_NICK,myNick); return true; }
+function setHeader(nicks) {
+  if (Array.isArray(nicks)) onlineNicksCache=nicks;
+  roomTitle.textContent = roomName||'채팅방';
+  const onl = onlineNicksCache.length ? onlineNicksCache.join(', ') : '없음';
+  const unr = unread>0 ? `<span class="pill">새 메시지 ${unread}개</span>` : '';
+  roomSub.innerHTML = `<span class="pill">나: ${esc(myNick)}</span><span class="pill">온라인: ${esc(onl)}</span>${unr}`;
+  updateMenuStates();
+}
 
-function doAnalyze() {
-  const srcColIdx = getSrcColIdx();
-  const priorityColIdx = getOptionalColIdx('priorityColSelect');
-  const categoryColIdx = getOptionalColIdx('categoryColSelect');
-  const tgtColIdxArr = getTgtColIdxArr();
+// ================================================================
+// SCROLL
+// ================================================================
+function isNearBottom() { return (logEl.scrollHeight - logEl.scrollTop - logEl.clientHeight) < 150; }
+function scrollToBottom(force) { if (force || isNearBottom()) logEl.scrollTop = logEl.scrollHeight; }
+function shouldNotify() { return document.hidden || !document.hasFocus() || !isNearBottom(); }
 
-  if (!tgtColIdxArr.length) {
-    alert('비교 열을 하나 이상 선택해 주세요.');
+// ================================================================
+// TYPING BAR
+// ================================================================
+function showTyping(text) {
+  if (!text) { typingBar.style.display='none'; typingBar.textContent=''; typingBar.setAttribute('aria-hidden','true'); return; }
+  typingBar.style.display='flex'; typingBar.textContent=text; typingBar.setAttribute('aria-hidden','false');
+}
+
+// ================================================================
+// LINK PREVIEW & LINKIFY
+// ================================================================
+function extractUrl(t) { try { const m=String(t||'').match(/https?:\/\/[^\s]+/); return m?m[0]:null; } catch(e){return null;} }
+function linkifyText(text) {
+  const frag=document.createDocumentFragment();
+  const re=/(https?:\/\/[^\s]+)/g;
+  let last=0, m;
+  while((m=re.exec(text))!==null){
+    if(m.index>last) frag.appendChild(document.createTextNode(text.slice(last,m.index)));
+    const a=document.createElement('a');
+    a.href=m[0]; a.target='_blank'; a.rel='noopener noreferrer'; a.className='msgLink'; a.textContent=m[0];
+    a.addEventListener('click',e=>e.stopPropagation());
+    frag.appendChild(a); last=m.index+m[0].length;
+  }
+  if(last<text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+  return frag;
+}
+async function renderLinkPreview(url, container) {
+  try {
+    const res = await fetch('https://api.allorigins.win/get?url='+encodeURIComponent(url), {signal:AbortSignal.timeout(5000)});
+    if (!res.ok) return;
+    const {contents} = await res.json();
+    const doc = new DOMParser().parseFromString(contents||'','text/html');
+    const gm = p => { const el=doc.querySelector(`meta[property="${p}"],meta[name="${p}"]`); return el?el.getAttribute('content'):''; };
+    const title = gm('og:title')||doc.title||''; if (!title) return;
+    const desc=gm('og:description')||gm('description')||'', img=gm('og:image')||'', site=gm('og:site_name')||(new URL(url)).hostname;
+    const a=document.createElement('a'); a.className='linkPreview'; a.href=url; a.target='_blank'; a.rel='noopener noreferrer';
+    if (img) { const im=document.createElement('img'); im.className='lpImg'; im.src=img; im.alt=''; im.onerror=()=>im.remove(); a.appendChild(im); }
+    const b=document.createElement('div'); b.className='lpBody';
+    b.innerHTML=`<div class="lpSite">${esc(site)}</div><div class="lpTitle">${esc(title)}</div>${desc?`<div class="lpDesc">${esc(desc)}</div>`:''}`;
+    a.appendChild(b); container.appendChild(a);
+  } catch(e) {}
+}
+
+// ================================================================
+// REACTIONS — 방 단위 단일 구독
+// ================================================================
+function initRxWatcher(rid) {
+  stopRxWatcher();
+  _rxCallbacks.clear(); _rxRoomCache={};
+  _rxRoomRef = db.ref('reactions/'+rid);
+  _rxRoomRef.on('value', snap => {
+    _rxRoomCache = snap.val()||{};
+    _rxCallbacks.forEach((cb,mid) => { try { cb(_rxRoomCache[mid]||{}); } catch(e){} });
+  });
+}
+function stopRxWatcher() {
+  if (_rxRoomRef) { try{_rxRoomRef.off();}catch(e){} _rxRoomRef=null; }
+  _rxRoomCache={}; _rxCallbacks.clear();
+}
+function watchRx(mid, bar) {
+  const cb = data => {
+    bar.innerHTML='';
+    const tally={}, mine={};
+    Object.entries(data).forEach(([uid,e])=>{ tally[e]=(tally[e]||0)+1; if(uid===myUid)mine[e]=1; });
+    Object.entries(tally).forEach(([e,n])=>{
+      const c=document.createElement('div'); c.className='reactChip'+(mine[e]?' mine':'');
+      c.innerHTML=`${e} <span class="reactCount">${n}</span>`;
+      c.addEventListener('click',()=>toggleRx(mid,e)); bar.appendChild(c);
+    });
+    scrollToBottom(false);
+  };
+  _rxCallbacks.set(mid, cb);
+  cb(_rxRoomCache[mid]||{});
+}
+async function toggleRx(mid, emoji) {
+  const ref=db.ref('reactions/'+roomId+'/'+mid+'/'+myUid);
+  const snap=await ref.once('value');
+  snap.val()===emoji ? await ref.remove() : await ref.set(emoji);
+}
+
+// ================================================================
+// MESSAGE RENDER
+// ================================================================
+function buildQuoteEl(replyTo) {
+  const q=document.createElement('div'); q.className='replyQuote';
+  const n=document.createElement('div'); n.className='replyQuoteName'; n.textContent=replyTo.nick||'';
+  q.appendChild(n);
+  if (replyTo.imageUrl) {
+    const row=document.createElement('div'); row.className='replyQuoteRow';
+    const thumb=document.createElement('img'); thumb.className='replyQuoteImg'; thumb.src=replyTo.imageUrl; thumb.alt='사진';
+    const label=document.createElement('span'); label.className='replyQuoteText'; label.textContent=replyTo.text?String(replyTo.text).slice(0,60):'📷 사진';
+    row.appendChild(thumb); row.appendChild(label); q.appendChild(row);
+  } else {
+    const t=document.createElement('div'); t.className='replyQuoteText'; t.textContent=String(replyTo.text||'').slice(0,80);
+    q.appendChild(t);
+  }
+  q.addEventListener('click',()=>{
+    const el=logEl.querySelector('[data-mid="'+CSS.escape(replyTo.mid||'')+'"]');
+    if(el){el.scrollIntoView({behavior:'smooth',block:'center'});el.style.background='rgba(34,197,94,.08)';setTimeout(()=>el.style.background='',1200);}
+  });
+  return q;
+}
+function rebuildBubble(bubble, m) {
+  bubble.innerHTML='';
+  if (m.deleted){bubble.className='bubble deletedBubble';bubble.textContent='삭제된 메시지입니다.';return;}
+  bubble.className='bubble';
+  if (m.replyTo&&(m.replyTo.text||m.replyTo.imageUrl)) bubble.appendChild(buildQuoteEl(m.replyTo));
+  if (m.imageUrl==='__uploading__') {
+    const d=document.createElement('div');d.className='imgUploading';
+    const sp=document.createElement('div');sp.className='imgUploadSpinner';
+    const tx=document.createElement('span');tx.textContent='업로드 중...';
+    d.appendChild(sp);d.appendChild(tx);bubble.appendChild(d);
+  } else if (m.imageUrl) {
+    const a=document.createElement('a');a.className='imgMsg';a.href=m.imageUrl;a.target='_blank';a.rel='noopener noreferrer';
+    const img=document.createElement('img');img.src=m.imageUrl;img.alt='사진';img.loading='lazy';
+    img.addEventListener('click',e=>{e.preventDefault();const ov=document.createElement('div');ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:999;display:flex;align-items:center;justify-content:center;cursor:zoom-out';const fi=document.createElement('img');fi.src=m.imageUrl;fi.style.cssText='max-width:94vw;max-height:90vh;border-radius:10px;object-fit:contain';ov.appendChild(fi);ov.addEventListener('click',()=>ov.remove());document.body.appendChild(ov);});
+    a.appendChild(img);bubble.appendChild(a);
+    if (m.text) { bubble.appendChild(document.createElement('br')); bubble.appendChild(linkifyText(String(m.text))); }
+  } else {
+    bubble.appendChild(linkifyText(String(m.text||'')));
+  }
+  if (m.edited){const em=document.createElement('span');em.className='editedMark';em.textContent='(수정됨)';bubble.appendChild(em);}
+}
+
+function renderMessage(m, isPending) {
+  if (seen.has(m.messageId)) return;
+  const mine = m.senderId === myUid;
+
+  const wrap=document.createElement('div'); wrap.className='msg'; wrap.dataset.mid=m.messageId;
+  const row=document.createElement('div'); row.className='row '+(mine?'me':'other');
+  const bubble=document.createElement('div'); rebuildBubble(bubble,m);
+
+  if (!isPending && !m.deleted && !m.imageUrl) {
+    const url=extractUrl(String(m.text||'')); if(url) renderLinkPreview(url,wrap);
+  }
+  row.appendChild(bubble); wrap.appendChild(row);
+
+  const rxBar=document.createElement('div'); rxBar.className='reactionsBar';
+  const rxAlign=document.createElement('div');
+  rxAlign.style.cssText=mine?'display:flex;justify-content:flex-end':'display:flex;justify-content:flex-start';
+  rxAlign.appendChild(rxBar); wrap.appendChild(rxAlign);
+  if (!isPending && !m.deleted) watchRx(m.messageId, rxBar);
+
+  const meta=document.createElement('div'); meta.className='meta'+(mine?' me':'');
+  const who=document.createElement('span'); who.textContent=m.senderNick||'';
+  const time=document.createElement('span'); time.textContent=fmt(m.ts||Date.now());
+  meta.appendChild(who); meta.appendChild(time);
+  if (mine && isPending) { const b=document.createElement('span');b.className='badgePending';b.textContent='전송 중';meta.appendChild(b); }
+  wrap.appendChild(meta);
+
+  if (!m.deleted) {
+    let lt=null;
+    const ctx=(e)=>{e.preventDefault();openCtx(m.messageId,m.senderId,wrap,bubble);};
+    wrap.addEventListener('contextmenu',ctx);
+    wrap.addEventListener('touchstart',()=>{lt=setTimeout(()=>openCtx(m.messageId,m.senderId,wrap,bubble),550);},{passive:true});
+    wrap.addEventListener('touchend',()=>clearTimeout(lt));
+    wrap.addEventListener('touchmove',()=>clearTimeout(lt));
+  }
+
+  logEl.appendChild(wrap);
+  seen.set(m.messageId, {seq:Number(m.seq||0),metaEl:meta,senderId:m.senderId,wrapEl:wrap,bubbleEl:bubble,text:String(m.text||''),replyTo:m.replyTo||null,imageUrl:m.imageUrl||null});
+}
+
+function applyMsgUpdate(m) {
+  const obj=seen.get(m.messageId); if(!obj) return;
+  rebuildBubble(obj.bubbleEl, {text:String(m.text||''),deleted:!!m.deleted,edited:!!m.edited,replyTo:obj.replyTo||null,imageUrl:obj.imageUrl||null});
+  obj.text=String(m.text||'');
+}
+
+function mergeServerMsg(m) {
+  const wasPending=pending.has(m.messageId);
+  if (!seen.has(m.messageId)) {
+    renderMessage(m,false);
+  } else if (wasPending) {
+    const obj=seen.get(m.messageId);
+    if (obj&&obj.bubbleEl&&!m.deleted) {
+      rebuildBubble(obj.bubbleEl,m);
+      const url=extractUrl(String(m.text||'')); if(url) renderLinkPreview(url,obj.wrapEl);
+      const rxBar=obj.wrapEl&&obj.wrapEl.querySelector('.reactionsBar');
+      if(rxBar) watchRx(m.messageId,rxBar);
+    }
+  }
+  if (wasPending) pending.delete(m.messageId);
+  const obj=seen.get(m.messageId);
+  if (obj) {
+    obj.seq=Number(m.seq||obj.seq||0);
+    if (m.text!==undefined) obj.text=String(m.text||'');
+    if (m.replyTo!==undefined) obj.replyTo=m.replyTo||null;
+    if (m.imageUrl!==undefined) obj.imageUrl=m.imageUrl||null;
+  }
+  updateBadges(); updateReadBadges();
+}
+
+function updateBadges() {
+  for (const [mid,obj] of seen) {
+    if (!obj.metaEl) continue;
+    Array.from(obj.metaEl.querySelectorAll('.badgePending,.badgeFail')).forEach(n=>n.remove());
+    if (obj.senderId!==myUid) continue;
+    if (pending.has(mid)) {
+      const age=Date.now()-(pending.get(mid).createdAt||0);
+      const b=document.createElement('span');
+      if (age>12000) { b.className='badgeFail';b.textContent='전송 실패(재시도)';b.addEventListener('click',()=>retrySend(mid)); }
+      else { b.className='badgePending';b.textContent='전송 중'; }
+      obj.metaEl.appendChild(b);
+    }
+  }
+}
+
+function updateReadBadges() {
+  const others=Object.keys(_readsCache||{}).filter(u=>u!==myUid);
+  const total=others.length;
+  for (const [mid,obj] of seen) {
+    if (obj.senderId!==myUid||!obj.metaEl) continue;
+    Array.from(obj.metaEl.querySelectorAll('.readBadge')).forEach(n=>n.remove());
+    const seq=Number(obj.seq||0); if(!seq||pending.has(mid)) continue;
+    let readers=0;
+    for (const u of others) { if(Number((_readsCache[u]&&_readsCache[u].lastReadSeq)||0)>=seq) readers++; }
+    const b=document.createElement('span'); b.className='readBadge';
+    b.textContent=total<=1?(readers>=1?'읽음':'안읽음'):`읽음 ${readers}/${total}`;
+    obj.metaEl.appendChild(b);
+  }
+}
+
+// ================================================================
+// ★ 핵심 수정 1: subscribeMessages — 토큰 기반 구독 관리
+//
+// 문제: 기존 _subId(전역 카운터) 방식은 stopMessages()가 여러 곳에서
+// 중복 호출될 때 카운터가 꼬여 신규 구독의 콜백까지 차단되는 버그 발생.
+//
+// 해결: 구독마다 고유한 { alive: true } 토큰 객체를 클로저로 캡처.
+// stopMessages()는 토큰의 alive를 false로만 바꾸고 ref.off()를 호출.
+// 콜백은 토큰의 alive 여부로만 유효성 검사 → 전역 상태 의존 제거.
+// ================================================================
+function stopMessages() {
+  // 현재 토큰 무효화
+  if (_msgToken) {
+    _msgToken.alive = false;
+    _msgToken = null;
+  }
+  // Firebase 리스너 해제
+  if (_msgRef) {
+    try { _msgRef.off(); } catch(e) {}
+    _msgRef = null;
+  }
+}
+
+function subscribeMessages(rid) {
+  // 기존 구독 중단 (토큰 무효화 + 리스너 해제)
+  stopMessages();
+  stopRxWatcher();
+
+  // DOM 및 상태 완전 초기화
+  logEl.innerHTML = '';
+  seen.clear();
+  pending.clear();
+  afterSeq = 0;
+
+  // ★ 이번 구독 전용 토큰 생성 (클로저로 캡처)
+  const token = { alive: true };
+  _msgToken = token;
+
+  initRxWatcher(rid);
+
+  const ref = db.ref('messages/'+rid).orderByChild('seq').limitToLast(MSG_LIMIT);
+  _msgRef = ref;
+
+  let initialBatchDone = false;
+
+  // ── child_added: 기존 + 신규 메시지 처리 ──
+  ref.on('child_added', snap => {
+    // ★ 전역 카운터 대신 토큰으로 유효성 검사
+    if (!token.alive) return;
+    const m = snap.val(); if (!m) return;
+
+    const msg = {
+      messageId: String(m.messageId||snap.key||''),
+      senderId:  String(m.senderId||''),
+      senderNick:String(m.senderNick||''),
+      text:      String(m.text||''),
+      ts:        Number(m.ts||0),
+      seq:       Number(m.seq||0),
+      deleted:   !!m.deleted,
+      edited:    !!m.edited,
+      replyTo:   m.replyTo||null,
+      imageUrl:  m.imageUrl||null
+    };
+
+    afterSeq = Math.max(afterSeq, msg.seq);
+    const isNew = !seen.has(msg.messageId);
+    mergeServerMsg(msg);
+
+    // 알림: 초기배치 완료 후 + 새 메시지 + 상대방 + 최근 60초 내
+    if (initialBatchDone && isNew && msg.senderId !== myUid && (Date.now()-msg.ts) < 60000) {
+      if (shouldNotify()) { bumpUnread(); playBeep(); notifyMsg(msg); }
+      else if (isNearBottom()) clearUnread();
+    }
+
+    if (initialBatchDone) { scrollToBottom(false); markRead(); }
+  });
+
+  // ── child_changed: 수정/삭제 반영 ──
+  ref.on('child_changed', snap => {
+    if (!token.alive) return;
+    const m = snap.val(); if (!m) return;
+    applyMsgUpdate({
+      messageId: String(m.messageId||snap.key||''),
+      text:      String(m.text||''),
+      deleted:   !!m.deleted,
+      edited:    !!m.edited
+    });
+  });
+
+  // ── once('value'): 기존 child_added가 모두 완료된 뒤 발화
+  //    initialBatchDone = true로 변경 후 스크롤/읽음 처리 ──
+  ref.once('value', () => {
+    if (!token.alive) return;
+    initialBatchDone = true;
+    requestAnimationFrame(() => {
+      if (!token.alive) return;
+      logEl.scrollTop = logEl.scrollHeight;
+      setTimeout(() => {
+        if (!token.alive) return;
+        logEl.scrollTop = logEl.scrollHeight;
+        markRead(); updateBadges(); updateReadBadges();
+      }, 200);
+    });
+  });
+}
+
+// ================================================================
+// PRESENCE
+// ================================================================
+function stopPresence() {
+  if (_presInterval) { clearInterval(_presInterval); _presInterval=null; }
+  if (_presListenRef) { try{_presListenRef.off();}catch(e){} _presListenRef=null; }
+  if (_presRef) {
+    // 즉시 lastActive를 0으로 만들어 collectSubIds가 "방 밖"으로 인식하게 함
+    try { _presRef.update({ lastActive: 0, vis: 'hidden' }).catch(()=>{}); } catch(e) {}
+    try { _presRef.onDisconnect().cancel(); } catch(e) {}
+    _presRef = null;
+  }
+}
+function startPresence(rid) {
+  stopPresence();
+  _presRef = db.ref('presence/'+rid+'/'+myUid);
+  const write = () => _presRef.set({nick:myNick,lastActive:SV.TIMESTAMP}).catch(()=>{});
+  _presRef.onDisconnect().remove();
+  write();
+  _presInterval = setInterval(write, 30000);
+  _presListenRef = db.ref('presence/'+rid).orderByChild('lastActive').limitToLast(30);
+  _presListenRef.on('value', snap => {
+    const v=snap.val()||{}, now=Date.now(), online=[];
+    Object.keys(v).forEach(u=>{ const p=v[u]||{},ts=Number(p.lastActive||0); if(ts&&(now-ts)<=75000&&p.nick)online.push(p.nick); });
+    const uniq=[],s=new Set(); for(const n of online){const t=(n||'').trim();if(!t||s.has(t))continue;s.add(t);uniq.push(t);}
+    setHeader(uniq.slice(0,12));
+  });
+}
+// visibilitychange: lastActive 갱신 (vis 필드는 push 판별에서 제거했으므로 lastActive만 갱신)
+document.addEventListener('visibilitychange', () => { if(_presRef) _presRef.update({lastActive:SV.TIMESTAMP,nick:myNick}).catch(()=>{}); });
+
+// ================================================================
+// TYPING
+// ================================================================
+function stopTyping() {
+  if(_typInterval){clearInterval(_typInterval);_typInterval=null;}
+  if(_typListenRef){try{_typListenRef.off();}catch(e){}_typListenRef=null;}
+  if(_typRef){try{_typRef.remove().catch(()=>{});}catch(e){}_typRef=null;}
+  if(_typInputHandler){inputEl.removeEventListener('input',_typInputHandler);_typInputHandler=null;}
+  if(_typFocusHandler){inputEl.removeEventListener('focus',_typFocusHandler);_typFocusHandler=null;}
+  if(_typBlurHandler){inputEl.removeEventListener('blur',_typBlurHandler);_typBlurHandler=null;}
+  if(_typUnloadHandler){window.removeEventListener('beforeunload',_typUnloadHandler);_typUnloadHandler=null;}
+  _typingOn=false; _lastTypeAt=0; showTyping('');
+}
+function markTypeActivity() { _lastTypeAt=Date.now(); }
+function startTyping(rid) {
+  stopTyping();
+  _typListenRef=db.ref('typing/'+rid);
+  _typListenRef.on('value',snap=>{
+    const v=snap.val()||{},now=Date.now();let best=null;
+    Object.keys(v).forEach(u=>{if(u===myUid)return;const t=v[u]||{},until=Number(t.until||0);if(until>now&&(!best||until>best.until))best={nick:String(t.nick||''),until};});
+    showTyping(best&&best.nick?best.nick+' 님이 입력 중입니다':'');
+  });
+  _typRef=db.ref('typing/'+rid+'/'+myUid);
+  _typRef.onDisconnect().remove();
+  _typInterval=setInterval(()=>{
+    if(!roomId) return;
+    const should=(document.activeElement===inputEl)&&inputEl.value.trim().length>0&&(Date.now()-_lastTypeAt)<=4500;
+    if(should){_typRef.set({nick:myNick,until:Date.now()+5500});_typingOn=true;}
+    else if(_typingOn){_typRef.remove();_typingOn=false;}
+  },2000);
+  _typInputHandler = markTypeActivity;
+  _typFocusHandler = markTypeActivity;
+  _typBlurHandler = ()=>{try{if(_typRef)_typRef.remove();}catch(e){}_typingOn=false;};
+  _typUnloadHandler = ()=>{try{if(_typRef)_typRef.remove();}catch(e){}};
+  inputEl.addEventListener('input',_typInputHandler);
+  inputEl.addEventListener('focus',_typFocusHandler);
+  inputEl.addEventListener('blur',_typBlurHandler);
+  window.addEventListener('beforeunload',_typUnloadHandler);
+}
+
+// ================================================================
+// READS
+// ================================================================
+function stopReads() {
+  if(_readsRef){try{_readsRef.off();}catch(e){}_readsRef=null;}
+  if(_readsInterval){clearInterval(_readsInterval);_readsInterval=null;}
+  if(_readsScrollHandler){logEl.removeEventListener('scroll',_readsScrollHandler);_readsScrollHandler=null;}
+  if(_readsVisHandler){document.removeEventListener('visibilitychange',_readsVisHandler);_readsVisHandler=null;}
+  if(_readsFocusHandler){window.removeEventListener('focus',_readsFocusHandler);_readsFocusHandler=null;}
+  _readsCache={};
+}
+function canRead() { return !!(roomId&&!document.hidden&&document.hasFocus()&&logEl.style.display!=='none'&&isNearBottom()); }
+function markRead() {
+  if(!canRead()) return;
+  const seq=Number(afterSeq||0); if(!seq) return;
+  db.ref('reads/'+roomId+'/'+myUid).set({nick:myNick,lastReadSeq:seq,ts:SV.TIMESTAMP}).catch(()=>{});
+}
+function startReads(rid) {
+  stopReads();
+  _readsRef=db.ref('reads/'+rid);
+  _readsRef.on('value',snap=>{_readsCache=snap.val()||{};updateReadBadges();});
+  _readsInterval=setInterval(markRead,2500);
+  _readsScrollHandler=()=>setTimeout(()=>{markRead();if(canRead())clearUnread();},120);
+  _readsVisHandler=()=>{if(!document.hidden)markRead();};
+  _readsFocusHandler=()=>markRead();
+  logEl.addEventListener('scroll',_readsScrollHandler);
+  document.addEventListener('visibilitychange',_readsVisHandler);
+  window.addEventListener('focus',_readsFocusHandler);
+}
+
+// ================================================================
+// PUSH SUBSCRIPTION SYNC
+// ================================================================
+async function syncPushSub() {
+  try {
+    if(!window.__OS||!myUid) return;
+    const subId = window.__OS.User.PushSubscription.id || '';
+    if(!window.__OS.User.PushSubscription.optedIn || !subId) return;
+    // 기존 subId 모두 제거 후 현재 subId만 유지 → 중복 push 방지
+    const snap = await db.ref('pushSubs/'+myUid).once('value');
+    const existing = snap.val() || {};
+    const updates = {};
+    Object.keys(existing).forEach(id => { if(id !== subId) updates[id] = null; });
+    updates[subId] = { onesignalId: window.__OS.User.onesignalId||null, nick: myNick||'', updatedAt: SV.TIMESTAMP };
+    await db.ref('pushSubs/'+myUid).update(updates);
+  } catch(e) {}
+}
+let _pushSyncT=null;
+function schedulePushSync() { if(_pushSyncT)clearTimeout(_pushSyncT); _pushSyncT=setTimeout(syncPushSub,400); }
+window.__schedulePushSync=schedulePushSync;
+
+async function collectSubIds(rid) {
+  try {
+    // members + presence 동시에 읽어 타이밍 오차 최소화
+    const [mSnap, pSnap] = await Promise.all([
+      db.ref('roomMembers/'+rid).once('value'),
+      db.ref('presence/'+rid).once('value'),
+    ]);
+    const members = mSnap.val() || {};
+    const pres    = pSnap.val() || {};
+    const now     = Date.now();
+
+    // ─── 90초 이내 활동 기록이 있으면 "방 안에 있는 중"으로 판단 → push 제외
+    // (vis 체크 제거: 모바일에서 백그라운드가 돼도 vis='hidden'이 돼버려 신뢰 불가)
+    const ACTIVE_MS = 90_000;           // 90초
+    const STALE_MS  = 30 * 86400_000;  // 30일 이상 된 구독은 stale로 무시
+
+    const uids = Object.keys(members).filter(u => {
+      if (u === myUid) return false;           // 본인 제외
+      const ts = Number((pres[u] || {}).lastActive || 0);
+      return !(ts && (now - ts) <= ACTIVE_MS); // 90초 이내 활동 = 방 보는 중 → 제외
+    });
+
+    if (!uids.length) return [];
+
+    const ss = await Promise.all(uids.map(u => db.ref('pushSubs/'+u).once('value')));
+    const ids = [];
+    ss.forEach(s => {
+      Object.entries(s.val() || {}).forEach(([subId, data]) => {
+        if (!subId) return;
+        // 30일 이상 된 stale 구독 무시 → 오래된 anonymous UID 구독 차단
+        const updated = Number((data && data.updatedAt) || 0);
+        if (updated && (now - updated) > STALE_MS) return;
+        ids.push(subId);
+      });
+    });
+
+    return Array.from(new Set(ids)); // 중복 subId 최종 제거
+  } catch(e) { return []; }
+}
+
+// ================================================================
+// ROOM LIST
+// ================================================================
+async function refreshRooms() {
+  roomList.innerHTML='';
+  try {
+    const snap=await db.ref('rooms').orderByChild('updatedAt').limitToLast(50).once('value');
+    const v=snap.val()||{};
+    const items=Object.keys(v).map(id=>({roomId:id,...v[id]})).sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
+    if(!items.length){const d=document.createElement('div');d.className='roomMeta';d.textContent='방이 없습니다.';roomList.appendChild(d);return;}
+    items.forEach(r=>{
+      const item=document.createElement('div');item.className='roomItem clickable';
+      const left=document.createElement('div');left.className='roomLeft';
+      const nm=document.createElement('div');nm.className='roomName';
+      nm.innerHTML=`<span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.passEnabled?'🔒 ':''}${esc(r.roomName||'채팅방')}</span>`;
+      const mt=document.createElement('div');mt.className='roomMeta';
+      mt.textContent=`방장: ${r.ownerNick||'미확정'} · ${r.passEnabled?'🔒 비밀번호 있음':'🔓 없음'} · ${r.updatedAt?fmt(r.updatedAt):''}`;
+      left.appendChild(nm);left.appendChild(mt);
+      const right=document.createElement('div');right.className='roomRight';
+      const chip=document.createElement('div');chip.className='chip';chip.textContent='입장';right.appendChild(chip);
+      item.appendChild(left);item.appendChild(right);
+      item.addEventListener('click',async()=>await joinFlow(r.roomId));
+      roomList.appendChild(item);
+    });
+  } catch(e){const d=document.createElement('div');d.className='roomMeta';d.textContent='목록을 불러오지 못했습니다.';roomList.appendChild(d);}
+}
+btnRefresh.addEventListener('click',()=>refreshRooms());
+btnJoin.addEventListener('click',()=>alert('방 목록에서 입장해 주세요.'));
+homeUsePass.addEventListener('change',()=>{homePassField.style.display=homeUsePass.checked?'block':'none';if(!homeUsePass.checked)homeRoomPass.value='';});
+
+btnCreate.addEventListener('click',async()=>{
+  if(!setNick(homeNick.value.trim())){alert('닉네임을 입력해 주세요.');return;}
+  if(!myUid){alert('로그인 확인 중입니다. 잠시 후 다시 시도해 주세요.');return;}
+  const rn=(homeRoomName.value.trim()||'새 채팅방').slice(0,60);
+  let passEnabled=false,passSalt='',passHash='',passVer=0;
+  if(homeUsePass.checked){
+    const pw=(homeRoomPass.value||'').trim();
+    if(!pw){alert('비밀번호를 입력해 주세요.');return;}
+    try{passEnabled=true;passSalt=randHex(16);passHash=await hashPass(pw,passSalt);passVer=1;}
+    catch(e){alert('비밀번호 설정 실패');return;}
+  }
+  const rid=uuid(),now=Date.now();
+  const obj={roomName:rn,ownerUid:myUid,ownerNick:myNick,createdAt:now,updatedAt:now,lastSeq:0,lastMsgTs:0,passEnabled,passSalt:passEnabled?passSalt:null,passHash:passEnabled?passHash:null,passVer:passEnabled?passVer:0};
+  try{
+    await db.ref('rooms/'+rid).set(obj);
+    if(obj.passEnabled&&obj.passHash) setRoomAuth(rid,{ver:obj.passVer,hash:obj.passHash,at:Date.now()});
+    history.pushState({},'',NAV_URL+'?roomId='+encodeURIComponent(rid));
+    await enterRoom(rid);
+  }catch(e){alert('방 생성 실패: '+(e&&e.message||''));}
+});
+
+async function loadRoomInfo(rid) {
+  const snap=await db.ref('rooms/'+rid).once('value');
+  if(!snap.exists()) return null;
+  const r=snap.val()||{};
+  return {roomId:rid,roomName:String(r.roomName||''),ownerUid:String(r.ownerUid||''),ownerNick:String(r.ownerNick||''),lastSeq:Number(r.lastSeq||0),updatedAt:Number(r.updatedAt||0),passEnabled:(r.passEnabled===true),passVer:Number(r.passVer||0),passSalt:String(r.passSalt||''),passHash:String(r.passHash||'')};
+}
+
+async function joinFlow(rid) {
+  rid=String(rid||'').trim(); if(!rid) return;
+  if(!myNick&&!setNick(homeNick.value.trim())){alert('닉네임을 입력해 주세요.');return;}
+  if(!myUid){alert('로그인 확인 중입니다. 잠시 후 다시 시도해 주세요.');return;}
+  try{
+    const info=await loadRoomInfo(rid);
+    if(!info){alert('방을 찾을 수 없습니다.');return;}
+    const ok=await ensureRoomAccess(info); if(!ok) return;
+    info._ok=true;
+    history.pushState({},'',NAV_URL+'?roomId='+encodeURIComponent(rid));
+    await enterRoom(rid,info);
+  }catch(e){alert('입장 실패: '+(e&&e.message||''));}
+}
+
+// ================================================================
+// ★ 핵심 수정 2: enterRoom — 중복 진입 방지 및 구독 단일화
+//
+// 문제: 기존 _enterDebounce(setTimeout 0) 패턴은 빠른 연속 호출 시
+// 첫 번째 호출의 Promise가 영원히 resolve되지 않는 버그 발생.
+// 또한 enterRoom과 subscribeMessages 양쪽에서 stopMessages()를 호출해
+// _subId가 과도하게 증가하여 신규 구독 콜백까지 차단.
+//
+// 해결:
+// 1. _enteringRoom 플래그로 중복 진입만 방지 (setTimeout 제거)
+// 2. enterRoom에서 stopMessages() 제거 → subscribeMessages 내부에서만 호출
+// ================================================================
+async function enterRoom(rid, infoOpt) {
+  rid = String(rid||'').trim(); if (!rid) return;
+
+  // 이미 진입 중이면 무시 (중복 클릭 방지)
+  if (_enteringRoom) return;
+  _enteringRoom = true;
+
+  try {
+    // ★ stopMessages는 subscribeMessages 안에서만 호출 (중복 제거)
+    stopPresence(); stopTyping(); stopReads();
+
+    const info = infoOpt || await loadRoomInfo(rid).catch(() => null);
+    if (!info) { showHome(); return; }
+
+    // 비밀번호 미확인된 경우만 확인
+    if (!info._ok) {
+      const ok = await ensureRoomAccess(info);
+      if (!ok) { try{history.pushState({},'',NAV_URL);}catch(e){} showHome(); return; }
+    }
+
+    roomId = rid;
+    roomName = info.roomName;
+    ownerUid = info.ownerUid;
+
+    db.ref('roomMembers/'+roomId+'/'+myUid).set({nick:myNick,joinedAt:SV.TIMESTAMP}).catch(()=>{});
+    // 계정 단위로 마지막 방 기억
+    saveUserSettings({ lastRoom: { roomId: rid, roomName: info.roomName, ts: Date.now() } });
+    clearUnread();
+    showChat();
+    setHeader([]);
+    startPresence(roomId);
+    startTyping(roomId);
+    startReads(roomId);
+    // ★ subscribeMessages가 내부에서 stopMessages() 호출 → 이전 구독 정리 후 새 구독
+    subscribeMessages(roomId);
+  } catch(e) {
+    console.error('enterRoom error:', e);
+  } finally {
+    _enteringRoom = false;
+  }
+}
+
+function showChat() {
+  loginScreen.style.display='none'; home.style.display='none';
+  header.style.display='block'; logEl.style.display='block'; composer.style.display='flex';
+  refreshLayout(); inputEl.focus(); refreshLayout();
+  // 공유 대기 내용이 있으면 입력창에 자동 적용
+  applyPendingShare();
+}
+function showHome() {
+  stopMessages(); stopPresence(); stopTyping(); stopReads(); stopRxWatcher();
+  clearUnread(); try{clearReply();}catch(e){}
+  roomId=''; roomName=''; ownerUid='';
+  _enteringRoom = false;
+  loginScreen.style.display='none';
+  header.style.display='none'; logEl.style.display='none'; composer.style.display='none';
+  showTyping(''); home.style.display='block';
+  // 공유 배너 갱신
+  showShareBanner();
+  refreshLayout(); refreshRooms(); loadLastRoom();
+}
+function showLogin() {
+  stopMessages(); stopPresence(); stopTyping(); stopReads(); stopRxWatcher();
+  clearUnread(); try{clearReply();}catch(e){}
+  roomId=''; roomName=''; ownerUid=''; myUid='';
+  _enteringRoom = false;
+  home.style.display='none';
+  header.style.display='none'; logEl.style.display='none'; composer.style.display='none';
+  showTyping('');
+  // 저장된 계정명 복원
+  const savedAccount = localStorage.getItem(LS_ACCOUNT) || '';
+  if (savedAccount) loginUserEl.value = savedAccount;
+  loginErrorEl.textContent = '';
+  loginScreen.style.display='flex';
+  refreshLayout();
+  setTimeout(() => { try { (savedAccount ? loginPassEl : loginUserEl).focus(); } catch(e){} }, 80);
+}
+
+// ================================================================
+// USER SETTINGS — 계정 단위 설정 저장 (lastRoomId 등)
+// ================================================================
+async function saveUserSettings(obj) {
+  if (!myUid) return;
+  try { await db.ref('userSettings/'+myUid).update({...obj, updatedAt: SV.TIMESTAMP}); } catch(e) {}
+}
+async function loadLastRoom() {
+  lastRoomSection.style.display = 'none';
+  if (!myUid) return;
+  try {
+    const snap = await db.ref('userSettings/'+myUid+'/lastRoom').once('value');
+    const d = snap.val();
+    if (d && d.roomId && d.roomName) {
+      lastRoomNameEl.textContent = d.roomName;
+      lastRoomSection.style.display = 'block';
+      btnLastRoom.onclick = () => joinFlow(d.roomId);
+      lastRoomSection.onclick = () => joinFlow(d.roomId);
+    }
+  } catch(e) {}
+}
+
+// ================================================================
+// WEB SHARE TARGET — 다른 앱에서 공유하기로 우리 앱 선택 시 처리
+// ================================================================
+let pendingShareText = '';
+function initShareTarget() {
+  const p = new URLSearchParams(location.search);
+  if (!p.has('share')) return;
+  const parts = [p.get('title')||'', p.get('text')||'', p.get('url')||''].map(s=>s.trim()).filter(Boolean);
+  // 중복 제거 (text 안에 url이 이미 포함된 경우)
+  const url = p.get('url')||'';
+  const text = p.get('text')||'';
+  const title = p.get('title')||'';
+  let composed = text;
+  if (url && !text.includes(url)) composed = (composed ? composed+'\n' : '') + url;
+  if (title && !composed.includes(title)) composed = (title ? title+'\n' : '') + composed;
+  pendingShareText = composed.trim();
+  if (!pendingShareText) return;
+  // URL에서 share 파라미터 제거 (새로고침 시 재공유 방지)
+  try { history.replaceState({}, '', location.pathname + (p.get('roomId') ? '?roomId='+encodeURIComponent(p.get('roomId')) : '')); } catch(e){}
+}
+function showShareBanner() {
+  const banner = document.getElementById('shareIncomingBanner');
+  const textEl = document.getElementById('shareIncomingText');
+  if (pendingShareText) {
+    textEl.textContent = pendingShareText.length > 80 ? pendingShareText.slice(0,80)+'…' : pendingShareText;
+    banner.classList.add('active');
+  } else {
+    banner.classList.remove('active');
+  }
+}
+function applyPendingShare() {
+  if (!pendingShareText) return;
+  inputEl.value = pendingShareText;
+  inputEl.dispatchEvent(new Event('input'));
+  pendingShareText = '';
+  showShareBanner();
+  setTimeout(()=>inputEl.focus(),100);
+  showToast('공유된 내용이 입력창에 넣어졌습니다');
+}
+
+// ================================================================
+// MENU ACTIONS
+// ================================================================
+mLeave.addEventListener('click',()=>{closeMenu();history.pushState({},'',NAV_URL);showHome();});
+
+// ================================================================
+// HOME SCREEN — ··· 드롭다운 메뉴
+// ================================================================
+const homeMenuBtn = document.getElementById('homeMenuBtn');
+const homeDropdown = document.getElementById('homeDropdown');
+const homeDropdownAccountName = document.getElementById('homeDropdownAccountName');
+const homeDropdownLogout = document.getElementById('homeDropdownLogout');
+
+function openHomeDropdown() {
+  const account = localStorage.getItem(LS_ACCOUNT) || myNick || '-';
+  homeDropdownAccountName.textContent = account;
+  homeDropdown.classList.add('open');
+}
+function closeHomeDropdown() {
+  homeDropdown.classList.remove('open');
+}
+
+homeMenuBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  homeDropdown.classList.contains('open') ? closeHomeDropdown() : openHomeDropdown();
+});
+
+homeDropdownLogout.addEventListener('click', async () => {
+  closeHomeDropdown();
+  if (!confirm('로그아웃 하시겠습니까?')) return;
+  history.pushState({}, '', NAV_URL);
+  try { await firebase.auth().signOut(); } catch(e) {}
+  localStorage.removeItem(LS_NICK);
+  myNick = ''; homeNick.value = '';
+  showLogin();
+});
+
+document.addEventListener('click', (e) => {
+  if (!homeDropdown.contains(e.target) && e.target !== homeMenuBtn) closeHomeDropdown();
+});
+
+mLogout.addEventListener('click', async () => {
+  closeMenu();
+  if (!confirm('로그아웃 하시겠습니까?')) return;
+  history.pushState({}, '', NAV_URL);
+  try { await firebase.auth().signOut(); } catch(e) {}
+  localStorage.removeItem(LS_NICK);
+  myNick = ''; homeNick.value = '';
+  showLogin();
+});
+
+mNick.addEventListener('click',async()=>{
+  closeMenu();
+  const n=prompt('새 닉네임',myNick||''); if(!n||!setNick(n)) return;
+  homeNick.value=myNick;
+  if(roomId){try{db.ref('presence/'+roomId+'/'+myUid).update({nick:myNick,lastActive:SV.TIMESTAMP});db.ref('reads/'+roomId+'/'+myUid).update({nick:myNick}).catch(()=>{});}catch(e){}}
+  // 계정 단위로 닉네임 저장
+  saveUserSettings({ nick: myNick });
+  schedulePushSync();
+  setHeader([]);
+});
+
+mRoomName.addEventListener('click',async()=>{
+  closeMenu(); if(!roomId) return;
+  const n=prompt('새 방 이름',roomName||''); if(!n) return;
+  const nn=n.trim().slice(0,60); if(!nn) return;
+  try{await db.ref('rooms/'+roomId).update({roomName:nn,updatedAt:SV.TIMESTAMP});roomName=nn;setHeader([]);showToast('방 이름 변경 완료');}
+  catch(e){alert('변경 실패: '+(e&&e.message||''));}
+});
+
+mRoomPass.addEventListener('click',async()=>{
+  closeMenu(); if(!roomId) return;
+  let info; try{info=await loadRoomInfo(roomId);}catch(e){alert('방 정보를 불러오지 못했습니다.');return;}
+  if(!info) return;
+  const res=await openPassModal({title:'비밀번호 설정/변경',body:(info.passEnabled?'현재: 비밀번호 있음':'현재: 비밀번호 없음')+'\n\n새 비밀번호 입력 → 설정/변경\n[비밀번호 제거] 클릭 → 잠금 해제',okText:'저장',showRemove:true});
+  if(!res) return;
+  try{
+    if(res.action==='remove'){await removeRoomPassword(roomId);showToast('비밀번호 제거 완료');}
+    else if(res.action==='ok'){const pw=(res.value||'').trim();if(!pw){alert('비밀번호를 입력해 주세요.');return;}await setRoomPassword(roomId,pw);showToast('비밀번호 설정 완료');}
+  }catch(e){alert('처리 실패: '+(e&&e.message||''));}
+});
+
+// ================================================================
+// LOGIN SCREEN EVENTS
+// ================================================================
+async function doLogin() {
+  const username = (loginUserEl.value || '').trim();
+  const password = (loginPassEl.value || '').trim();
+  loginErrorEl.textContent = '';
+  if (!username) { loginErrorEl.textContent = '계정명을 입력해 주세요.'; loginUserEl.focus(); return; }
+  if (!password) { loginErrorEl.textContent = '비밀번호를 입력해 주세요.'; loginPassEl.focus(); return; }
+  if (password.length < 6) { loginErrorEl.textContent = '비밀번호는 6자 이상이어야 합니다.'; loginPassEl.focus(); return; }
+  btnLoginSubmit.disabled = true;
+  btnLoginSubmit.textContent = '처리 중...';
+  const result = await loginOrRegister(username, password);
+  btnLoginSubmit.disabled = false;
+  btnLoginSubmit.textContent = '로그인 / 가입';
+  if (!result.ok) { loginErrorEl.textContent = result.error || '로그인 실패'; loginPassEl.focus(); return; }
+  myUid = result.uid;
+  // 계정명 저장 + 닉네임 초기화
+  localStorage.setItem(LS_ACCOUNT, username);
+  if (!myNick) {
+    myNick = username;
+    localStorage.setItem(LS_NICK, myNick);
+    homeNick.value = myNick;
+  }
+  schedulePushSync();
+  applyBubbleTheme();
+  updateMenuStates();
+  setAppBadge(0);
+  _lastFocusHref = location.href;
+  const urlRid = getRoomUrlId();
+  if (urlRid) {
+    await enterRoom(urlRid);
+  } else {
+    showHome();
+  }
+}
+btnLoginSubmit.addEventListener('click', doLogin);
+loginPassEl.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+loginUserEl.addEventListener('keydown', e => { if (e.key === 'Enter') loginPassEl.focus(); });
+
+// ================================================================
+// SEND
+// ================================================================
+function onInput() { sendBtn.disabled=!inputEl.value.trim(); if(roomId) markTypeActivity(); }
+inputEl.addEventListener('input',onInput);
+inputEl.addEventListener('focus',refreshLayout);
+inputEl.addEventListener('click',refreshLayout);
+inputEl.addEventListener('touchstart',refreshLayout,{passive:true});
+inputEl.addEventListener('blur',()=>{setTimeout(updateKb,60);setTimeout(updateKb,220);});
+document.addEventListener('focusin',e=>{if(e&&e.target===inputEl)refreshLayout();});
+
+['touchend','mouseup'].forEach(evt=>logEl.addEventListener(evt,()=>{if(document.activeElement===inputEl)refreshLayout();},{passive:true}));
+
+async function sendToFirebase(mid, text, replyToData, imageUrl) {
+  if(!roomId) return;
+  try {
+    const tx=await db.ref('rooms/'+roomId+'/lastSeq').transaction(v=>(Number(v||0)+1));
+    const seq=Number((tx&&tx.snapshot&&tx.snapshot.val())||0);
+    const msg={messageId:mid,senderId:myUid,senderNick:myNick,text:String(text||'').slice(0,4000),ts:SV.TIMESTAMP,seq};
+    if(replyToData) msg.replyTo=replyToData;
+    if(imageUrl) msg.imageUrl=imageUrl;
+    await db.ref('messages/'+roomId).push(msg);
+    await db.ref('rooms/'+roomId).update({updatedAt:SV.TIMESTAMP,lastMsgTs:SV.TIMESTAMP});
+    const notifyText=imageUrl?'📷 사진':String(text||'').slice(0,120);
+    try{const ids=await collectSubIds(roomId);if(ids.length)pushToSubs(ids,roomName||'Chat',notifyText,roomId,1);}catch(e){}
+  }catch(e){updateBadges();}
+}
+
+async function compressToBase64(file) {
+  return new Promise(resolve => {
+    const img=new Image(), url=URL.createObjectURL(file);
+    img.onload=()=>{
+      const MAX=800; let w=img.width, h=img.height;
+      if(w>MAX||h>MAX){if(w>h){h=Math.round(h*MAX/w);w=MAX;}else{w=Math.round(w*MAX/h);h=MAX;}}
+      const c=document.createElement('canvas');c.width=w;c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      URL.revokeObjectURL(url);
+      resolve(c.toDataURL('image/jpeg',0.72));
+    };
+    img.onerror=()=>{URL.revokeObjectURL(url);resolve(null);};
+    img.src=url;
+  });
+}
+
+async function sendImage(file) {
+  if(!file||!roomId) return;
+  if(!file.type.startsWith('image/'))return showToast('이미지 파일만 전송할 수 있어요');
+  if(file.size>15*1024*1024)return showToast('15MB 이하 이미지만 전송 가능해요');
+  const mid=uuid();
+  renderMessage({messageId:mid,senderId:myUid,senderNick:myNick,text:'',ts:Date.now(),seq:0,replyTo:null,imageUrl:'__uploading__'},true);
+  scrollToBottom(true);
+  pending.set(mid,{text:'',createdAt:Date.now()}); updateBadges();
+  try {
+    const imageUrl=await compressToBase64(file);
+    if(!imageUrl) throw new Error('변환 실패');
+    await sendToFirebase(mid,'',null,imageUrl);
+  } catch(e) {
+    pending.delete(mid);
+    const obj=seen.get(mid);
+    if(obj&&obj.bubbleEl){obj.bubbleEl.innerHTML='';obj.bubbleEl.className='bubble deletedBubble';obj.bubbleEl.textContent='전송 실패';}
+    updateBadges(); showToast('사진 전송 실패');
+  }
+}
+function retrySend(mid) {const p=pending.get(mid);if(!p)return;p.createdAt=Date.now();pending.set(mid,p);updateBadges();sendToFirebase(mid,p.text);}
+
+function send() {
+  const text=inputEl.value; if(!text.trim()||!roomId) return;
+  const mid=uuid();
+  let replyToData=null;
+  if(currentReplyTo){replyToData={...currentReplyTo};clearReply();}
+  renderMessage({roomId,messageId:mid,senderId:myUid,senderNick:myNick,text,ts:Date.now(),seq:0,replyTo:replyToData},true);
+  scrollToBottom(true);
+  pending.set(mid,{text,createdAt:Date.now()}); updateBadges();
+  inputEl.value=''; onInput();
+  try{if(_typRef)_typRef.remove();}catch(e){} _typingOn=false;
+  sendToFirebase(mid,text,replyToData);
+}
+function focusInput(){try{inputEl.focus({preventScroll:true});}catch(e){try{inputEl.focus();}catch(e2){}}}
+sendBtn.addEventListener('pointerdown',async e=>{e.preventDefault();if(soundEnabled)await unlockAudio();send();focusInput();});
+inputEl.addEventListener('keydown',async e=>{if(e.key==='Enter'){e.preventDefault();if(soundEnabled)await unlockAudio();send();focusInput();}});
+
+// ================================================================
+// CONTEXT MENU
+// ================================================================
+function openCtx(mid,senderId,wrap,bubble){
+  ctxMid=mid;ctxSenderId=senderId;ctxWrap=wrap;ctxBubble=bubble;
+  const mine=senderId===myUid;
+  ctxEdit.style.display=mine?'flex':'none'; ctxDelete.style.display=mine?'flex':'none';
+  const rect=wrap.getBoundingClientRect();
+  let top=rect.bottom+6,left=mine?rect.right-200:rect.left;
+  left=Math.max(8,Math.min(left,window.innerWidth-210));
+  if(top+180>window.innerHeight)top=rect.top-186;
+  msgCtxMenu.style.top=top+'px';msgCtxMenu.style.left=left+'px';msgCtxMenu.classList.add('open');
+}
+function closeCtx(){msgCtxMenu.classList.remove('open');ctxMid=null;}
+document.addEventListener('click',e=>{if(!msgCtxMenu.contains(e.target))closeCtx();});
+quickReactBar.addEventListener('click',async e=>{const sp=e.target.closest('[data-e]');if(!sp||!ctxMid)return;await toggleRx(ctxMid,sp.dataset.e);closeCtx();});
+
+ctxEdit.addEventListener('click',()=>{
+  if(!ctxMid||!ctxBubble) return;
+  const obj=seen.get(ctxMid); if(!obj) return;
+  const mid=ctxMid,wrap=ctxWrap; closeCtx();
+  const cur=(obj.text||'').trim();
+  const ew=document.createElement('div');ew.className='editWrap';
+  const inp=document.createElement('input');inp.className='editInput';inp.type='text';inp.value=cur;
+  const sv=document.createElement('button');sv.className='editSave';sv.textContent='저장';
+  const ca=document.createElement('button');ca.className='editCancel';ca.textContent='취소';
+  ew.appendChild(inp);ew.appendChild(sv);ew.appendChild(ca);
+  const row=wrap.querySelector('.row'); if(row)row.insertAdjacentElement('afterend',ew);
+  inp.focus();inp.select();
+  const rm=()=>ew.remove();ca.addEventListener('click',rm);
+  const doSave=async()=>{
+    const t=inp.value.trim(); if(!t||t===cur){rm();return;}
+    try{const s=await db.ref('messages/'+roomId).orderByChild('messageId').equalTo(mid).once('value');s.forEach(c=>c.ref.update({text:t,edited:true}));showToast('수정되었습니다.');}
+    catch(e){showToast('수정 실패');}rm();
+  };
+  sv.addEventListener('click',doSave);
+  inp.addEventListener('keydown',e=>{if(e.key==='Enter')doSave();if(e.key==='Escape')rm();});
+});
+
+ctxDelete.addEventListener('click',async()=>{
+  if(!ctxMid)return;const mid=ctxMid;closeCtx();
+  if(!confirm('이 메시지를 삭제할까요?'))return;
+  try{const s=await db.ref('messages/'+roomId).orderByChild('messageId').equalTo(mid).once('value');s.forEach(c=>c.ref.update({deleted:true,text:''}));showToast('삭제되었습니다.');}
+  catch(e){showToast('삭제 실패');}
+});
+
+// ================================================================
+// REPLY
+// ================================================================
+function setReply(mid,nick,text,imageUrl){
+  currentReplyTo={mid,nick,text:String(text||'').slice(0,100),imageUrl:imageUrl||null};
+  replyPreviewNameEl.textContent=nick||'';
+  replyPreviewMsgEl.textContent=text?String(text).slice(0,80):(imageUrl?'📷 사진':'');
+  replyPreviewEl.style.display='flex';inputEl.focus();
+}
+function clearReply(){currentReplyTo=null;replyPreviewEl.style.display='none';replyPreviewNameEl.textContent='';replyPreviewMsgEl.textContent='';}
+replyCloseBtn.addEventListener('click',clearReply);
+ctxReply.addEventListener('click',()=>{
+  if(!ctxMid)return;const obj=seen.get(ctxMid);if(!obj)return;
+  const nick=obj.wrapEl?(obj.wrapEl.querySelector('.meta span')?.textContent||''):'';
+  setReply(ctxMid,nick,obj.text||'',obj.imageUrl||null);closeCtx();
+});
+
+// ================================================================
+// TOAST
+// ================================================================
+let _toastT=null;
+function showToast(msg,ms=2200){toastEl.textContent=msg;toastEl.classList.add('show');if(_toastT)clearTimeout(_toastT);_toastT=setTimeout(()=>toastEl.classList.remove('show'),ms);}
+
+// ================================================================
+// EMOJI PANEL
+// ================================================================
+const EMOJIS=['😀','😄','😊','😍','😘','😎','🥹','😂','😭','😡','👍','👏','🙏','🔥','🎉','💯','❤️','✨','⭐','✅','❌','⚡','🍀','☕','🍜','🎮','📌','📝'];
+(function buildEmoji(){
+  EMOJIS.forEach(e=>{
+    const d=document.createElement('div');d.className='emoji clickable';d.textContent=e;
+    let touched=false;
+    const ins=()=>{inputEl.value=(inputEl.value||'')+e;onInput();try{inputEl.focus({preventScroll:true});const n=(inputEl.value||'').length;inputEl.setSelectionRange(n,n);}catch(_){try{inputEl.focus();}catch(__){}}markTypeActivity();};
+    d.addEventListener('touchstart',ev=>{ev.preventDefault();touched=false;},{passive:false});
+    d.addEventListener('touchend',ev=>{ev.preventDefault();touched=true;ins();},{passive:false});
+    d.addEventListener('mousedown',ev=>ev.preventDefault());
+    d.addEventListener('click',ev=>{ev.preventDefault();if(touched){touched=false;return;}ins();});
+    emojiGrid.appendChild(d);
+  });
+})();
+
+let _emjTouched=false;
+const toggleEmoji=()=>{emojiPanel.classList.toggle('open');const o=emojiPanel.classList.contains('open');emojiPanel.setAttribute('aria-hidden',o?'false':'true');try{inputEl.focus({preventScroll:true});}catch(_){try{inputEl.focus();}catch(__){}}};
+emojiBtn.addEventListener('touchstart',e=>{e.preventDefault();_emjTouched=false;},{passive:false});
+emojiBtn.addEventListener('touchend',e=>{e.preventDefault();_emjTouched=true;toggleEmoji();},{passive:false});
+emojiBtn.addEventListener('mousedown',e=>e.preventDefault());
+emojiBtn.addEventListener('click',e=>{e.preventDefault();if(_emjTouched){_emjTouched=false;return;}toggleEmoji();});
+document.addEventListener('click',e=>{if(!emojiBtn.contains(e.target)&&!emojiPanel.contains(e.target)){emojiPanel.classList.remove('open');emojiPanel.setAttribute('aria-hidden','true');}});
+
+// ================================================================
+// PHOTO UPLOAD
+// ================================================================
+const imgInputEl = document.getElementById('imgInput');
+imgInputEl.addEventListener('change',()=>{if(imgInputEl.files[0]){sendImage(imgInputEl.files[0]);imgInputEl.value='';}});
+document.addEventListener('paste',e=>{
+  if(!roomId)return;
+  const items=e.clipboardData&&e.clipboardData.items; if(!items)return;
+  for(const item of items){
+    if(item.type.startsWith('image/')){e.preventDefault();sendImage(item.getAsFile());return;}
+  }
+});
+
+// ================================================================
+// VISIBILITY RESTORE (iOS GPU / 검은화면 방지)
+// ================================================================
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) {
+    if (appEl) { appEl.style.display='none'; void appEl.offsetHeight; appEl.style.display='flex'; }
+    refreshLayout();
+    setTimeout(refreshLayout, 300);
+    try { firebase.database().goOnline(); } catch(e) {}
+  }
+});
+
+// ================================================================
+// iOS PWA 푸시 탭 복원 처리
+// ================================================================
+
+// BFCache 복원
+window.addEventListener('pageshow', async (e) => {
+  if (!e.persisted) return;
+
+  try { firebase.database().goOnline(); } catch(err) {}
+  refreshLayout();
+
+  if (!myUid) {
+    const user = firebase.auth().currentUser;
+    if (user && user.uid) myUid = user.uid;
+    else { showLogin(); return; }
+  }
+
+  if (!myNick) { showHome(); return; }
+
+  const urlRid = getRoomUrlId();
+  if (urlRid) {
+    if (urlRid !== roomId) {
+      await enterRoom(urlRid);
+    } else {
+      // 같은 방 재진입 → 구독 재시작으로 누락 메시지 보장
+      subscribeMessages(roomId);
+    }
+  } else if (roomId) {
+    showHome();
+  }
+});
+
+// popstate (뒤로가기 / 히스토리 변경)
+window.addEventListener('popstate', async () => {
+  const urlRid = getRoomUrlId();
+  if (urlRid && myUid && myNick && urlRid !== roomId) {
+    await enterRoom(urlRid);
+  } else if (!urlRid && roomId) {
+    showHome();
+  }
+});
+
+// focus: iOS PWA에서 푸시 탭 후 URL 변경 감지
+let _lastFocusHref = '';
+window.addEventListener('focus', async () => {
+  try { firebase.database().goOnline(); } catch(e) {}
+  const href = location.href;
+  if (href === _lastFocusHref) return;
+  _lastFocusHref = href;
+  const urlRid = getRoomUrlId();
+  if (urlRid && myUid && myNick && urlRid !== roomId) {
+    await enterRoom(urlRid);
+  }
+});
+
+// ================================================================
+// INIT
+// ================================================================
+async function init() {
+  myNick = (localStorage.getItem(LS_NICK) || '').trim();
+  if (myNick) homeNick.value = myNick;
+
+  applyBubbleTheme();
+
+  // 기존 Firebase 세션 확인 (자동 로그인)
+  const authOk = await waitForAuth();
+
+  if (!authOk || !myUid) {
+    // 세션 없음 → 로그인 화면
+    showLogin();
     return;
   }
 
-  const mode = getMode();
-  const analyzed = analyzeConsistency(
-    dataRows,
-    headers,
-    srcColIdx,
-    tgtColIdxArr,
-    priorityColIdx,
-    categoryColIdx,
-    mode
-  );
+  // 세션 있음 → 정상 진입
+  schedulePushSync();
+  updateMenuStates();
+  setAppBadge(0);
+  _lastFocusHref = location.href;
 
-  analysisResult = analyzed.result;
-  badSet = analyzed.bad;
-  resultMap = analyzed.rowMap;
-
-  let total = 0;
-  for (const [, { issues }] of analysisResult) total += issues.length;
-  $('statIssue').textContent = `불일치 ${total}`;
-
-  renderIssues(tgtColIdxArr);
-  $('downloadBtn').disabled = false;
-}
-
-function renderIssues(tgtColIdxArr) {
-  const area = $('issueArea');
-  area.innerHTML = '';
-  $('emptyState').style.display = 'none';
-  area.style.display = '';
-
-  let totalIssues = 0;
-  let okCols = 0;
-  let totalBaseIssues = 0;
-
-  for (const [, { issues, summary }] of analysisResult) {
-    totalIssues += issues.length;
-    totalBaseIssues += summary.base;
-    if (!issues.length) okCols++;
-  }
-
-  const badRowCount = badSet ? badSet.size : 0;
-
-  const frag = document.createDocumentFragment();
-
-  const bar = document.createElement('div');
-  bar.className = 'summary-bar';
-
-  const c1 = document.createElement('span');
-  c1.className = 's-chip';
-  c1.textContent = `불일치 ${totalIssues}건`;
-  bar.appendChild(c1);
-
-  const c2 = document.createElement('span');
-  c2.className = 's-chip violet';
-  c2.textContent = `base 검수 ${totalBaseIssues}건`;
-  bar.appendChild(c2);
-
-  const c3 = document.createElement('span');
-  c3.className = 's-chip info';
-  c3.textContent = `문제 행 ${badRowCount}개`;
-  bar.appendChild(c3);
-
-  if (okCols) {
-    const c4 = document.createElement('span');
-    c4.className = 's-chip ok';
-    c4.textContent = `이상 없는 열 ${okCols}개`;
-    bar.appendChild(c4);
-  }
-
-  const c5 = document.createElement('span');
-  c5.className = 's-chip info';
-  c5.textContent = `전체 ${dataRows.length}행 · ${tgtColIdxArr.length}개 비교 열`;
-  bar.appendChild(c5);
-
-  frag.appendChild(bar);
-
-  for (const [colName, { issues, summary }] of analysisResult) {
-    const card = document.createElement('div');
-    card.className = 'issue-card';
-
-    const head = document.createElement('div');
-    head.className = 'icard-head';
-
-    if (issues.length) {
-      head.innerHTML = `
-        <span class="icard-colname">${escHtml(colName)}</span>
-        <span class="icard-count">총 ${issues.length}건</span>
-        <span class="icard-count">전체 원문 ${summary.full}건</span>
-        <span class="icard-count">대표어(base) ${summary.base}건</span>
-        <span class="icard-count">문장(P3) ${summary.sentence}건</span>
-      `;
-    } else {
-      head.innerHTML = `
-        <span class="icard-colname">${escHtml(colName)}</span>
-        <span class="icard-ok">✓ 이상 없음</span>
-      `;
-    }
-    card.appendChild(head);
-
-    if (issues.length) {
-      const table = document.createElement('table');
-      table.className = 'icard-table';
-      table.innerHTML = `
-        <thead>
-          <tr>
-            <th>종류</th>
-            <th>분류</th>
-            <th>P</th>
-            <th>기준어 / base</th>
-            <th>대표 번역</th>
-            <th>문제 값 / 상태</th>
-            <th>행 번호 (Excel)</th>
-          </tr>
-        </thead>
-      `;
-
-      const tbody = document.createElement('tbody');
-
-      for (const issue of issues) {
-        const tr = document.createElement('tr');
-
-        const tdKind = document.createElement('td');
-        tdKind.className = 'td-kind';
-        const kindBadge = document.createElement('span');
-        kindBadge.className = 'badge-kind ' + (
-          issue.type === 'base' ? 'base' :
-          issue.type === 'sentence' ? 'sentence' : 'full'
-        );
-        kindBadge.textContent = issue.typeLabel;
-        tdKind.appendChild(kindBadge);
-        tr.appendChild(tdKind);
-
-        const tdCat = document.createElement('td');
-        tdCat.className = 'td-cat';
-        tdCat.textContent = formatCategory(issue.category);
-        tr.appendChild(tdCat);
-
-        const tdPri = document.createElement('td');
-        tdPri.className = 'td-pri';
-        tdPri.textContent = `P${issue.priority}`;
-        tr.appendChild(tdPri);
-
-        const tdSrc = document.createElement('td');
-        tdSrc.className = 'td-src';
-        tdSrc.textContent = issue.basisText;
-        tr.appendChild(tdSrc);
-
-        const tdFirst = document.createElement('td');
-        tdFirst.className = 'td-first';
-        const firstBadge = document.createElement('span');
-        firstBadge.className = 'badge-first';
-        firstBadge.textContent = '대표';
-        tdFirst.appendChild(firstBadge);
-        tdFirst.appendChild(document.createTextNode(issue.representativeText || '(비어있음)'));
-        tr.appendChild(tdFirst);
-
-        const tdBad = document.createElement('td');
-        tdBad.className = 'td-bad';
-        const badBadge = document.createElement('span');
-        badBadge.className = 'badge-bad';
-        badBadge.textContent = issue.type === 'sentence' ? '상태' : '문제';
-        tdBad.appendChild(badBadge);
-        tdBad.appendChild(document.createTextNode(issue.problemText || '(비어있음)'));
-        if (issue.note) {
-          const noteDiv = document.createElement('div');
-          noteDiv.className = 'td-note';
-          noteDiv.textContent = issue.note;
-          tdBad.appendChild(noteDiv);
-        }
-        tr.appendChild(tdBad);
-
-        const tdRows = document.createElement('td');
-        tdRows.className = 'td-rows';
-        tdRows.textContent = formatRowsExcel(issue.rows);
-        tr.appendChild(tdRows);
-
-        tbody.appendChild(tr);
-      }
-
-      table.appendChild(tbody);
-      card.appendChild(table);
-    }
-
-    frag.appendChild(card);
-  }
-
-  area.appendChild(frag);
-}
-
-$('downloadBtn').addEventListener('click', downloadExcel);
-
-async function downloadExcel() {
-  if (!analysisResult || !dataRows.length) return;
-
-  const btn = $('downloadBtn');
-  btn.disabled = true;
-  btn.textContent = '생성 중...';
-
-  try {
-    const srcColIdx = getSrcColIdx();
-    const priorityColIdx = getOptionalColIdx('priorityColSelect');
-    const categoryColIdx = getOptionalColIdx('categoryColSelect');
-    const tgtColIdxArr = getTgtColIdxArr();
-    const tgtSet = new Set(tgtColIdxArr);
-
-    const metaSet = new Set([srcColIdx]);
-    if (priorityColIdx >= 0) metaSet.add(priorityColIdx);
-    if (categoryColIdx >= 0) metaSet.add(categoryColIdx);
-
-    const resultCols = [...analysisResult.entries()].map(([colName, { tgtColIdx }]) => ({
-      colName,
-      tgtColIdx,
-      header: `${colName}_검수결과`
-    }));
-
-    const wb = new ExcelJS.Workbook();
-    const ws = wb.addWorksheet('단어일치검수');
-
-    const headerRow = ws.addRow([...headers, ...resultCols.map(rc => rc.header)]);
-    headerRow.height = 20;
-
-    headerRow.eachCell((cell, colNum) => {
-      const ci = colNum - 1;
-
-      if (ci === srcColIdx) {
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1A3A5C' } };
-        cell.font = { bold: true, color: { argb: 'FF79C0FF' }, size: 11 };
-      } else if (priorityColIdx >= 0 && ci === priorityColIdx) {
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF3C2A5C' } };
-        cell.font = { bold: true, color: { argb: 'FFC8A2FF' }, size: 11 };
-      } else if (categoryColIdx >= 0 && ci === categoryColIdx) {
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF204A4F' } };
-        cell.font = { bold: true, color: { argb: 'FF8DEBFF' }, size: 11 };
-      } else if (ci < headers.length && tgtSet.has(ci)) {
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF5C3A00' } };
-        cell.font = { bold: true, color: { argb: 'FFFFA657' }, size: 11 };
-      } else if (ci >= headers.length) {
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4A3000' } };
-        cell.font = { bold: true, color: { argb: 'FFFFCC80' }, size: 11 };
-      } else {
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2C3E50' } };
-        cell.font = { bold: true, color: { argb: 'FFE6EDF3' }, size: 11 };
-      }
-
-      cell.border = { bottom: { style: 'medium', color: { argb: 'FF555555' } } };
-      cell.alignment = { vertical: 'middle' };
-    });
-
-    ws.views = [{ state: 'frozen', ySplit: 1 }];
-
-    dataRows.forEach((row, rowIdx) => {
-      const resultVals = resultCols.map(rc => {
-        const msgs = resultMap?.get(rowIdx)?.get(rc.tgtColIdx) || [];
-        return msgs.length ? uniq(msgs).join('\n') : '';
-      });
-
-      const excelRow = ws.addRow([...row, ...resultVals]);
-
-      excelRow.eachCell({ includeEmpty: true }, (cell, colNum) => {
-        const ci = colNum - 1;
-
-        if (ci < headers.length) {
-          if (badSet?.has(rowIdx) && badSet.get(rowIdx).has(ci)) {
-            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFE0B2' } };
-            cell.font = { bold: true, color: { argb: 'FFC45300' } };
-          }
-          cell.alignment = { vertical: 'middle' };
-        } else {
-          const rcIdx = ci - headers.length;
-          const rc = resultCols[rcIdx];
-          if (rc && resultMap?.has(rowIdx) && resultMap.get(rowIdx).has(rc.tgtColIdx)) {
-            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF3E0' } };
-            cell.font = { color: { argb: 'FFB94000' } };
-            cell.alignment = { wrapText: true, vertical: 'top' };
-          }
-        }
-      });
-    });
-
-    ws.columns.forEach((col, ci) => {
-      if (ci >= headers.length) {
-        col.width = 52;
-        return;
-      }
-
-      let maxLen = (headers[ci] || '').length + 2;
-      col.eachCell({ includeEmpty: false }, cell => {
-        const len = String(cell.value ?? '').length;
-        if (len > maxLen) maxLen = len;
-      });
-      col.width = Math.min(maxLen + 2, 40);
-    });
-
-    const buffer = await wb.xlsx.writeBuffer();
-    const blob = new Blob([buffer], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    });
-
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = '단어일치검수_결과.xlsx';
-    a.click();
-    URL.revokeObjectURL(url);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = '엑셀 내보내기';
+  const urlRid = getRoomUrlId();
+  if (urlRid && myNick) {
+    await enterRoom(urlRid);
+  } else {
+    showHome();
   }
 }
 
-document.querySelectorAll('.mode-group label').forEach(label => {
-  label.addEventListener('click', () => {
-    document.querySelectorAll('.mode-group label').forEach(l => l.classList.remove('active'));
-    label.classList.add('active');
-    const r = label.querySelector('input');
-    if (r) r.checked = true;
-  });
+firebase.auth().onAuthStateChanged(user => {
+  if (user && user.uid && !myUid) {
+    myUid = user.uid;
+    schedulePushSync();
+  } else if (!user && myUid) {
+    // 세션 만료 → 로그인 화면으로
+    myUid = '';
+    if (loginScreen.style.display === 'none' || !loginScreen.style.display) showLogin();
+  }
 });
-const checkedMode = document.querySelector('.mode-group input:checked');
-if (checkedMode && checkedMode.closest('label')) {
-  checkedMode.closest('label').classList.add('active');
-}
 
-const curPage = (location.pathname.split('/').pop() || '').toLowerCase();
-document.querySelectorAll('.nav a[data-page]').forEach(a => {
-  if ((a.dataset.page || '').toLowerCase() === curPage) a.classList.add('active');
-});
+initShareTarget();
+init();
 </script>
 </body>
 </html>
