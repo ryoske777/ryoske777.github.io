@@ -891,7 +891,7 @@ function setHeader(nicks) {
 // ================================================================
 function isNearBottom() { return (logEl.scrollHeight - logEl.scrollTop - logEl.clientHeight) < 150; }
 function scrollToBottom(force) { if (force || isNearBottom()) logEl.scrollTop = logEl.scrollHeight; }
-function shouldNotify() { return document.hidden || !document.hasFocus() || !isNearBottom(); }
+function shouldNotify() { return document.hidden || !document.hasFocus(); }
 
 // ================================================================
 // TYPING BAR
@@ -1331,12 +1331,17 @@ async function syncPushSub() {
     if(!window.__OS||!myUid) return;
     const subId = window.__OS.User.PushSubscription.id || '';
     if(!window.__OS.User.PushSubscription.optedIn || !subId) return;
-    // 기존 subId 모두 제거 후 현재 subId만 유지 → 중복 push 방지
+    const myOsId = window.__OS.User.onesignalId || null;
     const snap = await db.ref('pushSubs/'+myUid).once('value');
     const existing = snap.val() || {};
     const updates = {};
-    Object.keys(existing).forEach(id => { if(id !== subId) updates[id] = null; });
-    updates[subId] = { onesignalId: window.__OS.User.onesignalId||null, nick: myNick||'', updatedAt: SV.TIMESTAMP };
+    // 같은 기기(동일 onesignalId)의 교체된 구독만 제거 → 다른 기기 구독은 유지
+    Object.keys(existing).forEach(id => {
+      if (id === subId) return;
+      const d = existing[id] || {};
+      if (myOsId && d.onesignalId === myOsId) updates[id] = null;
+    });
+    updates[subId] = { onesignalId: myOsId, nick: myNick||'', updatedAt: SV.TIMESTAMP };
     await db.ref('pushSubs/'+myUid).update(updates);
   } catch(e) {}
 }
