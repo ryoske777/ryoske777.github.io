@@ -158,6 +158,10 @@ input[type="text"]{width:100%;border:0;outline:none;font-size:16px;background:tr
 .replyQuoteText{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .replyQuoteRow{display:flex;align-items:center;gap:6px}
 .replyQuoteImg{width:32px;height:32px;object-fit:cover;border-radius:4px;flex-shrink:0}
+.loadMoreWrap{display:flex;justify-content:center;padding:12px 0 4px}
+.loadMoreBtn{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:8px 20px;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.06);transition:background .15s}
+.loadMoreBtn:hover{background:#f0f0f0}
+.loadMoreBtn:disabled{opacity:.5;cursor:default}
 .toast{position:fixed;bottom:calc(var(--composerH) + 12px);left:50%;transform:translateX(-50%) translateY(20px);background:#111827;color:#fff;padding:9px 18px;border-radius:999px;font-size:13px;font-weight:700;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;z-index:400;white-space:nowrap}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .photoBtn{width:48px;height:48px;border-radius:14px;border:1px solid var(--line);background:#fff;font-size:22px;display:flex;align-items:center;justify-content:center;user-select:none;box-shadow:0 6px 18px rgba(0,0,0,.06);cursor:pointer;flex-shrink:0}
@@ -215,6 +219,7 @@ OneSignalDeferred.push(async function(OneSignal) {
           <button id="mRoomName"><span>방 이름 변경</span><span>›</span></button>
           <button id="mRoomPass"><span>비밀번호 설정/변경</span><span>›</span></button>
           <button id="mLeave"><span>나가기</span><span>›</span></button>
+          <button id="mDeleteRoom" style="color:var(--danger)"><span>채팅방 삭제</span><span>›</span></button>
           <button id="mLogout" style="color:var(--danger)"><span>로그아웃</span><span>›</span></button>
           <div class="mFontSizeRow">
             <span>글씨 크기</span>
@@ -415,6 +420,7 @@ const mNick = document.getElementById('mNick');
 const mRoomName = document.getElementById('mRoomName');
 const mRoomPass = document.getElementById('mRoomPass');
 const mLeave = document.getElementById('mLeave');
+const mDeleteRoom = document.getElementById('mDeleteRoom');
 const mFontDec = document.getElementById('mFontDec');
 const mFontInc = document.getElementById('mFontInc');
 const mFontSizeVal = document.getElementById('mFontSizeVal');
@@ -503,6 +509,9 @@ let _rxCallbacks = new Map();
 const seen = new Map();
 const pending = new Map();
 let afterSeq = 0;
+let _earliestSeq = Infinity; // 현재 로드된 가장 오래된 메시지의 seq
+let _loadingOlder = false;   // 이전 메시지 로딩 중 플래그
+const LOAD_MORE_LIMIT = 50;  // 이전 메시지 한 번에 불러올 개수
 
 // Unread / notifications
 let unread = 0;
@@ -1149,6 +1158,8 @@ function subscribeMessages(rid) {
   seen.clear();
   pending.clear();
   afterSeq = 0;
+  _earliestSeq = Infinity;
+  _loadingOlder = false;
 
   // ★ 이번 구독 전용 토큰 생성 (클로저로 캡처)
   const token = { alive: true };
@@ -1181,6 +1192,7 @@ function subscribeMessages(rid) {
     };
 
     afterSeq = Math.max(afterSeq, msg.seq);
+    if (msg.seq > 0) _earliestSeq = Math.min(_earliestSeq, msg.seq);
     const isNew = !seen.has(msg.messageId);
     mergeServerMsg(msg);
 
@@ -1210,6 +1222,10 @@ function subscribeMessages(rid) {
   ref.once('value', () => {
     if (!token.alive) return;
     initialBatchDone = true;
+    // 이전 대화가 더 있을 수 있으면 "이전 대화 보기" 버튼 표시
+    if (_earliestSeq > 1 && seen.size >= MSG_LIMIT) {
+      showLoadMoreButton();
+    }
     requestAnimationFrame(() => {
       if (!token.alive) return;
       logEl.scrollTop = logEl.scrollHeight;
@@ -1220,6 +1236,131 @@ function subscribeMessages(rid) {
       }, 200);
     });
   });
+}
+
+// ================================================================
+// LOAD OLDER MESSAGES — 이전 대화 불러오기
+// ================================================================
+function showLoadMoreButton() {
+  // 이미 있으면 제거 후 재생성
+  const existing = logEl.querySelector('.loadMoreWrap');
+  if (existing) existing.remove();
+  const wrap = document.createElement('div');
+  wrap.className = 'loadMoreWrap';
+  const btn = document.createElement('button');
+  btn.className = 'loadMoreBtn';
+  btn.textContent = '이전 대화 보기';
+  btn.addEventListener('click', () => loadOlderMessages());
+  wrap.appendChild(btn);
+  logEl.prepend(wrap);
+}
+
+async function loadOlderMessages() {
+  if (_loadingOlder || !roomId || _earliestSeq <= 1) return;
+  _loadingOlder = true;
+  const btn = logEl.querySelector('.loadMoreBtn');
+  if (btn) { btn.disabled = true; btn.textContent = '불러오는 중...'; }
+
+  // 스크롤 위치 보존을 위해 현재 높이 저장
+  const prevHeight = logEl.scrollHeight;
+  const prevTop = logEl.scrollTop;
+
+  try {
+    const endSeq = _earliestSeq - 1;
+    // seq가 endSeq 이하인 메시지 중 마지막 LOAD_MORE_LIMIT개
+    const snap = await db.ref('messages/'+roomId)
+      .orderByChild('seq')
+      .endAt(endSeq)
+      .limitToLast(LOAD_MORE_LIMIT)
+      .once('value');
+
+    const messages = [];
+    snap.forEach(child => {
+      const m = child.val();
+      if (!m) return;
+      messages.push({
+        messageId: String(m.messageId||child.key||''),
+        senderId:  String(m.senderId||''),
+        senderNick:String(m.senderNick||''),
+        text:      String(m.text||''),
+        ts:        Number(m.ts||0),
+        seq:       Number(m.seq||0),
+        deleted:   !!m.deleted,
+        edited:    !!m.edited,
+        replyTo:   m.replyTo||null,
+        imageUrl:  m.imageUrl||null
+      });
+    });
+
+    // seq 순으로 정렬
+    messages.sort((a,b) => a.seq - b.seq);
+
+    // loadMore 버튼 제거
+    const loadMoreWrap = logEl.querySelector('.loadMoreWrap');
+    if (loadMoreWrap) loadMoreWrap.remove();
+
+    // 기존 첫 번째 메시지 요소 참조
+    const firstMsg = logEl.querySelector('.msg');
+
+    // 메시지를 DOM에 삽입 (기존 메시지 위에)
+    for (const m of messages) {
+      if (seen.has(m.messageId)) continue;
+      if (m.seq > 0) _earliestSeq = Math.min(_earliestSeq, m.seq);
+
+      const mine = m.senderId === myUid;
+      const wrap = document.createElement('div'); wrap.className = 'msg'; wrap.dataset.mid = m.messageId;
+      const row = document.createElement('div'); row.className = 'row '+(mine?'me':'other');
+      const bubble = document.createElement('div'); rebuildBubble(bubble, m);
+
+      if (!m.deleted && !m.imageUrl) {
+        const url = extractUrl(String(m.text||'')); if(url) renderLinkPreview(url, wrap);
+      }
+      row.appendChild(bubble); wrap.appendChild(row);
+
+      const rxBar = document.createElement('div'); rxBar.className = 'reactionsBar';
+      const rxAlign = document.createElement('div');
+      rxAlign.style.cssText = mine ? 'display:flex;justify-content:flex-end' : 'display:flex;justify-content:flex-start';
+      rxAlign.appendChild(rxBar); wrap.appendChild(rxAlign);
+      if (!m.deleted) watchRx(m.messageId, rxBar);
+
+      const meta = document.createElement('div'); meta.className = 'meta'+(mine?' me':'');
+      const who = document.createElement('span'); who.textContent = m.senderNick||'';
+      const time = document.createElement('span'); time.textContent = fmt(m.ts||Date.now());
+      meta.appendChild(who); meta.appendChild(time);
+      wrap.appendChild(meta);
+
+      if (!m.deleted) {
+        let lt = null;
+        const ctx = (e) => { e.preventDefault(); openCtx(m.messageId,m.senderId,wrap,bubble); };
+        wrap.addEventListener('contextmenu', ctx);
+        wrap.addEventListener('touchstart', () => { lt=setTimeout(()=>openCtx(m.messageId,m.senderId,wrap,bubble),550); }, {passive:true});
+        wrap.addEventListener('touchend', () => clearTimeout(lt));
+        wrap.addEventListener('touchmove', () => clearTimeout(lt));
+      }
+
+      if (firstMsg) logEl.insertBefore(wrap, firstMsg);
+      else logEl.appendChild(wrap);
+
+      seen.set(m.messageId, {seq:Number(m.seq||0),metaEl:meta,senderId:m.senderId,wrapEl:wrap,bubbleEl:bubble,text:String(m.text||''),replyTo:m.replyTo||null,imageUrl:m.imageUrl||null});
+    }
+
+    // 더 로드할 메시지가 있으면 버튼 다시 표시
+    if (messages.length >= LOAD_MORE_LIMIT && _earliestSeq > 1) {
+      showLoadMoreButton();
+    }
+
+    // 스크롤 위치 보존: 새로 추가된 높이만큼 보정
+    requestAnimationFrame(() => {
+      const newHeight = logEl.scrollHeight;
+      logEl.scrollTop = prevTop + (newHeight - prevHeight);
+    });
+
+  } catch(e) {
+    console.error('loadOlderMessages error:', e);
+    showToast('이전 대화를 불러오지 못했습니다');
+  } finally {
+    _loadingOlder = false;
+  }
 }
 
 // ================================================================
@@ -1617,6 +1758,32 @@ function applyPendingShare() {
 // MENU ACTIONS
 // ================================================================
 mLeave.addEventListener('click',()=>{closeMenu();history.pushState({},'',NAV_URL);showHome();});
+
+// ── 채팅방 삭제 ──
+mDeleteRoom.addEventListener('click', async () => {
+  closeMenu();
+  if (!roomId) return;
+  if (!confirm('이 채팅방을 삭제하시겠습니까?\n모든 메시지와 데이터가 영구적으로 삭제됩니다.')) return;
+  if (!confirm('정말로 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.')) return;
+  const rid = roomId;
+  try {
+    showToast('채팅방 삭제 중...');
+    await Promise.all([
+      db.ref('rooms/'+rid).remove(),
+      db.ref('messages/'+rid).remove(),
+      db.ref('presence/'+rid).remove(),
+      db.ref('typing/'+rid).remove(),
+      db.ref('reads/'+rid).remove(),
+      db.ref('roomMembers/'+rid).remove(),
+      db.ref('reactions/'+rid).remove()
+    ]);
+    history.pushState({},'',NAV_URL);
+    showHome();
+    showToast('채팅방이 삭제되었습니다');
+  } catch(e) {
+    alert('삭제 실패: '+(e&&e.message||''));
+  }
+});
 
 // ================================================================
 // HOME SCREEN — ··· 드롭다운 메뉴
