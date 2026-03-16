@@ -192,6 +192,9 @@ body.stealth .stealthBar{display:flex !important}
 .stealthBar{display:none;align-items:center;justify-content:space-between;padding:3px 10px;background:#f8f9fa;border-bottom:1px solid #e0e0e0;font-size:11px;color:#5f6368}
 .stealthBar button{border:none;background:transparent;font-size:11px;color:#1a73e8;cursor:pointer;padding:2px 6px;border-radius:3px}
 .stealthBar button:hover{background:#e8f0fe}
+.stealthFontCtrl{display:flex;align-items:center;gap:4px}
+.stealthFontCtrl button{font-size:11px;font-weight:700;min-width:22px}
+.stealthFontCtrl span{font-size:11px;min-width:16px;text-align:center}
 .stealthPanicHint{color:#999;font-size:10px}
 .loadMoreWrap{display:flex;justify-content:center;padding:12px 0 4px}
 .loadMoreBtn{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:8px 20px;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.06);transition:background .15s}
@@ -280,6 +283,11 @@ OneSignalDeferred.push(async function(OneSignal) {
   </header>
   <div class="stealthBar" id="stealthBar">
     <span class="stealthPanicHint">Esc × 2 = 즉시 숨김</span>
+    <div class="stealthFontCtrl">
+      <button id="stealthFontDec" title="글씨 작게">A-</button>
+      <span id="stealthFontVal">16</span>
+      <button id="stealthFontInc" title="글씨 크게">A+</button>
+    </div>
     <button id="stealthExit">시크릿모드 해제</button>
   </div>
 
@@ -891,11 +899,18 @@ function applyBubbleTheme() {
 }
 applyBubbleTheme();
 
+const stealthFontDec = document.getElementById('stealthFontDec');
+const stealthFontInc = document.getElementById('stealthFontInc');
+const stealthFontVal = document.getElementById('stealthFontVal');
+
 function applyFontSize() {
   document.documentElement.style.setProperty('--bubbleFontSize', chatFontSize+'px');
   mFontSizeVal.textContent = chatFontSize;
+  stealthFontVal.textContent = chatFontSize;
   mFontDec.disabled = chatFontSize <= 6;
   mFontInc.disabled = chatFontSize >= 24;
+  stealthFontDec.disabled = chatFontSize <= 6;
+  stealthFontInc.disabled = chatFontSize >= 24;
 }
 applyFontSize();
 
@@ -942,6 +957,14 @@ mFontDec.addEventListener('click', e => {
   if (chatFontSize > 6) { chatFontSize -= 1; localStorage.setItem(LS_FONT_SIZE, chatFontSize); applyFontSize(); }
 });
 mFontInc.addEventListener('click', e => {
+  e.stopPropagation();
+  if (chatFontSize < 24) { chatFontSize += 1; localStorage.setItem(LS_FONT_SIZE, chatFontSize); applyFontSize(); }
+});
+stealthFontDec.addEventListener('click', e => {
+  e.stopPropagation();
+  if (chatFontSize > 6) { chatFontSize -= 1; localStorage.setItem(LS_FONT_SIZE, chatFontSize); applyFontSize(); }
+});
+stealthFontInc.addEventListener('click', e => {
   e.stopPropagation();
   if (chatFontSize < 24) { chatFontSize += 1; localStorage.setItem(LS_FONT_SIZE, chatFontSize); applyFontSize(); }
 });
