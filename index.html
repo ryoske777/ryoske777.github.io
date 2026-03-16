@@ -170,7 +170,7 @@ input[type="text"]{width:100%;border:0;outline:none;font-size:16px;background:tr
 .searchClose:hover{background:#fff1f2;color:var(--danger)}
 .searchHighlight{background:rgba(255,213,0,.4);border-radius:2px;padding:0 1px}
 .searchHighlightCurrent{background:rgba(255,140,0,.6);border-radius:2px;padding:0 1px}
-/* stealth (몰컴) mode */
+/* stealth (시크릿) mode */
 body.stealth{background:#fff}
 body.stealth header{padding:6px 10px 4px;background:#fff;border-bottom:1px solid #e0e0e0;backdrop-filter:none}
 body.stealth .title{font-size:13px;font-weight:600;color:#5f6368}
@@ -255,7 +255,7 @@ OneSignalDeferred.push(async function(OneSignal) {
           <button id="mRoomName"><span>방 이름 변경</span><span>›</span></button>
           <button id="mRoomPass"><span>비밀번호 설정/변경</span><span>›</span></button>
           <button id="mLeave"><span>나가기</span><span>›</span></button>
-          <button id="mStealth"><span>몰컴모드</span><span>›</span></button>
+          <button id="mStealth"><span>시크릿모드</span><span>›</span></button>
           <button id="mDeleteRoom" style="color:var(--danger)"><span>채팅방 삭제</span><span>›</span></button>
           <button id="mLogout" style="color:var(--danger)"><span>로그아웃</span><span>›</span></button>
           <div class="mFontSizeRow">
@@ -280,7 +280,7 @@ OneSignalDeferred.push(async function(OneSignal) {
   </header>
   <div class="stealthBar" id="stealthBar">
     <span class="stealthPanicHint">Esc × 2 = 즉시 숨김</span>
-    <button id="stealthExit">몰컴모드 해제</button>
+    <button id="stealthExit">시크릿모드 해제</button>
   </div>
 
   <div class="loginScreen" id="loginScreen" style="display:none">
@@ -947,7 +947,7 @@ mFontInc.addEventListener('click', e => {
 });
 
 // ================================================================
-// STEALTH (몰컴) MODE
+// STEALTH (시크릿) MODE
 // ================================================================
 const STEALTH_TITLE = 'Google Sheets';
 const STEALTH_FAVICON = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><path fill="%2334a853" d="M11 6h20l8 8v28c0 1.1-.9 2-2 2H11a2 2 0 01-2-2V8c0-1.1.9-2 2-2z"/><path fill="%23188038" d="M31 6l8 8h-8z"/><rect x="14" y="20" width="20" height="18" rx="1" fill="white"/><path stroke="%23666" stroke-width=".8" d="M14 25h20M14 30h20M14 35h20M24 20v18"/></svg>';
@@ -1074,7 +1074,7 @@ function showDecoyScreen() {
 
 mStealth.addEventListener('click', () => {
   if (isPopup() || _stealthMode) {
-    // 이미 몰컴모드 중이면 해제
+    // 이미 시크릿모드 중이면 해제
     closeMenu();
     exitStealthMode();
   } else {
@@ -2197,7 +2197,7 @@ function showHome() {
   // 공유 배너 갱신
   showShareBanner();
   refreshLayout(); refreshRooms(); loadLastRoom();
-  // 몰컴모드 팝업: ?room= 파라미터 있으면 자동 입장
+  // 시크릿모드 팝업: ?room= 파라미터 있으면 자동 입장
   const _stealthRoomParam = new URLSearchParams(location.search).get('room');
   if (_stealthRoomParam && _stealthMode) {
     setTimeout(() => joinFlow(_stealthRoomParam), 300);
