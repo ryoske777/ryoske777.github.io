@@ -158,6 +158,18 @@ input[type="text"]{width:100%;border:0;outline:none;font-size:16px;background:tr
 .replyQuoteText{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .replyQuoteRow{display:flex;align-items:center;gap:6px}
 .replyQuoteImg{width:32px;height:32px;object-fit:cover;border-radius:4px;flex-shrink:0}
+.searchBtn{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;line-height:1;user-select:none;box-shadow:0 6px 18px rgba(0,0,0,.06)}
+.searchBar{display:flex;align-items:center;gap:6px;padding:8px 0 0;margin-top:8px;border-top:1px solid var(--line)}
+.searchBar input{flex:1;height:36px;border-radius:10px;border:1px solid var(--line);padding:0 10px;font-size:14px;outline:none;min-width:0;transition:border-color .15s}
+.searchBar input:focus{border-color:rgba(34,197,94,.6);box-shadow:0 0 0 3px rgba(34,197,94,.1)}
+.searchInfo{font-size:12px;color:var(--muted);white-space:nowrap;min-width:50px;text-align:center;font-weight:700}
+.searchArrow{width:32px;height:32px;border-radius:8px;border:1px solid var(--line);background:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;flex-shrink:0;color:var(--text)}
+.searchArrow:hover{background:#f0f0f0}
+.searchArrow:disabled{opacity:.35;cursor:default}
+.searchClose{width:32px;height:32px;border-radius:8px;border:1px solid var(--line);background:#fff;font-size:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;flex-shrink:0;color:var(--muted)}
+.searchClose:hover{background:#fff1f2;color:var(--danger)}
+.searchHighlight{background:rgba(255,213,0,.4);border-radius:2px;padding:0 1px}
+.searchHighlightCurrent{background:rgba(255,140,0,.6);border-radius:2px;padding:0 1px}
 .loadMoreWrap{display:flex;justify-content:center;padding:12px 0 4px}
 .loadMoreBtn{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:8px 20px;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.06);transition:background .15s}
 .loadMoreBtn:hover{background:#f0f0f0}
@@ -210,6 +222,7 @@ OneSignalDeferred.push(async function(OneSignal) {
         <div class="sub" id="roomSub"></div>
       </div>
       <div class="menuWrap">
+        <div class="searchBtn clickable" id="searchBtn">🔍</div>
         <div class="menuBtn clickable" id="menuBtn">…</div>
         <div class="menu" id="menu">
           <button id="mEnableNoti"><span>알림 켜기</span><span id="mEnableNotiState">›</span></button>
@@ -232,6 +245,13 @@ OneSignalDeferred.push(async function(OneSignal) {
           <div class="hint" id="menuHint"></div>
         </div>
       </div>
+    </div>
+    <div class="searchBar" id="searchBar" style="display:none">
+      <input type="text" id="searchInput" placeholder="메시지 검색..." autocomplete="off" spellcheck="false"/>
+      <span class="searchInfo" id="searchInfo"></span>
+      <button class="searchArrow" id="searchUp" title="이전">▲</button>
+      <button class="searchArrow" id="searchDown" title="다음">▼</button>
+      <button class="searchClose" id="searchClose">✕</button>
     </div>
   </header>
 
@@ -421,6 +441,13 @@ const mRoomName = document.getElementById('mRoomName');
 const mRoomPass = document.getElementById('mRoomPass');
 const mLeave = document.getElementById('mLeave');
 const mDeleteRoom = document.getElementById('mDeleteRoom');
+const searchBtnEl = document.getElementById('searchBtn');
+const searchBar = document.getElementById('searchBar');
+const searchInput = document.getElementById('searchInput');
+const searchInfo = document.getElementById('searchInfo');
+const searchUp = document.getElementById('searchUp');
+const searchDown = document.getElementById('searchDown');
+const searchCloseBtn = document.getElementById('searchClose');
 const mFontDec = document.getElementById('mFontDec');
 const mFontInc = document.getElementById('mFontInc');
 const mFontSizeVal = document.getElementById('mFontSizeVal');
@@ -512,6 +539,12 @@ let afterSeq = 0;
 let _earliestSeq = Infinity; // 현재 로드된 가장 오래된 메시지의 seq
 let _loadingOlder = false;   // 이전 메시지 로딩 중 플래그
 const LOAD_MORE_LIMIT = 50;  // 이전 메시지 한 번에 불러올 개수
+
+// Search state
+let _searchResults = [];     // [{messageId, seq, text, senderNick, ts}]
+let _searchIndex = -1;       // 현재 포커스된 검색 결과 인덱스
+let _searchKeyword = '';     // 현재 검색 키워드
+let _searchTimer = null;     // 디바운스 타이머
 
 // Unread / notifications
 let unread = 0;
@@ -1364,6 +1397,322 @@ async function loadOlderMessages() {
 }
 
 // ================================================================
+// MESSAGE SEARCH — 키워드 검색
+// ================================================================
+function openSearch() {
+  searchBar.style.display = 'flex';
+  searchInput.value = '';
+  searchInfo.textContent = '';
+  searchUp.disabled = true;
+  searchDown.disabled = true;
+  _searchResults = [];
+  _searchIndex = -1;
+  _searchKeyword = '';
+  clearSearchHighlights();
+  setTimeout(() => searchInput.focus(), 100);
+}
+
+function closeSearch() {
+  searchBar.style.display = 'none';
+  searchInput.value = '';
+  searchInfo.textContent = '';
+  _searchResults = [];
+  _searchIndex = -1;
+  _searchKeyword = '';
+  clearSearchHighlights();
+}
+
+function clearSearchHighlights() {
+  logEl.querySelectorAll('.searchHighlight,.searchHighlightCurrent').forEach(el => {
+    const parent = el.parentNode;
+    parent.replaceChild(document.createTextNode(el.textContent), el);
+    parent.normalize();
+  });
+}
+
+searchBtnEl.addEventListener('click', () => {
+  if (searchBar.style.display === 'flex') closeSearch();
+  else openSearch();
+});
+
+searchCloseBtn.addEventListener('click', closeSearch);
+
+searchInput.addEventListener('input', () => {
+  clearTimeout(_searchTimer);
+  _searchTimer = setTimeout(() => executeSearch(searchInput.value.trim()), 350);
+});
+
+searchInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    if (e.shiftKey) navigateSearch(-1);
+    else navigateSearch(1);
+  } else if (e.key === 'Escape') {
+    closeSearch();
+  }
+});
+
+searchUp.addEventListener('click', () => navigateSearch(-1));
+searchDown.addEventListener('click', () => navigateSearch(1));
+
+async function executeSearch(keyword) {
+  clearSearchHighlights();
+  _searchResults = [];
+  _searchIndex = -1;
+  _searchKeyword = keyword;
+
+  if (!keyword || !roomId) {
+    searchInfo.textContent = '';
+    searchUp.disabled = true;
+    searchDown.disabled = true;
+    return;
+  }
+
+  searchInfo.textContent = '검색 중...';
+  searchUp.disabled = true;
+  searchDown.disabled = true;
+
+  try {
+    // Firebase에서 해당 방의 전체 메시지 가져오기
+    const snap = await db.ref('messages/' + roomId).orderByChild('seq').once('value');
+    const kw = keyword.toLowerCase();
+    const results = [];
+
+    snap.forEach(child => {
+      const m = child.val();
+      if (!m || m.deleted) return;
+      const text = String(m.text || '');
+      if (text.toLowerCase().includes(kw)) {
+        results.push({
+          messageId: String(m.messageId || child.key || ''),
+          seq: Number(m.seq || 0),
+          text: text,
+          senderNick: String(m.senderNick || ''),
+          ts: Number(m.ts || 0)
+        });
+      }
+    });
+
+    // 검색 중 키워드가 바뀌었으면 무시
+    if (_searchKeyword !== keyword) return;
+
+    // seq 순 정렬 (오래된 것부터)
+    results.sort((a, b) => a.seq - b.seq);
+    _searchResults = results;
+
+    if (results.length === 0) {
+      searchInfo.textContent = '결과 없음';
+      searchUp.disabled = true;
+      searchDown.disabled = true;
+    } else {
+      // 가장 최근 결과(마지막)부터 시작
+      _searchIndex = results.length - 1;
+      updateSearchInfo();
+      searchUp.disabled = results.length <= 1;
+      searchDown.disabled = results.length <= 1;
+      await showSearchResult(_searchIndex);
+    }
+  } catch (e) {
+    console.error('Search error:', e);
+    searchInfo.textContent = '검색 실패';
+  }
+}
+
+function updateSearchInfo() {
+  if (_searchResults.length === 0) {
+    searchInfo.textContent = '결과 없음';
+  } else {
+    searchInfo.textContent = `${_searchIndex + 1} / ${_searchResults.length}`;
+  }
+}
+
+function navigateSearch(dir) {
+  if (_searchResults.length === 0) return;
+  // dir: 1 = 다음(아래/최신), -1 = 이전(위/오래된)
+  let next = _searchIndex + dir;
+  if (next < 0) next = _searchResults.length - 1;
+  if (next >= _searchResults.length) next = 0;
+  _searchIndex = next;
+  updateSearchInfo();
+  showSearchResult(_searchIndex);
+}
+
+async function showSearchResult(idx) {
+  const result = _searchResults[idx];
+  if (!result) return;
+
+  // 메시지가 현재 DOM에 없으면 로드
+  if (!seen.has(result.messageId)) {
+    await loadMessagesAroundSeq(result.seq);
+  }
+
+  // 이전 하이라이트 초기화
+  clearSearchHighlights();
+
+  // 해당 메시지 요소 찾기
+  const entry = seen.get(result.messageId);
+  if (!entry || !entry.wrapEl) return;
+
+  // 버블 내 텍스트에 하이라이트 적용
+  highlightInBubble(entry.bubbleEl, _searchKeyword, true);
+
+  // 다른 DOM에 있는 검색 결과에도 하이라이트 (현재 결과 제외)
+  for (let i = 0; i < _searchResults.length; i++) {
+    if (i === idx) continue;
+    const other = seen.get(_searchResults[i].messageId);
+    if (other && other.bubbleEl) {
+      highlightInBubble(other.bubbleEl, _searchKeyword, false);
+    }
+  }
+
+  // 해당 메시지로 스크롤
+  entry.wrapEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function highlightInBubble(bubbleEl, keyword, isCurrent) {
+  if (!bubbleEl || !keyword) return;
+  const cls = isCurrent ? 'searchHighlightCurrent' : 'searchHighlight';
+  const walker = document.createTreeWalker(bubbleEl, NodeFilter.SHOW_TEXT, null, false);
+  const textNodes = [];
+  while (walker.nextNode()) textNodes.push(walker.currentNode);
+
+  const kw = keyword.toLowerCase();
+  for (const node of textNodes) {
+    const val = node.nodeValue;
+    const lower = val.toLowerCase();
+    const idx = lower.indexOf(kw);
+    if (idx === -1) continue;
+
+    // replyQuote 내부는 건너뛰기
+    if (node.parentElement && node.parentElement.closest('.replyQuote')) continue;
+
+    const before = val.substring(0, idx);
+    const match = val.substring(idx, idx + keyword.length);
+    const after = val.substring(idx + keyword.length);
+
+    const span = document.createElement('span');
+    span.className = cls;
+    span.textContent = match;
+
+    const parent = node.parentNode;
+    if (before) parent.insertBefore(document.createTextNode(before), node);
+    parent.insertBefore(span, node);
+    if (after) parent.insertBefore(document.createTextNode(after), node);
+    parent.removeChild(node);
+  }
+}
+
+async function loadMessagesAroundSeq(targetSeq) {
+  // targetSeq 주변의 메시지를 로드
+  const batchSize = 50;
+  const startSeq = Math.max(1, targetSeq - Math.floor(batchSize / 2));
+  const endSeq = targetSeq + Math.floor(batchSize / 2);
+
+  try {
+    const snap = await db.ref('messages/' + roomId)
+      .orderByChild('seq')
+      .startAt(startSeq)
+      .endAt(endSeq)
+      .once('value');
+
+    const messages = [];
+    snap.forEach(child => {
+      const m = child.val();
+      if (!m) return;
+      messages.push({
+        messageId: String(m.messageId || child.key || ''),
+        senderId: String(m.senderId || ''),
+        senderNick: String(m.senderNick || ''),
+        text: String(m.text || ''),
+        ts: Number(m.ts || 0),
+        seq: Number(m.seq || 0),
+        deleted: !!m.deleted,
+        edited: !!m.edited,
+        replyTo: m.replyTo || null,
+        imageUrl: m.imageUrl || null
+      });
+    });
+
+    messages.sort((a, b) => a.seq - b.seq);
+
+    for (const m of messages) {
+      if (seen.has(m.messageId)) continue;
+      if (m.seq > 0) _earliestSeq = Math.min(_earliestSeq, m.seq);
+
+      // 올바른 위치에 삽입 (seq 순서 유지)
+      const mine = m.senderId === myUid;
+      const wrap = document.createElement('div'); wrap.className = 'msg'; wrap.dataset.mid = m.messageId;
+      const row = document.createElement('div'); row.className = 'row ' + (mine ? 'me' : 'other');
+      const bubble = document.createElement('div'); rebuildBubble(bubble, m);
+
+      if (!m.deleted && !m.imageUrl) {
+        const url = extractUrl(String(m.text || '')); if (url) renderLinkPreview(url, wrap);
+      }
+      row.appendChild(bubble); wrap.appendChild(row);
+
+      const rxBar = document.createElement('div'); rxBar.className = 'reactionsBar';
+      const rxAlign = document.createElement('div');
+      rxAlign.style.cssText = mine ? 'display:flex;justify-content:flex-end' : 'display:flex;justify-content:flex-start';
+      rxAlign.appendChild(rxBar); wrap.appendChild(rxAlign);
+      if (!m.deleted) watchRx(m.messageId, rxBar);
+
+      const meta = document.createElement('div'); meta.className = 'meta' + (mine ? ' me' : '');
+      const who = document.createElement('span'); who.textContent = m.senderNick || '';
+      const time = document.createElement('span'); time.textContent = fmt(m.ts || Date.now());
+      meta.appendChild(who); meta.appendChild(time);
+      wrap.appendChild(meta);
+
+      if (!m.deleted) {
+        let lt = null;
+        const ctx = (e) => { e.preventDefault(); openCtx(m.messageId, m.senderId, wrap, bubble); };
+        wrap.addEventListener('contextmenu', ctx);
+        wrap.addEventListener('touchstart', () => { lt = setTimeout(() => openCtx(m.messageId, m.senderId, wrap, bubble), 550); }, { passive: true });
+        wrap.addEventListener('touchend', () => clearTimeout(lt));
+        wrap.addEventListener('touchmove', () => clearTimeout(lt));
+      }
+
+      // seq 순서에 맞게 삽입 위치 찾기
+      let inserted = false;
+      const allMsgs = logEl.querySelectorAll('.msg');
+      for (const existing of allMsgs) {
+        const existingEntry = seen.get(existing.dataset.mid);
+        if (existingEntry && existingEntry.seq > m.seq) {
+          logEl.insertBefore(wrap, existing);
+          inserted = true;
+          break;
+        }
+      }
+      if (!inserted) {
+        // loadMoreWrap 뒤에 삽입
+        const loadMoreWrap = logEl.querySelector('.loadMoreWrap');
+        if (loadMoreWrap && loadMoreWrap.nextSibling) {
+          const firstMsg = logEl.querySelector('.msg');
+          if (firstMsg) {
+            const firstEntry = seen.get(firstMsg.dataset.mid);
+            if (firstEntry && firstEntry.seq > m.seq) {
+              logEl.insertBefore(wrap, firstMsg);
+              inserted = true;
+            }
+          }
+        }
+        if (!inserted) logEl.appendChild(wrap);
+      }
+
+      seen.set(m.messageId, { seq: Number(m.seq || 0), metaEl: meta, senderId: m.senderId, wrapEl: wrap, bubbleEl: bubble, text: String(m.text || ''), replyTo: m.replyTo || null, imageUrl: m.imageUrl || null });
+    }
+
+    // loadMore 버튼 갱신
+    if (_earliestSeq > 1) {
+      const existing = logEl.querySelector('.loadMoreWrap');
+      if (!existing) showLoadMoreButton();
+    }
+
+  } catch (e) {
+    console.error('loadMessagesAroundSeq error:', e);
+  }
+}
+
+// ================================================================
 // PRESENCE
 // ================================================================
 function stopPresence() {
@@ -1665,7 +2014,7 @@ function showChat() {
 }
 function showHome() {
   stopMessages(); stopPresence(); stopTyping(); stopReads(); stopRxWatcher();
-  clearUnread(); try{clearReply();}catch(e){}
+  clearUnread(); try{clearReply();}catch(e){} try{closeSearch();}catch(e){}
   roomId=''; roomName=''; ownerUid='';
   _enteringRoom = false;
   loginScreen.style.display='none';
