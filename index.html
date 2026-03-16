@@ -172,7 +172,7 @@ input[type="text"]{width:100%;border:0;outline:none;font-size:16px;background:tr
 .searchHighlightCurrent{background:rgba(255,140,0,.6);border-radius:2px;padding:0 1px}
 /* stealth (시크릿) mode */
 body.stealth{background:#fff}
-body.stealth header{padding:6px 10px 4px;background:#fff;border-bottom:1px solid #e0e0e0;backdrop-filter:none}
+body.stealth header{padding:4px 10px 0;background:#fff;border-bottom:none;backdrop-filter:none}
 body.stealth .title{font-size:13px;font-weight:600;color:#5f6368}
 body.stealth .sub{display:none}
 body.stealth .menuWrap{gap:4px}
@@ -183,19 +183,19 @@ body.stealth .msg{margin:3px 0}
 body.stealth .bubble{padding:6px 10px;border-radius:6px;font-size:var(--bubbleFontSize,13px);box-shadow:none;border:1px solid #e0e0e0}
 body.stealth .bubble.me{background:#e8f0fe;border-color:#d2e3fc}
 body.stealth .meta{font-size:10px;margin-top:1px}
-body.stealth .composer{height:44px;padding:6px 8px;background:#fff;border-top:1px solid #e0e0e0;backdrop-filter:none}
-body.stealth .composer input{height:32px;font-size:13px;border-radius:4px}
-body.stealth .sendBtn{width:32px;height:32px;border-radius:4px;font-size:14px}
-body.stealth .photoBtn{width:32px;height:32px;border-radius:4px;font-size:14px;box-shadow:none}
-body.stealth .emojiBtn{width:32px;height:32px;border-radius:4px;font-size:14px;box-shadow:none}
+body.stealth .composer{height:40px;padding:4px 8px;background:#fff;border-top:1px solid #e0e0e0;backdrop-filter:none;gap:6px}
+body.stealth .composer input{height:30px;font-size:13px;border-radius:4px}
+body.stealth .sendBtn{width:32px;height:32px;border-radius:4px;font-size:0;padding:0;display:flex;align-items:center;justify-content:center}
+body.stealth .sendBtn::after{content:'▶';font-size:12px}
+body.stealth .photoBtn{display:none}
+body.stealth .emojiBtn{display:none}
 body.stealth .stealthBar{display:flex !important}
-.stealthBar{display:none;align-items:center;justify-content:space-between;padding:3px 10px;background:#f8f9fa;border-bottom:1px solid #e0e0e0;font-size:11px;color:#5f6368}
+.stealthBar{display:none;align-items:center;justify-content:space-between;padding:4px 10px;background:#f0f1f3;border-bottom:1px solid #dadce0;font-size:11px;color:#5f6368;flex-shrink:0;z-index:25}
 .stealthBar button{border:none;background:transparent;font-size:11px;color:#1a73e8;cursor:pointer;padding:2px 6px;border-radius:3px}
 .stealthBar button:hover{background:#e8f0fe}
 .stealthFontCtrl{display:flex;align-items:center;gap:4px}
 .stealthFontCtrl button{font-size:11px;font-weight:700;min-width:22px}
 .stealthFontCtrl span{font-size:11px;min-width:16px;text-align:center}
-.stealthPanicHint{color:#999;font-size:10px}
 .loadMoreWrap{display:flex;justify-content:center;padding:12px 0 4px}
 .loadMoreBtn{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:8px 20px;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.06);transition:background .15s}
 .loadMoreBtn:hover{background:#f0f0f0}
@@ -280,16 +280,15 @@ OneSignalDeferred.push(async function(OneSignal) {
       <button class="searchArrow" id="searchDown" title="다음">▼</button>
       <button class="searchClose" id="searchClose">✕</button>
     </div>
-  </header>
-  <div class="stealthBar" id="stealthBar">
-    <span class="stealthPanicHint">Esc × 2 = 즉시 숨김</span>
-    <div class="stealthFontCtrl">
-      <button id="stealthFontDec" title="글씨 작게">A-</button>
-      <span id="stealthFontVal">16</span>
-      <button id="stealthFontInc" title="글씨 크게">A+</button>
+    <div class="stealthBar" id="stealthBar">
+      <div class="stealthFontCtrl">
+        <button id="stealthFontDec" title="글씨 작게">A-</button>
+        <span id="stealthFontVal">16</span>
+        <button id="stealthFontInc" title="글씨 크게">A+</button>
+      </div>
+      <button id="stealthExit">해제</button>
     </div>
-    <button id="stealthExit">시크릿모드 해제</button>
-  </div>
+  </header>
 
   <div class="loginScreen" id="loginScreen" style="display:none">
     <div class="loginCard">
@@ -1014,7 +1013,7 @@ function enterStealthMode() {
   document.body.classList.add('stealth');
 
   // composerH 줄이기
-  document.documentElement.style.setProperty('--composerH', '44px');
+  document.documentElement.style.setProperty('--composerH', '40px');
 }
 
 function exitStealthMode() {
