@@ -170,6 +170,29 @@ input[type="text"]{width:100%;border:0;outline:none;font-size:16px;background:tr
 .searchClose:hover{background:#fff1f2;color:var(--danger)}
 .searchHighlight{background:rgba(255,213,0,.4);border-radius:2px;padding:0 1px}
 .searchHighlightCurrent{background:rgba(255,140,0,.6);border-radius:2px;padding:0 1px}
+/* stealth (시크릿) mode */
+body.stealth{background:#fff}
+body.stealth header{padding:6px 10px 4px;background:#fff;border-bottom:1px solid #e0e0e0;backdrop-filter:none}
+body.stealth .title{font-size:13px;font-weight:600;color:#5f6368}
+body.stealth .sub{display:none}
+body.stealth .menuWrap{gap:4px}
+body.stealth .menuBtn,body.stealth .searchBtn{width:28px;height:28px;border-radius:4px;font-size:14px;border:none;box-shadow:none;background:transparent;color:#5f6368}
+body.stealth .menuBtn:hover,body.stealth .searchBtn:hover{background:#f1f3f4}
+body.stealth .log{padding:8px 8px calc(var(--composerH) + var(--typingH) + var(--kb) + 8px)}
+body.stealth .msg{margin:3px 0}
+body.stealth .bubble{padding:6px 10px;border-radius:6px;font-size:13px;box-shadow:none;border:1px solid #e0e0e0}
+body.stealth .bubble.me{background:#e8f0fe;border-color:#d2e3fc}
+body.stealth .meta{font-size:10px;margin-top:1px}
+body.stealth .composer{height:44px;padding:6px 8px;background:#fff;border-top:1px solid #e0e0e0;backdrop-filter:none}
+body.stealth .composer input{height:32px;font-size:13px;border-radius:4px}
+body.stealth .sendBtn{width:32px;height:32px;border-radius:4px;font-size:14px}
+body.stealth .photoBtn{width:32px;height:32px;border-radius:4px;font-size:14px;box-shadow:none}
+body.stealth .emojiBtn{width:32px;height:32px;border-radius:4px;font-size:14px;box-shadow:none}
+body.stealth .stealthBar{display:flex !important}
+.stealthBar{display:none;align-items:center;justify-content:space-between;padding:3px 10px;background:#f8f9fa;border-bottom:1px solid #e0e0e0;font-size:11px;color:#5f6368}
+.stealthBar button{border:none;background:transparent;font-size:11px;color:#1a73e8;cursor:pointer;padding:2px 6px;border-radius:3px}
+.stealthBar button:hover{background:#e8f0fe}
+.stealthPanicHint{color:#999;font-size:10px}
 .loadMoreWrap{display:flex;justify-content:center;padding:12px 0 4px}
 .loadMoreBtn{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:8px 20px;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.06);transition:background .15s}
 .loadMoreBtn:hover{background:#f0f0f0}
@@ -232,6 +255,7 @@ OneSignalDeferred.push(async function(OneSignal) {
           <button id="mRoomName"><span>방 이름 변경</span><span>›</span></button>
           <button id="mRoomPass"><span>비밀번호 설정/변경</span><span>›</span></button>
           <button id="mLeave"><span>나가기</span><span>›</span></button>
+          <button id="mStealth"><span>시크릿모드</span><span>›</span></button>
           <button id="mDeleteRoom" style="color:var(--danger)"><span>채팅방 삭제</span><span>›</span></button>
           <button id="mLogout" style="color:var(--danger)"><span>로그아웃</span><span>›</span></button>
           <div class="mFontSizeRow">
@@ -254,6 +278,10 @@ OneSignalDeferred.push(async function(OneSignal) {
       <button class="searchClose" id="searchClose">✕</button>
     </div>
   </header>
+  <div class="stealthBar" id="stealthBar">
+    <span class="stealthPanicHint">Esc × 2 = 즉시 숨김</span>
+    <button id="stealthExit">시크릿모드 해제</button>
+  </div>
 
   <div class="loginScreen" id="loginScreen" style="display:none">
     <div class="loginCard">
@@ -441,6 +469,9 @@ const mRoomName = document.getElementById('mRoomName');
 const mRoomPass = document.getElementById('mRoomPass');
 const mLeave = document.getElementById('mLeave');
 const mDeleteRoom = document.getElementById('mDeleteRoom');
+const mStealth = document.getElementById('mStealth');
+const stealthBarEl = document.getElementById('stealthBar');
+const stealthExit = document.getElementById('stealthExit');
 const searchBtnEl = document.getElementById('searchBtn');
 const searchBar = document.getElementById('searchBar');
 const searchInput = document.getElementById('searchInput');
@@ -914,6 +945,149 @@ mFontInc.addEventListener('click', e => {
   e.stopPropagation();
   if (chatFontSize < 24) { chatFontSize += 1; localStorage.setItem(LS_FONT_SIZE, chatFontSize); applyFontSize(); }
 });
+
+// ================================================================
+// STEALTH (시크릿) MODE
+// ================================================================
+const STEALTH_TITLE = 'Google Sheets';
+const STEALTH_FAVICON = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><path fill="%2334a853" d="M11 6h20l8 8v28c0 1.1-.9 2-2 2H11a2 2 0 01-2-2V8c0-1.1.9-2 2-2z"/><path fill="%23188038" d="M31 6l8 8h-8z"/><rect x="14" y="20" width="20" height="18" rx="1" fill="white"/><path stroke="%23666" stroke-width=".8" d="M14 25h20M14 30h20M14 35h20M24 20v18"/></svg>';
+
+let _stealthMode = false;
+let _origTitle = '';
+let _origFavicon = '';
+let _stealthPopup = null;
+let _lastEscTime = 0;
+
+function isPopup() {
+  return window.opener && window.opener !== window;
+}
+
+function initStealthIfPopup() {
+  // URL에 stealth 파라미터가 있으면 자동 진입
+  if (new URLSearchParams(location.search).get('stealth') === '1') {
+    enterStealthMode();
+  }
+}
+
+function enterStealthMode() {
+  _stealthMode = true;
+  _origTitle = document.title;
+  const existingFav = document.querySelector('link[rel="icon"]');
+  _origFavicon = existingFav ? existingFav.href : '';
+
+  // 타이틀 위장
+  document.title = STEALTH_TITLE;
+
+  // 파비콘 위장
+  let fav = document.querySelector('link[rel="icon"]');
+  if (!fav) { fav = document.createElement('link'); fav.rel = 'icon'; document.head.appendChild(fav); }
+  fav.href = STEALTH_FAVICON;
+
+  // compact 스타일 적용
+  document.body.classList.add('stealth');
+
+  // composerH 줄이기
+  document.documentElement.style.setProperty('--composerH', '44px');
+}
+
+function exitStealthMode() {
+  _stealthMode = false;
+  document.title = _origTitle || 'Chat';
+  document.body.classList.remove('stealth');
+  document.documentElement.style.setProperty('--composerH', '64px');
+
+  // 파비콘 복원
+  const fav = document.querySelector('link[rel="icon"]');
+  if (fav && _origFavicon) fav.href = _origFavicon;
+  else if (fav) fav.href = '/icon-512x512.png';
+}
+
+function openStealthPopup() {
+  closeMenu();
+  const w = 380, h = 520;
+  const left = window.screen.width - w - 50;
+  const top = window.screen.height - h - 100;
+  const url = location.href.split('?')[0] + '?stealth=1' + (roomId ? '&room=' + encodeURIComponent(roomId) : '');
+  _stealthPopup = window.open(url, '_blank',
+    `width=${w},height=${h},left=${left},top=${top},resizable=yes,scrollbars=no,toolbar=no,menubar=no,location=no,status=no`
+  );
+  if (!_stealthPopup || _stealthPopup.closed) {
+    alert('팝업이 차단되었습니다.\n브라우저 설정에서 팝업을 허용해 주세요.');
+  }
+}
+
+// 패닉 키: Esc 더블탭 → 즉시 숨김
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') { _lastEscTime = 0; return; }
+  if (!_stealthMode) return;
+
+  const now = Date.now();
+  if (now - _lastEscTime < 500) {
+    // Esc 더블탭 감지
+    _lastEscTime = 0;
+    panicHide();
+  } else {
+    _lastEscTime = now;
+  }
+});
+
+function panicHide() {
+  if (isPopup()) {
+    // 팝업이면 창 닫기
+    window.close();
+  } else {
+    // 일반 탭이면 화면을 위장 화면으로 덮기
+    showDecoyScreen();
+  }
+}
+
+function showDecoyScreen() {
+  let decoy = document.getElementById('decoyScreen');
+  if (!decoy) {
+    decoy = document.createElement('div');
+    decoy.id = 'decoyScreen';
+    decoy.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#fff;display:flex;flex-direction:column;cursor:text';
+    decoy.innerHTML = `
+      <div style="background:#f8f9fa;border-bottom:1px solid #dadce0;padding:8px 16px;display:flex;align-items:center;gap:12px">
+        <div style="width:32px;height:32px;border-radius:4px;background:#34a853;display:flex;align-items:center;justify-content:center">
+          <svg width="18" height="18" viewBox="0 0 48 48"><path fill="white" d="M11 6h20l8 8v28c0 1.1-.9 2-2 2H11a2 2 0 01-2-2V8c0-1.1.9-2 2-2z"/></svg>
+        </div>
+        <div>
+          <div style="font-size:15px;font-weight:500;color:#202124">제목 없는 스프레드시트</div>
+          <div style="font-size:11px;color:#5f6368;margin-top:2px">파일 ‎ 수정 ‎ 보기 ‎ 삽입 ‎ 서식 ‎ 데이터 ‎ 도구 ‎ 확장 프로그램 ‎ 도움말</div>
+        </div>
+      </div>
+      <div style="flex:1;display:grid;grid-template-columns:40px repeat(8,1fr);grid-template-rows:28px repeat(20,24px);border-collapse:collapse">
+        <div style="background:#f8f9fa;border:1px solid #e0e0e0;grid-column:1;grid-row:1"></div>
+        ${['A','B','C','D','E','F','G','H'].map((c,i) => `<div style="background:#f8f9fa;border:1px solid #e0e0e0;display:flex;align-items:center;justify-content:center;font-size:12px;color:#666;grid-column:${i+2};grid-row:1">${c}</div>`).join('')}
+        ${Array.from({length:20},(_,r) => `<div style="background:#f8f9fa;border:1px solid #e0e0e0;display:flex;align-items:center;justify-content:center;font-size:11px;color:#666;grid-column:1;grid-row:${r+2}">${r+1}</div>${Array.from({length:8},(_,c) => `<div style="border:1px solid #e8e8e8;grid-column:${c+2};grid-row:${r+2};background:#fff"></div>`).join('')}`).join('')}
+      </div>
+    `;
+    decoy.addEventListener('click', () => {
+      decoy.style.display = 'none';
+    });
+    document.body.appendChild(decoy);
+  } else {
+    decoy.style.display = 'flex';
+  }
+}
+
+mStealth.addEventListener('click', () => {
+  if (isPopup() || _stealthMode) {
+    // 이미 시크릿모드 중이면 해제
+    closeMenu();
+    exitStealthMode();
+  } else {
+    openStealthPopup();
+  }
+});
+
+stealthExit.addEventListener('click', () => {
+  exitStealthMode();
+});
+
+// 페이지 로드 시 팝업 자동 감지
+initStealthIfPopup();
 
 // ================================================================
 // HEADER / NICK
@@ -2023,6 +2197,11 @@ function showHome() {
   // 공유 배너 갱신
   showShareBanner();
   refreshLayout(); refreshRooms(); loadLastRoom();
+  // 시크릿모드 팝업: ?room= 파라미터 있으면 자동 입장
+  const _stealthRoomParam = new URLSearchParams(location.search).get('room');
+  if (_stealthRoomParam && _stealthMode) {
+    setTimeout(() => joinFlow(_stealthRoomParam), 300);
+  }
 }
 function showLogin() {
   stopMessages(); stopPresence(); stopTyping(); stopReads(); stopRxWatcher();
