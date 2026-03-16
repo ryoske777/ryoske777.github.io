@@ -843,7 +843,7 @@ function playBeep() {
 // TITLE BLINK / UNREAD
 // ================================================================
 function startBlink() {
-  if (_stealthMode || _titleTimer) return;
+  if (_titleTimer) return;
   let f=false;
   _titleTimer = setInterval(() => {
     if (!document.hidden && document.hasFocus()) { stopBlink(); return; }
@@ -851,11 +851,11 @@ function startBlink() {
     document.title = (f=!f) ? `(${unread}) 새 메시지` : 'Chat';
   }, 900);
 }
-function stopBlink() { if (_titleTimer) { clearInterval(_titleTimer); _titleTimer=null; } document.title = _stealthMode ? _stealthTitle : 'Chat'; }
+function stopBlink() { if (_titleTimer) { clearInterval(_titleTimer); _titleTimer=null; } document.title='Chat'; }
 function bumpUnread() {
   unread = Math.min(999, unread+1);
-  if (!_stealthMode) setAppBadge(unread);
-  if (!_stealthMode && (document.hidden || !document.hasFocus())) startBlink(); else if (!_stealthMode) stopBlink();
+  setAppBadge(unread);
+  if (document.hidden || !document.hasFocus()) startBlink(); else stopBlink();
   setHeader();
 }
 function clearUnread() {
@@ -879,7 +879,6 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden && ro
 // ================================================================
 function notifyMsg(msg) {
   try {
-    if (_stealthMode) return;
     if (!notifyEnabled || !('Notification' in window) || Notification.permission!=='granted') return;
     const n = new Notification(roomName||'채팅', {
       body: `${msg.senderNick||'상대'}: ${String(msg.text||'').slice(0,140)}`,
@@ -1015,16 +1014,6 @@ function enterStealthMode() {
 
   // composerH 줄이기
   document.documentElement.style.setProperty('--composerH', '40px');
-
-  // presence 중지 → 다른 기기(폰)로 푸시 전달
-  if (roomId && _presRef) {
-    if (_presInterval) { clearInterval(_presInterval); _presInterval = null; }
-    _presRef.remove().catch(()=>{});
-  }
-
-  // 앱 뱃지 초기화
-  setAppBadge(0);
-  stopBlink();
 }
 
 function exitStealthMode() {
@@ -1037,9 +1026,6 @@ function exitStealthMode() {
   const fav = document.querySelector('link[rel="icon"]');
   if (fav && _origFavicon) fav.href = _origFavicon;
   else if (fav) fav.href = '/icon-512x512.png';
-
-  // presence 복원
-  if (roomId) startPresence(roomId);
 }
 
 function openStealthPopup() {
@@ -1143,7 +1129,7 @@ function setHeader(nicks) {
   if (Array.isArray(nicks)) onlineNicksCache=nicks;
   roomTitle.textContent = roomName||'채팅방';
   const onl = onlineNicksCache.length ? onlineNicksCache.join(', ') : '없음';
-  const unr = (!_stealthMode && unread>0) ? `<span class="pill">새 메시지 ${unread}개</span>` : '';
+  const unr = unread>0 ? `<span class="pill">새 메시지 ${unread}개</span>` : '';
   roomSub.innerHTML = `<span class="pill">나: ${esc(myNick)}</span><span class="pill">온라인: ${esc(onl)}</span>${unr}`;
   updateMenuStates();
 }
@@ -1451,7 +1437,7 @@ function subscribeMessages(rid) {
 
     // 알림: 초기배치 완료 후 + 새 메시지 + 상대방 + 최근 60초 내
     if (initialBatchDone && isNew && msg.senderId !== myUid && (Date.now()-msg.ts) < 60000) {
-      if (shouldNotify()) { bumpUnread(); if (!_stealthMode) playBeep(); notifyMsg(msg); }
+      if (shouldNotify()) { bumpUnread(); playBeep(); notifyMsg(msg); }
       else if (isNearBottom()) clearUnread();
     }
 
@@ -1948,16 +1934,10 @@ function stopPresence() {
 function startPresence(rid) {
   stopPresence();
   _presRef = db.ref('presence/'+rid+'/'+myUid);
-  // 시크릿모드: presence 쓰기 중지 → collectSubIds가 오프라인으로 판단 → 폰으로 푸시 전달
-  if (!_stealthMode) {
-    const write = () => _presRef.set({nick:myNick,lastActive:SV.TIMESTAMP}).catch(()=>{});
-    _presRef.onDisconnect().remove();
-    write();
-    _presInterval = setInterval(write, 30000);
-  } else {
-    // 시크릿모드에서는 기존 presence 삭제 (오프라인으로 보이게)
-    _presRef.remove().catch(()=>{});
-  }
+  const write = () => _presRef.set({nick:myNick,lastActive:SV.TIMESTAMP}).catch(()=>{});
+  _presRef.onDisconnect().remove();
+  write();
+  _presInterval = setInterval(write, 30000);
   _presListenRef = db.ref('presence/'+rid).orderByChild('lastActive').limitToLast(30);
   _presListenRef.on('value', snap => {
     const v=snap.val()||{}, now=Date.now(), online=[];
@@ -1966,8 +1946,8 @@ function startPresence(rid) {
     setHeader(uniq.slice(0,12));
   });
 }
-// visibilitychange: lastActive 갱신 (시크릿모드에서는 스킵)
-document.addEventListener('visibilitychange', () => { if(_presRef && !_stealthMode) _presRef.update({lastActive:SV.TIMESTAMP,nick:myNick}).catch(()=>{}); });
+// visibilitychange: lastActive 갱신 (vis 필드는 push 판별에서 제거했으므로 lastActive만 갱신)
+document.addEventListener('visibilitychange', () => { if(_presRef) _presRef.update({lastActive:SV.TIMESTAMP,nick:myNick}).catch(()=>{}); });
 
 // ================================================================
 // TYPING
