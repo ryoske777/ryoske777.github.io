@@ -9,6 +9,9 @@
 <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,viewport-fit=cover,shrink-to-fit=no"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cute+Font&family=Gaegu&family=Hi+Melody&family=Nanum+Pen+Script&family=Single+Day&display=swap" rel="stylesheet">
 <title>Chat</title>
 <style>
 :root{
@@ -296,6 +299,11 @@ OneSignalDeferred.push(async function(OneSignal) {
               <option value="serif">명조 (Serif)</option>
               <option value="rounded">둥근고딕</option>
               <option value="mono">고정폭 (Mono)</option>
+              <option value="cute">큐트체</option>
+              <option value="gaegu">개구체</option>
+              <option value="penscript">나눔손글씨</option>
+              <option value="melody">하이멜로디</option>
+              <option value="singleday">싱글데이</option>
             </select>
           </div>
           <div class="hint" id="menuHint"></div>
@@ -963,7 +971,12 @@ const FONT_FAMILY_MAP = {
   system: '-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",Arial,sans-serif',
   serif: '"Noto Serif KR",Georgia,"Times New Roman","Batang",serif',
   rounded: '"Apple SD Gothic Neo","Hiragino Maru Gothic ProN","Noto Sans KR",sans-serif',
-  mono: '"SF Mono","Menlo","Noto Sans Mono","D2Coding",monospace'
+  mono: '"SF Mono","Menlo","Noto Sans Mono","D2Coding",monospace',
+  cute: '"Cute Font","Apple SD Gothic Neo",sans-serif',
+  gaegu: '"Gaegu","Apple SD Gothic Neo",sans-serif',
+  penscript: '"Nanum Pen Script","Apple SD Gothic Neo",cursive',
+  melody: '"Hi Melody","Apple SD Gothic Neo",sans-serif',
+  singleday: '"Single Day","Apple SD Gothic Neo",sans-serif'
 };
 function applyFontFamily() {
   const ff = FONT_FAMILY_MAP[chatFontFamily] || FONT_FAMILY_MAP.system;
@@ -2487,7 +2500,7 @@ function applyPendingShare() {
 // ================================================================
 // MENU ACTIONS
 // ================================================================
-mLeave.addEventListener('click',()=>{closeMenu();history.pushState({},'',NAV_URL);showHome();});
+mLeave.addEventListener('click',()=>{closeMenu();saveUserSettings({lastRoom:null});history.pushState({},'',NAV_URL);showHome();});
 
 // ── 채팅방 삭제 ──
 mDeleteRoom.addEventListener('click', async () => {
@@ -2507,6 +2520,7 @@ mDeleteRoom.addEventListener('click', async () => {
       db.ref('roomMembers/'+rid).remove(),
       db.ref('reactions/'+rid).remove()
     ]);
+    saveUserSettings({lastRoom:null});
     history.pushState({},'',NAV_URL);
     showHome();
     showToast('채팅방이 삭제되었습니다');
@@ -2975,6 +2989,17 @@ async function init() {
   const urlRid = getRoomUrlId();
   if (urlRid && myNick) {
     await enterRoom(urlRid);
+  } else if (myNick && myUid) {
+    // PWA 복귀 시 마지막 방으로 바로 입장 (대기실 깜빡임 방지)
+    try {
+      const snap = await db.ref('userSettings/'+myUid+'/lastRoom').once('value');
+      const d = snap.val();
+      if (d && d.roomId) {
+        await enterRoom(d.roomId);
+        return;
+      }
+    } catch(e) {}
+    showHome();
   } else {
     showHome();
   }
