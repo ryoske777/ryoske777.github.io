@@ -1,0 +1,99 @@
+{
+  "rules": {
+
+    "rooms": {
+      ".read": "auth != null",
+      "$roomId": {
+        ".read": "auth != null",
+        ".write": "auth != null && (!data.exists() || data.child('ownerUid').val() === auth.uid || auth.uid === 'ADMIN_UID_HERE')",
+        "updatedAt": { ".write": "auth != null" },
+        "lastSeq": { ".write": "auth != null" },
+        "lastMsgTs": { ".write": "auth != null" },
+        "passEnabled": { ".write": "auth != null && (root.child('rooms').child($roomId).child('ownerUid').val() === auth.uid || auth.uid === 'ADMIN_UID_HERE')" },
+        "passSalt": { ".write": "auth != null && (root.child('rooms').child($roomId).child('ownerUid').val() === auth.uid || auth.uid === 'ADMIN_UID_HERE')" },
+        "passHash": { ".write": "auth != null && (root.child('rooms').child($roomId).child('ownerUid').val() === auth.uid || auth.uid === 'ADMIN_UID_HERE')" },
+        "passVer": { ".write": "auth != null && (root.child('rooms').child($roomId).child('ownerUid').val() === auth.uid || auth.uid === 'ADMIN_UID_HERE')" },
+        "roomName": { ".write": "auth != null && (root.child('rooms').child($roomId).child('ownerUid').val() === auth.uid || auth.uid === 'ADMIN_UID_HERE')" }
+      }
+    },
+
+    "messages": {
+      "$roomId": {
+        ".read": "auth != null",
+        ".write": "auth != null && (root.child('rooms').child($roomId).child('ownerUid').val() === auth.uid || auth.uid === 'ADMIN_UID_HERE' || !data.exists())",
+        "$messageKey": {
+          ".write": "auth != null && (!data.exists() || data.child('senderId').val() === auth.uid)"
+        }
+      }
+    },
+
+    "presence": {
+      "$roomId": {
+        ".read": "auth != null",
+        ".write": "auth != null && (root.child('rooms').child($roomId).child('ownerUid').val() === auth.uid || auth.uid === 'ADMIN_UID_HERE')",
+        "$uid": {
+          ".write": "auth != null && $uid === auth.uid"
+        }
+      }
+    },
+
+    "typing": {
+      "$roomId": {
+        ".read": "auth != null",
+        ".write": "auth != null && (root.child('rooms').child($roomId).child('ownerUid').val() === auth.uid || auth.uid === 'ADMIN_UID_HERE')",
+        "$uid": {
+          ".write": "auth != null && $uid === auth.uid"
+        }
+      }
+    },
+
+    "reads": {
+      "$roomId": {
+        ".read": "auth != null",
+        ".write": "auth != null && (root.child('rooms').child($roomId).child('ownerUid').val() === auth.uid || auth.uid === 'ADMIN_UID_HERE')",
+        "$uid": {
+          ".write": "auth != null && $uid === auth.uid"
+        }
+      }
+    },
+
+    "reactions": {
+      "$roomId": {
+        ".read": "auth != null",
+        ".write": "auth != null && (root.child('rooms').child($roomId).child('ownerUid').val() === auth.uid || auth.uid === 'ADMIN_UID_HERE')",
+        "$messageId": {
+          "$uid": {
+            ".write": "auth != null && $uid === auth.uid"
+          }
+        }
+      }
+    },
+
+    "roomMembers": {
+      "$roomId": {
+        ".read": "auth != null",
+        ".write": "auth != null && (root.child('rooms').child($roomId).child('ownerUid').val() === auth.uid || auth.uid === 'ADMIN_UID_HERE')",
+        "$uid": {
+          ".write": "auth != null && $uid === auth.uid"
+        }
+      }
+    },
+
+    "userSettings": {
+      "$uid": {
+        ".read": "auth != null && $uid === auth.uid",
+        ".write": "auth != null && $uid === auth.uid"
+      }
+    },
+
+    "pushSubs": {
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth != null && $uid === auth.uid"
+      }
+    },
+
+    ".read": false,
+    ".write": false
+  }
+}
