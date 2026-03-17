@@ -2972,10 +2972,6 @@ composer.addEventListener('click', e => {
   const t = e.target;
   if (t === inputEl || t.closest('.sendBtn') || t.closest('.emojiBtn') || t.closest('.photoBtn') || t.closest('.replyCloseBtn')) return;
   focusInput();
-  // 키보드 올라온 후 채팅 영역도 따라서 스크롤
-  updateKb();
-  setTimeout(() => { updateKb(); scrollToBottom(true); }, 300);
-  setTimeout(() => { updateKb(); scrollToBottom(true); }, 600);
 });
 sendBtn.addEventListener('pointerdown',async e=>{e.preventDefault();if(soundEnabled)await unlockAudio();send();focusInput();});
 inputEl.addEventListener('keydown',async e=>{
