@@ -1542,7 +1542,13 @@ function subscribeMessages(rid) {
 
     // 알림: 초기배치 완료 후 + 새 메시지 + 상대방 + 최근 60초 내
     if (initialBatchDone && isNew && msg.senderId !== myUid && (Date.now()-msg.ts) < 60000) {
-      if (shouldNotify()) { bumpUnread(); playBeep(); notifyMsg(msg); }
+      if (shouldNotify()) {
+        bumpUnread(); playBeep();
+        // ★ OneSignal 푸시가 활성 + 백그라운드이면 로컬 알림 스킵 (중복 방지)
+        // 포그라운드(탭 비활성 등)에서만 로컬 알림 표시
+        const osPushActive = window.__OS && window.__OS.User && window.__OS.User.PushSubscription && window.__OS.User.PushSubscription.optedIn;
+        if (!osPushActive || !document.hidden) notifyMsg(msg);
+      }
       else if (isNearBottom()) clearUnread();
     }
 
@@ -2051,8 +2057,16 @@ function startPresence(rid) {
     setHeader(uniq.slice(0,12));
   });
 }
-// visibilitychange: lastActive 갱신 (vis 필드는 push 판별에서 제거했으므로 lastActive만 갱신)
-document.addEventListener('visibilitychange', () => { if(_presRef) _presRef.update({lastActive:SV.TIMESTAMP,nick:myNick}).catch(()=>{}); });
+// visibilitychange: lastActive 갱신
+// ★ 백그라운드→ lastActive:0 (즉시 push 대상), 포그라운드→ lastActive 복원
+document.addEventListener('visibilitychange', () => {
+  if (!_presRef) return;
+  if (document.hidden) {
+    _presRef.update({ lastActive: 0 }).catch(()=>{});
+  } else {
+    _presRef.update({ lastActive: SV.TIMESTAMP, nick: myNick }).catch(()=>{});
+  }
+});
 
 // ================================================================
 // TYPING
@@ -2161,9 +2175,9 @@ async function collectSubIds(rid) {
     const pres    = pSnap.val() || {};
     const now     = Date.now();
 
-    // ─── 90초 이내 활동 기록이 있으면 "방 안에 있는 중"으로 판단 → push 제외
-    // (vis 체크 제거: 모바일에서 백그라운드가 돼도 vis='hidden'이 돼버려 신뢰 불가)
-    const ACTIVE_MS = 90_000;           // 90초
+    // ─── lastActive가 최근이면 "방 안에 있는 중"으로 판단 → push 제외
+    // ★ 백그라운드 전환 시 lastActive=0으로 즉시 갱신하므로 5초면 충분
+    const ACTIVE_MS = 5_000;            // 5초
     const STALE_MS  = 30 * 86400_000;  // 30일 이상 된 구독은 stale로 무시
 
     const uids = Object.keys(members).filter(u => {
