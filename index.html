@@ -1064,12 +1064,16 @@ document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') { _lastEscTime = 0; return; }
   if (!_stealthMode) return;
 
+  // 시크릿모드에서 ESC는 항상 기본 동작 차단 (브라우저의 팝업 닫기 방지)
+  e.preventDefault();
+  e.stopImmediatePropagation();
+
   // 메뉴/모달/검색 등 UI가 열려있으면 해당 UI를 닫는 ESC이므로 패닉 카운트 무시
   const anyOverlay = menu.classList.contains('open')
     || emojiPanel.classList.contains('open')
     || msgCtxMenu.classList.contains('open')
     || passModal.classList.contains('open')
-    || searchBar.style.display !== 'none';
+    || searchBar.style.display === 'flex';
   if (anyOverlay) { _lastEscTime = 0; return; }
 
   const now = Date.now();
