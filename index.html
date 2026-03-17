@@ -1545,19 +1545,26 @@ function updateBadges() {
   }
 }
 
+let _readBadgeRic = 0;
 function updateReadBadges() {
-  const others=Object.keys(_readsCache||{}).filter(u=>u!==myUid);
-  const total=others.length;
-  for (const [mid,obj] of seen) {
-    if (obj.senderId!==myUid||!obj.metaEl) continue;
-    Array.from(obj.metaEl.querySelectorAll('.readBadge')).forEach(n=>n.remove());
-    const seq=Number(obj.seq||0); if(!seq||pending.has(mid)) continue;
-    let readers=0;
-    for (const u of others) { if(Number((_readsCache[u]&&_readsCache[u].lastReadSeq)||0)>=seq) readers++; }
-    const b=document.createElement('span'); b.className='readBadge';
-    b.textContent=total<=1?(readers>=1?'읽음':'안읽음'):`읽음 ${readers}/${total}`;
-    obj.metaEl.appendChild(b);
-  }
+  // 타이핑 중 DOM 대량 조작 방지: idle 시점으로 지연
+  if (_readBadgeRic) { (typeof cancelIdleCallback==='function'?cancelIdleCallback:clearTimeout)(_readBadgeRic); }
+  _readBadgeRic = (typeof requestIdleCallback==='function'?requestIdleCallback:function(cb){return setTimeout(cb,80);})(function(){
+    _readBadgeRic = 0;
+    const others=Object.keys(_readsCache||{}).filter(u=>u!==myUid);
+    const total=others.length;
+    for (const [mid,obj] of seen) {
+      if (obj.senderId!==myUid||!obj.metaEl) continue;
+      const seq=Number(obj.seq||0);
+      let readers=0;
+      if(seq&&!pending.has(mid)) { for (const u of others) { if(Number((_readsCache[u]&&_readsCache[u].lastReadSeq)||0)>=seq) readers++; } }
+      const label=(!seq||pending.has(mid))?'':(total<=1?(readers>=1?'읽음':'안읽음'):`읽음 ${readers}/${total}`);
+      const existing=obj.metaEl.querySelector('.readBadge');
+      if (!label) { if(existing) existing.remove(); continue; }
+      if (existing) { if(existing.textContent!==label) existing.textContent=label; }
+      else { const b=document.createElement('span'); b.className='readBadge'; b.textContent=label; obj.metaEl.appendChild(b); }
+    }
+  });
 }
 
 // ================================================================
@@ -2185,8 +2192,13 @@ function startTyping(rid) {
   _typRef.onDisconnect().remove();
   _typInterval=setInterval(()=>{
     if(!roomId) return;
-    const should=(document.activeElement===inputEl)&&inputEl.value.trim().length>0&&(Date.now()-_lastTypeAt)<=4500;
-    if(should){_typRef.set({nick:myNick,until:Date.now()+5500});_typingOn=true;}
+    const now=Date.now();
+    const should=(document.activeElement===inputEl)&&inputEl.value.trim().length>0&&(now-_lastTypeAt)<=4500;
+    if(should){
+      // 활발히 타이핑 중이면(500ms 이내) Firebase 쓰기를 idle로 지연
+      const doSet=()=>{if(_typRef)_typRef.set({nick:myNick,until:Date.now()+5500});_typingOn=true;};
+      if(now-_lastTypeAt<500&&typeof requestIdleCallback==='function'){requestIdleCallback(doSet);}else{doSet();}
+    }
     else if(_typingOn){_typRef.remove();_typingOn=false;}
   },2000);
   _typInputHandler = null; // onInput()이 이미 markTypeActivity 호출하므로 중복 리스너 제거
