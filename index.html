@@ -2702,6 +2702,22 @@ loginUserEl.addEventListener('keydown', e => { if (e.key === 'Enter') loginPassE
 // ================================================================
 let _prevInputH = 24;
 let _prevInputLen = 0;
+let _inputMirror = null;
+function _getInputMirror() {
+  if (!_inputMirror) {
+    _inputMirror = document.createElement('textarea');
+    _inputMirror.setAttribute('tabindex', '-1');
+    _inputMirror.setAttribute('aria-hidden', 'true');
+    _inputMirror.style.cssText = 'position:fixed;top:-9999px;left:0;visibility:hidden;pointer-events:none;overflow:hidden;border:0;padding:0;margin:0;resize:none;white-space:pre-wrap;word-wrap:break-word';
+    document.body.appendChild(_inputMirror);
+  }
+  const cs = getComputedStyle(inputEl);
+  _inputMirror.style.width = cs.width;
+  _inputMirror.style.font = cs.font;
+  _inputMirror.style.lineHeight = cs.lineHeight;
+  _inputMirror.style.letterSpacing = cs.letterSpacing;
+  return _inputMirror;
+}
 function autoResizeInput() {
   const val = inputEl.value || '';
   if (!val || !val.includes('\n')) {
@@ -2721,19 +2737,17 @@ function autoResizeInput() {
     return;
   }
   _prevInputLen = val.length;
-  // 멀티라인: scrollHeight 측정 - height를 1px로 설정해 깜빡임 최소화
-  const prev = inputEl.style.height;
-  inputEl.style.height = '1px';
-  const sh = inputEl.scrollHeight;
-  const h = Math.min(sh, 100);
+  // 멀티라인: 숨겨진 미러 textarea로 높이 측정 (깜빡임 제거)
+  const m = _getInputMirror();
+  m.value = val;
+  const sh = m.scrollHeight;
+  const h = Math.max(24, Math.min(sh, 100));
   if (h !== _prevInputH) {
     _prevInputH = h;
     inputEl.style.height = h + 'px';
     inputEl.style.overflowY = h >= 100 ? 'auto' : 'hidden';
     const comp = inputEl.closest('.composer');
     if (comp) document.documentElement.style.setProperty('--composerH', Math.max(64, comp.offsetHeight) + 'px');
-  } else {
-    inputEl.style.height = prev;
   }
 }
 let _prevSendDisabled = true;
