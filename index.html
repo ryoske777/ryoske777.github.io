@@ -678,7 +678,10 @@ function pushToSubs(ids, title, body, rid, badgeCount) {
         ios_badgeType: 'Increase',
         ios_badgeCount: 1,
         // 안드로이드 배지
-        android_badge_count: typeof badgeCount === 'number' ? badgeCount : 1
+        android_badge_count: typeof badgeCount === 'number' ? badgeCount : 1,
+        // ★ 같은 채팅방 알림은 최신 1개로 교체 + iOS 그룹핑
+        collapse_id: 'room_' + rid,
+        thread_id: 'room_' + rid
       })
     }).catch(() => {});
   } catch(e) {}
