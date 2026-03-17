@@ -93,10 +93,10 @@ header{position:sticky;top:0;z-index:10;padding:12px 14px 10px;border-bottom:1px
 .badgeFail{color:var(--danger);font-weight:900;cursor:pointer}
 .readBadge{font-weight:900;opacity:.85}
 .typingBar{position:fixed;left:0;right:0;bottom:var(--composerH);height:var(--typingH);display:none;align-items:center;padding:0 12px;font-size:12px;color:var(--muted);background:rgba(255,255,255,.95);backdrop-filter:blur(12px);border-top:1px solid var(--line);z-index:19}
-.composer{position:fixed;left:0;right:0;bottom:0;height:var(--composerH);padding:10px 12px;border-top:1px solid var(--line);background:rgba(255,255,255,.95);backdrop-filter:blur(12px);display:flex;gap:10px;align-items:center;z-index:20}
+.composer{position:fixed;left:0;right:0;bottom:0;min-height:var(--composerH);padding:10px 12px;border-top:1px solid var(--line);background:rgba(255,255,255,.95);backdrop-filter:blur(12px);display:flex;gap:10px;align-items:flex-end;z-index:20}
 .emojiBtn{width:48px;height:48px;border-radius:14px;border:1px solid var(--line);background:#fff;font-size:22px;display:flex;align-items:center;justify-content:center;user-select:none;box-shadow:0 6px 18px rgba(0,0,0,.06)}
-.inputWrap{flex:1;height:48px;border-radius:14px;border:1px solid var(--line);background:#fff;display:flex;align-items:center;padding:0 12px}
-input[type="text"]{width:100%;border:0;outline:none;font-size:16px;background:transparent}
+.inputWrap{flex:1;min-height:48px;border-radius:14px;border:1px solid var(--line);background:#fff;display:flex;align-items:center;padding:0 12px}
+#input{width:100%;border:0;outline:none;font-size:16px;background:transparent;resize:none;font-family:inherit;line-height:24px;max-height:100px;overflow-y:auto;padding:0;margin:0;display:block}
 .sendBtn{width:64px;height:48px;border-radius:14px;border:0;background:#111827;color:#fff;font-size:15px;font-weight:900;box-shadow:0 10px 18px rgba(17,24,39,.14)}
 .sendBtn:disabled{opacity:.45;box-shadow:none}
 .emojiPanel{position:fixed;left:12px;right:12px;bottom:calc(var(--composerH) + 10px);background:#fff;border:1px solid var(--line);border-radius:16px;padding:10px;box-shadow:var(--shadow);display:none;z-index:30}
@@ -201,8 +201,8 @@ body.stealth .bubble.me{background:#e8f0fe;border-color:#d2e3fc}
 body.stealth .meta{font-size:10px;margin-top:1px}
 body.stealth .typingBar{position:relative;left:auto;right:auto;bottom:auto}
 body.stealth .composer{position:relative;left:auto;right:auto;bottom:auto;height:auto;min-height:36px;padding:4px 0;background:#fff;border-top:1px solid #dadce0;backdrop-filter:none;gap:0;flex-shrink:0}
-body.stealth .inputWrap{height:28px;border-radius:0;border:none;padding:0 8px;background:#fff;box-shadow:none;flex:1}
-body.stealth .composer input{height:28px;font-size:13px}
+body.stealth .inputWrap{min-height:28px;height:auto;border-radius:0;border:none;padding:0 8px;background:#fff;box-shadow:none;flex:1}
+body.stealth .composer #input{font-size:13px;line-height:20px;max-height:60px}
 body.stealth .sendBtn{width:36px;height:28px;border-radius:0;font-size:0;padding:0;display:flex;align-items:center;justify-content:center;background:#5f6368;box-shadow:none;flex-shrink:0}
 body.stealth .sendBtn::after{content:'▶';font-size:11px}
 body.stealth .photoBtn{display:none}
@@ -218,6 +218,7 @@ body.stealth .stealthBar{display:flex !important}
 .loadMoreBtn{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:8px 20px;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.06);transition:background .15s}
 .loadMoreBtn:hover{background:#f0f0f0}
 .loadMoreBtn:disabled{opacity:.5;cursor:default}
+@media(hover:hover)and(pointer:fine){.mobileOnly{display:none!important}}
 .toast{position:fixed;bottom:calc(var(--composerH) + 12px);left:50%;transform:translateX(-50%) translateY(20px);background:#111827;color:#fff;padding:9px 18px;border-radius:999px;font-size:13px;font-weight:700;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;z-index:400;white-space:nowrap}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .photoBtn{width:48px;height:48px;border-radius:14px;border:1px solid var(--line);background:#fff;font-size:22px;display:flex;align-items:center;justify-content:center;user-select:none;box-shadow:0 6px 18px rgba(0,0,0,.06);cursor:pointer;flex-shrink:0}
@@ -272,6 +273,7 @@ OneSignalDeferred.push(async function(OneSignal) {
           <button id="mEnableNoti"><span>알림 켜기</span><span id="mEnableNotiState">›</span></button>
           <button id="mSound"><span>소리(삐) 켜기</span><span id="mSoundState">›</span></button>
           <button id="mMyBubbleWhite"><span>내 말풍선 흰색</span><span id="mMyBubbleWhiteState">›</span></button>
+          <button id="mEnterNewline" class="mobileOnly"><span>엔터=줄바꿈</span><span id="mEnterNewlineState">›</span></button>
           <button id="mNick"><span>닉네임 변경</span><span>›</span></button>
           <button id="mRoomName"><span>방 이름 변경</span><span>›</span></button>
           <button id="mRoomPass"><span>비밀번호 설정/변경</span><span>›</span></button>
@@ -407,7 +409,7 @@ OneSignalDeferred.push(async function(OneSignal) {
     <div class="emojiBtn clickable" id="emojiBtn">😊</div>
     <label class="photoBtn" id="photoBtn" for="imgInput">📷</label>
     <input type="file" id="imgInput" accept="image/*" style="position:absolute;width:0;height:0;opacity:0;overflow:hidden"/>
-    <div class="inputWrap"><input id="input" type="text" autocomplete="off" placeholder="메시지를 입력하세요"/></div>
+    <div class="inputWrap"><textarea id="input" rows="1" autocomplete="off" placeholder="메시지를 입력하세요"></textarea></div>
     <button class="sendBtn" id="send" disabled>전송</button>
   </div>
 </div>
@@ -470,6 +472,7 @@ const LS_ROOM_AUTH = 'chat_room_auth_v1_';
 const LS_BUBBLE = 'chat_my_bubble_white_v1';
 const LS_ACCOUNT = 'chat_account_v1'; // 계정명 캐시 (자동 로그인 input 복원용)
 const LS_FONT_SIZE = 'chat_font_size_v1';
+const LS_ENTER_NL = 'chat_enter_newline_v1';
 
 // ================================================================
 // DOM REFS
@@ -496,6 +499,8 @@ const mSound = document.getElementById('mSound');
 const mSoundState = document.getElementById('mSoundState');
 const mMyBubbleWhite = document.getElementById('mMyBubbleWhite');
 const mMyBubbleWhiteState = document.getElementById('mMyBubbleWhiteState');
+const mEnterNewline = document.getElementById('mEnterNewline');
+const mEnterNewlineState = document.getElementById('mEnterNewlineState');
 const mNick = document.getElementById('mNick');
 const mRoomName = document.getElementById('mRoomName');
 const mRoomPass = document.getElementById('mRoomPass');
@@ -615,6 +620,8 @@ let notifyEnabled = (localStorage.getItem(LS_NOTI) === '1');
 let soundEnabled  = (localStorage.getItem(LS_SOUND) === '1');
 let myBubbleWhite = (localStorage.getItem(LS_BUBBLE) === '1');
 let chatFontSize  = Math.min(24, Math.max(6, parseInt(localStorage.getItem(LS_FONT_SIZE)||'16',10)));
+let enterNewline  = (localStorage.getItem(LS_ENTER_NL) === '1'); // 모바일: 엔터=줄바꿈 모드
+const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || ('ontouchstart' in window && window.innerWidth < 768);
 let onlineNicksCache = [];
 let currentReplyTo = null;
 
@@ -947,6 +954,7 @@ function updateMenuStates() {
   mEnableNotiState.textContent = notiTxt;
   mSoundState.textContent = soundEnabled ? '켜짐':'꺼짐';
   mMyBubbleWhiteState.textContent = myBubbleWhite ? '켜짐':'꺼짐';
+  if (mEnterNewlineState) mEnterNewlineState.textContent = enterNewline ? '켜짐':'꺼짐';
   menuHint.textContent = `도메인: ${location.hostname}${nosup?'\niPhone Safari: PWA(홈 화면 추가) 필요':''}`;
 }
 
@@ -974,6 +982,10 @@ mSound.addEventListener('click', async () => {
 mMyBubbleWhite.addEventListener('click', () => {
   closeMenu(); myBubbleWhite=!myBubbleWhite; localStorage.setItem(LS_BUBBLE,myBubbleWhite?'1':'0');
   applyBubbleTheme(); updateMenuStates();
+});
+if (mEnterNewline) mEnterNewline.addEventListener('click', () => {
+  closeMenu(); enterNewline=!enterNewline; localStorage.setItem(LS_ENTER_NL,enterNewline?'1':'0');
+  updateMenuStates();
 });
 mFontDec.addEventListener('click', e => {
   e.stopPropagation();
@@ -2596,7 +2608,13 @@ loginUserEl.addEventListener('keydown', e => { if (e.key === 'Enter') loginPassE
 // ================================================================
 // SEND
 // ================================================================
-function onInput() { sendBtn.disabled=!inputEl.value.trim(); if(roomId) markTypeActivity(); }
+function autoResizeInput() {
+  inputEl.style.height = '24px';
+  inputEl.style.height = Math.min(inputEl.scrollHeight, 100) + 'px';
+  const comp = inputEl.closest('.composer');
+  if (comp) document.documentElement.style.setProperty('--composerH', comp.offsetHeight + 'px');
+}
+function onInput() { sendBtn.disabled=!inputEl.value.trim(); autoResizeInput(); if(roomId) markTypeActivity(); }
 inputEl.addEventListener('input',onInput);
 inputEl.addEventListener('focus',refreshLayout);
 inputEl.addEventListener('click',refreshLayout);
@@ -2666,13 +2684,22 @@ function send() {
   renderMessage({roomId,messageId:mid,senderId:myUid,senderNick:myNick,text,ts:Date.now(),seq:0,replyTo:replyToData},true);
   scrollToBottom(true);
   pending.set(mid,{text,createdAt:Date.now()}); updateBadges();
-  inputEl.value=''; onInput();
+  inputEl.value=''; autoResizeInput(); onInput();
   try{if(_typRef)_typRef.remove();}catch(e){} _typingOn=false;
   sendToFirebase(mid,text,replyToData);
 }
 function focusInput(){try{inputEl.focus({preventScroll:true});}catch(e){try{inputEl.focus();}catch(e2){}}}
 sendBtn.addEventListener('pointerdown',async e=>{e.preventDefault();if(soundEnabled)await unlockAudio();send();focusInput();});
-inputEl.addEventListener('keydown',async e=>{if(e.key==='Enter'){e.preventDefault();if(soundEnabled)await unlockAudio();send();focusInput();}});
+inputEl.addEventListener('keydown',async e=>{
+  if(e.key==='Enter'){
+    // PC: Shift+Enter=줄바꿈, Enter=전송
+    // 모바일: enterNewline 설정에 따라 Enter=줄바꿈 또는 전송
+    const wantNewline = e.shiftKey || (isMobileDevice && enterNewline && !e.shiftKey);
+    if(wantNewline) return; // 기본 동작(줄바꿈) 허용
+    e.preventDefault();
+    if(soundEnabled)await unlockAudio();send();focusInput();
+  }
+});
 
 // ================================================================
 // CONTEXT MENU
@@ -2790,6 +2817,24 @@ document.addEventListener('visibilitychange', () => {
     refreshLayout();
     setTimeout(refreshLayout, 300);
     try { firebase.database().goOnline(); } catch(e) {}
+    // ★ 포그라운드 복귀 시 최근 메시지 즉시 fetch (Firebase 재연결 지연 보완)
+    if (roomId && afterSeq > 0) {
+      db.ref('messages/'+roomId).orderByChild('seq').startAt(afterSeq+1).limitToLast(30).once('value').then(snap => {
+        if (!snap.exists()) return;
+        let added = false;
+        snap.forEach(child => {
+          const m = child.val(); if (!m) return;
+          const mid = String(m.messageId||child.key||'');
+          if (seen.has(mid)) return;
+          mergeServerMsg({ messageId:mid, senderId:String(m.senderId||''), senderNick:String(m.senderNick||''),
+            text:String(m.text||''), ts:Number(m.ts||0), seq:Number(m.seq||0),
+            deleted:!!m.deleted, edited:!!m.edited, replyTo:m.replyTo||null, imageUrl:m.imageUrl||null });
+          afterSeq = Math.max(afterSeq, Number(m.seq||0));
+          added = true;
+        });
+        if (added) scrollToBottom(false);
+      }).catch(()=>{});
+    }
   }
 });
 
