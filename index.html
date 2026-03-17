@@ -84,7 +84,7 @@ header{position:sticky;top:0;z-index:10;padding:12px 14px 10px;border-bottom:1px
 .row{display:flex;gap:8px;width:100%}
 .row.me{justify-content:flex-end}
 .row.other{justify-content:flex-start}
-.bubble{max-width:82%;padding:12px;border-radius:16px;border:1px solid var(--line);background:var(--other);color:var(--otherText);white-space:pre-wrap;word-break:break-word;font-size:var(--bubbleFontSize,16px);line-height:1.35}
+.bubble{max-width:82%;padding:12px;border-radius:16px;border:1px solid var(--line);background:var(--other);color:var(--otherText);white-space:pre-wrap;word-break:break-word;font-size:var(--bubbleFontSize,16px);line-height:1.35;font-family:var(--chatFontFamily,inherit)}
 .row.me .bubble{background:var(--me);color:var(--meText);border-color:transparent;border-bottom-right-radius:6px;box-shadow:none}
 .row.other .bubble{border-bottom-left-radius:6px}
 .meta{font-size:11px;color:var(--muted);display:flex;gap:8px;align-items:center}
@@ -273,7 +273,7 @@ OneSignalDeferred.push(async function(OneSignal) {
           <button id="mEnableNoti"><span>알림 켜기</span><span id="mEnableNotiState">›</span></button>
           <button id="mSound"><span>소리(삐) 켜기</span><span id="mSoundState">›</span></button>
           <button id="mMyBubbleWhite"><span>내 말풍선 흰색</span><span id="mMyBubbleWhiteState">›</span></button>
-          <button id="mEnterNewline" class="mobileOnly"><span>엔터=줄바꿈</span><span id="mEnterNewlineState">›</span></button>
+          <button id="mEnterNewline" class="mobileOnly"><span>엔터로 줄바꿈</span><span id="mEnterNewlineState">›</span></button>
           <button id="mNick"><span>닉네임 변경</span><span>›</span></button>
           <button id="mRoomName"><span>방 이름 변경</span><span>›</span></button>
           <button id="mRoomPass"><span>비밀번호 설정/변경</span><span>›</span></button>
@@ -288,6 +288,15 @@ OneSignalDeferred.push(async function(OneSignal) {
               <span id="mFontSizeVal">16</span>
               <button id="mFontInc" type="button">＋</button>
             </div>
+          </div>
+          <div class="mFontSizeRow">
+            <span>글씨체</span>
+            <select id="mFontFamily" style="font-size:13px;padding:4px 8px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--text);outline:none;max-width:140px">
+              <option value="system">기본</option>
+              <option value="serif">명조 (Serif)</option>
+              <option value="rounded">둥근고딕</option>
+              <option value="mono">고정폭 (Mono)</option>
+            </select>
           </div>
           <div class="hint" id="menuHint"></div>
         </div>
@@ -365,8 +374,8 @@ OneSignalDeferred.push(async function(OneSignal) {
           <input id="homeUsePass" type="checkbox" style="width:18px;height:18px"/>비밀번호 사용(선택)
         </label>
       </div>
-      <div class="field" id="homePassField" style="display:none">
-        <label>방 비밀번호</label><input id="homeRoomPass" type="password" placeholder="비밀번호를 설정해 주세요"/>
+      <div class="field" id="homePassField" style="display:none;margin-top:4px">
+        <label>방 비밀번호</label><input id="homeRoomPass" type="password" placeholder="비밀번호를 설정해 주세요" style="margin-top:4px"/>
       </div>
       <div class="rowBtns">
         <button class="primaryBtn" id="btnCreate">방 만들기</button>
@@ -374,7 +383,7 @@ OneSignalDeferred.push(async function(OneSignal) {
       </div>
       <div class="sectionTitle">채팅방 목록</div>
       <div class="roomList" id="roomList"></div>
-      <div class="rowBtns"><button class="ghostBtn" id="btnJoin">참여하기</button></div>
+      <div class="roomCountInfo" id="roomCountInfo" style="text-align:center;font-size:12px;color:var(--muted);padding:8px 0"></div>
       <div id="lastRoomSection" style="display:none">
         <div class="sectionTitle">이전 방</div>
         <div class="lastRoomBar clickable" id="lastRoomBar">
@@ -473,6 +482,7 @@ const LS_BUBBLE = 'chat_my_bubble_white_v1';
 const LS_ACCOUNT = 'chat_account_v1'; // 계정명 캐시 (자동 로그인 input 복원용)
 const LS_FONT_SIZE = 'chat_font_size_v1';
 const LS_ENTER_NL = 'chat_enter_newline_v1';
+const LS_FONT_FAMILY = 'chat_font_family_v1';
 
 // ================================================================
 // DOM REFS
@@ -519,6 +529,7 @@ const searchCloseBtn = document.getElementById('searchClose');
 const mFontDec = document.getElementById('mFontDec');
 const mFontInc = document.getElementById('mFontInc');
 const mFontSizeVal = document.getElementById('mFontSizeVal');
+const mFontFamily = document.getElementById('mFontFamily');
 const home = document.getElementById('home');
 const homeRoomName = document.getElementById('homeRoomName');
 const homeUsePass = document.getElementById('homeUsePass');
@@ -526,7 +537,7 @@ const homePassField = document.getElementById('homePassField');
 const homeRoomPass = document.getElementById('homeRoomPass');
 const btnCreate = document.getElementById('btnCreate');
 const btnRefresh = document.getElementById('btnRefresh');
-const btnJoin = document.getElementById('btnJoin');
+const roomCountInfo = document.getElementById('roomCountInfo');
 const roomList = document.getElementById('roomList');
 const logEl = document.getElementById('log');
 const composer = document.getElementById('composer');
@@ -620,7 +631,8 @@ let notifyEnabled = (localStorage.getItem(LS_NOTI) === '1');
 let soundEnabled  = (localStorage.getItem(LS_SOUND) === '1');
 let myBubbleWhite = (localStorage.getItem(LS_BUBBLE) === '1');
 let chatFontSize  = Math.min(24, Math.max(6, parseInt(localStorage.getItem(LS_FONT_SIZE)||'16',10)));
-let enterNewline  = (localStorage.getItem(LS_ENTER_NL) === '1'); // 모바일: 엔터=줄바꿈 모드
+let enterNewline  = (localStorage.getItem(LS_ENTER_NL) === '1'); // 모바일: 엔터로 줄바꿈 모드
+let chatFontFamily = localStorage.getItem(LS_FONT_FAMILY) || 'system';
 const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || ('ontouchstart' in window && window.innerWidth < 768);
 let onlineNicksCache = [];
 let currentReplyTo = null;
@@ -947,6 +959,19 @@ function applyFontSize() {
 }
 applyFontSize();
 
+const FONT_FAMILY_MAP = {
+  system: '-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",Arial,sans-serif',
+  serif: '"Noto Serif KR",Georgia,"Times New Roman","Batang",serif',
+  rounded: '"Apple SD Gothic Neo","Hiragino Maru Gothic ProN","Noto Sans KR",sans-serif',
+  mono: '"SF Mono","Menlo","Noto Sans Mono","D2Coding",monospace'
+};
+function applyFontFamily() {
+  const ff = FONT_FAMILY_MAP[chatFontFamily] || FONT_FAMILY_MAP.system;
+  document.documentElement.style.setProperty('--chatFontFamily', ff);
+  if (mFontFamily) mFontFamily.value = chatFontFamily;
+}
+applyFontFamily();
+
 function updateMenuStates() {
   const nosup = isIOS() && !isPWA();
   let notiTxt = '꺼짐';
@@ -1005,6 +1030,12 @@ stealthFontDec.addEventListener('click', e => {
 stealthFontInc.addEventListener('click', e => {
   e.stopPropagation();
   if (chatFontSize < 24) { chatFontSize += 1; localStorage.setItem(LS_FONT_SIZE, chatFontSize); applyFontSize(); }
+});
+if (mFontFamily) mFontFamily.addEventListener('change', e => {
+  e.stopPropagation();
+  chatFontFamily = mFontFamily.value;
+  localStorage.setItem(LS_FONT_FAMILY, chatFontFamily);
+  applyFontFamily();
 });
 
 // ================================================================
@@ -2233,14 +2264,14 @@ async function refreshRooms() {
     const snap=await db.ref('rooms').orderByChild('updatedAt').limitToLast(50).once('value');
     const v=snap.val()||{};
     const items=Object.keys(v).map(id=>({roomId:id,...v[id]})).sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
-    if(!items.length){const d=document.createElement('div');d.className='roomMeta';d.textContent='방이 없습니다.';roomList.appendChild(d);return;}
+    if(!items.length){const d=document.createElement('div');d.className='roomMeta';d.textContent='방이 없습니다.';roomList.appendChild(d);roomCountInfo.textContent='';return;}
     items.forEach(r=>{
       const item=document.createElement('div');item.className='roomItem clickable';
       const left=document.createElement('div');left.className='roomLeft';
       const nm=document.createElement('div');nm.className='roomName';
       nm.innerHTML=`<span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.passEnabled?'🔒 ':''}${esc(r.roomName||'채팅방')}</span>`;
       const mt=document.createElement('div');mt.className='roomMeta';
-      mt.textContent=`방장: ${r.ownerNick||'미확정'} · ${r.passEnabled?'🔒 비밀번호 있음':'🔓 없음'} · ${r.updatedAt?fmt(r.updatedAt):''}`;
+      mt.textContent=`방장: ${r.ownerNick||'미확정'} · ${r.passEnabled?'🔒':'🔓'} · ${r.updatedAt?fmt(r.updatedAt):''}`;
       left.appendChild(nm);left.appendChild(mt);
       const right=document.createElement('div');right.className='roomRight';
       const chip=document.createElement('div');chip.className='chip';chip.textContent='입장';right.appendChild(chip);
@@ -2248,10 +2279,10 @@ async function refreshRooms() {
       item.addEventListener('click',async()=>await joinFlow(r.roomId));
       roomList.appendChild(item);
     });
-  } catch(e){const d=document.createElement('div');d.className='roomMeta';d.textContent='목록을 불러오지 못했습니다.';roomList.appendChild(d);}
+    roomCountInfo.textContent=`총 ${items.length}개의 채팅방`;
+  } catch(e){const d=document.createElement('div');d.className='roomMeta';d.textContent='목록을 불러오지 못했습니다.';roomList.appendChild(d);roomCountInfo.textContent='';}
 }
 btnRefresh.addEventListener('click',()=>refreshRooms());
-btnJoin.addEventListener('click',()=>alert('방 목록에서 입장해 주세요.'));
 homeUsePass.addEventListener('change',()=>{homePassField.style.display=homeUsePass.checked?'block':'none';if(!homeUsePass.checked)homeRoomPass.value='';});
 
 btnCreate.addEventListener('click',async()=>{
