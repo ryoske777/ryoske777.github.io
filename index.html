@@ -1083,13 +1083,8 @@ document.addEventListener('keydown', (e) => {
 });
 
 function panicHide() {
-  if (isPopup()) {
-    // 팝업이면 창 닫기
-    window.close();
-  } else {
-    // 일반 탭이면 화면을 위장 화면으로 덮기
-    showDecoyScreen();
-  }
+  // 팝업이든 일반 탭이든 위장 화면으로 덮기
+  showDecoyScreen();
 }
 
 function showDecoyScreen() {
