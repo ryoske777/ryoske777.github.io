@@ -37,12 +37,18 @@ header{position:sticky;top:0;z-index:10;padding:12px 14px 10px;border-bottom:1px
 .pill,.chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:#fff;font-size:12px;color:var(--muted)}
 .menuWrap{position:relative;display:flex;align-items:center;gap:8px}
 .menuBtn{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;line-height:1;user-select:none;box-shadow:0 6px 18px rgba(0,0,0,.06)}
-.menu{position:absolute;right:0;top:46px;min-width:280px;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow2);overflow:hidden;display:none}
+.menu{position:absolute;right:0;top:46px;min-width:280px;max-height:70vh;overflow-y:auto;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow2);display:none;-webkit-overflow-scrolling:touch}
 .menu.open{display:block}
-.menu button{width:100%;padding:12px;border:0;background:#fff;text-align:left;font-size:14px;display:flex;justify-content:space-between;align-items:center}
+.menuSection{padding:0}
+.menuSectionTitle{font-size:11px;font-weight:800;color:var(--muted);padding:10px 12px 4px;text-transform:uppercase;letter-spacing:.5px;background:#f8fafc;border-top:1px solid var(--line)}
+.menuSection:first-child .menuSectionTitle{border-top:none;border-radius:14px 14px 0 0}
+.menu button{width:100%;padding:11px 12px;border:0;background:#fff;text-align:left;font-size:14px;display:flex;justify-content:space-between;align-items:center}
 .menu button:hover{background:#f8fafc}
 .menu .hint{font-size:12px;color:var(--muted);padding:10px 12px;border-top:1px solid var(--line);line-height:1.35;white-space:pre-wrap}
-.mFontSizeRow{width:100%;padding:10px 12px;border:0;background:#fff;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;font-size:14px}
+.mFontSizeRow{width:100%;padding:9px 12px;border:0;background:#fff;display:flex;justify-content:space-between;align-items:center;font-size:14px}
+.menuColorRow{display:flex;align-items:center;gap:8px;padding:9px 12px;font-size:14px}
+.menuColorRow span{flex:1}
+.menuBgActions{display:flex;gap:6px;align-items:center}
 .fontSizeCtrl{display:flex;align-items:center;gap:8px}
 .fontSizeCtrl button{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:#f8fafc;font-size:16px;line-height:1;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer;font-weight:700;color:var(--text)}
 .fontSizeCtrl button:hover{background:#e5e7eb}
@@ -82,7 +88,7 @@ header{position:sticky;top:0;z-index:10;padding:12px 14px 10px;border-bottom:1px
 .roomName{font-weight:900;font-size:15px;display:flex;align-items:center;gap:8px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .roomMeta{font-size:12px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap}
 .roomRight{display:flex;align-items:center;gap:8px;flex-shrink:0}
-.log{flex:1;min-height:0;overflow:auto;padding:12px 12px calc(var(--composerH) + var(--typingH) + var(--kb) + 12px);-webkit-overflow-scrolling:touch}
+.log{flex:1;min-height:0;overflow:auto;padding:12px 12px calc(var(--composerH) + var(--typingH) + var(--kb) + 12px);-webkit-overflow-scrolling:touch;background-color:var(--chatBg,transparent);background-size:cover;background-position:center;background-repeat:no-repeat}
 .msg{display:flex;flex-direction:column;gap:4px;margin:10px 0;width:100%}
 .row{display:flex;gap:8px;width:100%}
 .row.me{justify-content:flex-end}
@@ -96,11 +102,11 @@ header{position:sticky;top:0;z-index:10;padding:12px 14px 10px;border-bottom:1px
 .badgeFail{color:var(--danger);font-weight:900;cursor:pointer}
 .readBadge{font-weight:900;opacity:.85}
 .typingBar{position:fixed;left:0;right:0;bottom:var(--composerH);height:var(--typingH);display:none;align-items:center;padding:0 12px;font-size:12px;color:var(--muted);background:rgba(255,255,255,.98);border-top:1px solid var(--line);z-index:19}
-.composer{position:fixed;left:0;right:0;bottom:0;min-height:var(--composerH);padding:10px 12px;border-top:1px solid var(--line);background:rgba(255,255,255,.97);display:flex;gap:10px;align-items:flex-end;z-index:20}
+.composer{position:fixed;left:0;right:0;bottom:0;min-height:var(--composerH);padding:14px 12px;border-top:1px solid var(--line);background:rgba(255,255,255,.97);display:flex;gap:10px;align-items:flex-end;z-index:20;cursor:text}
 .composer::before{display:none}
 .emojiBtn{width:48px;height:48px;border-radius:14px;border:1px solid var(--line);background:#fff;font-size:22px;display:flex;align-items:center;justify-content:center;user-select:none;box-shadow:0 6px 18px rgba(0,0,0,.06)}
 .inputWrap{flex:1;min-height:48px;border-radius:14px;border:1px solid var(--line);background:#fff;display:flex;align-items:center;padding:0 12px;contain:layout style;isolation:isolate}
-#input{width:100%;border:0;outline:none;font-size:16px;background:transparent;resize:none;font-family:inherit;line-height:24px;height:24px;max-height:100px;overflow-y:hidden;padding:0;margin:0;display:block;box-sizing:border-box;-webkit-font-smoothing:antialiased}
+#input{width:100%;border:0;outline:none;font-size:16px;background:transparent;resize:none;font-family:inherit;line-height:24px;height:24px;max-height:200px;overflow-y:hidden;padding:0;margin:0;display:block;box-sizing:border-box;-webkit-font-smoothing:antialiased}
 .sendBtn{width:64px;height:48px;border-radius:14px;border:0;background:#111827;color:#fff;font-size:15px;font-weight:900;box-shadow:0 10px 18px rgba(17,24,39,.14);transition:opacity .15s}
 .sendBtn:disabled{opacity:.45;box-shadow:none}
 .emojiPanel{position:fixed;left:12px;right:12px;bottom:calc(var(--composerH) + 10px);background:#fff;border:1px solid var(--line);border-radius:16px;padding:10px;box-shadow:var(--shadow);display:none;z-index:30}
@@ -277,45 +283,70 @@ OneSignalDeferred.push(async function(OneSignal) {
         <div class="searchBtn clickable" id="searchBtn">🔍</div>
         <div class="menuBtn clickable" id="menuBtn">…</div>
         <div class="menu" id="menu">
-          <button id="mEnableNoti"><span>알림 켜기</span><span id="mEnableNotiState">›</span></button>
-          <button id="mSound"><span>소리(삐) 켜기</span><span id="mSoundState">›</span></button>
-          <div class="mFontSizeRow">
-            <span>내 말풍선</span>
-            <input type="color" id="mMyBubbleColor" style="width:36px;height:28px;border:1px solid var(--line);border-radius:6px;padding:1px;cursor:pointer;background:var(--card)">
+          <!-- 알림 설정 -->
+          <div class="menuSection">
+            <div class="menuSectionTitle">알림</div>
+            <button id="mEnableNoti"><span>알림</span><span id="mEnableNotiState">›</span></button>
+            <button id="mSound"><span>소리(삐)</span><span id="mSoundState">›</span></button>
           </div>
-          <div class="mFontSizeRow">
-            <span>상대 말풍선</span>
-            <input type="color" id="mOtherBubbleColor" style="width:36px;height:28px;border:1px solid var(--line);border-radius:6px;padding:1px;cursor:pointer;background:var(--card)">
-          </div>
-          <button id="mEnterNewline" class="mobileOnly"><span>엔터로 줄바꿈</span><span id="mEnterNewlineState">›</span></button>
-          <button id="mNick"><span>닉네임 변경</span><span>›</span></button>
-          <button id="mRoomName"><span>방 이름 변경</span><span>›</span></button>
-          <button id="mRoomPass"><span>비밀번호 설정/변경</span><span>›</span></button>
-          <button id="mLeave"><span>나가기</span><span>›</span></button>
-          <button id="mStealth"><span>시크릿모드</span><span>›</span></button>
-          <button id="mDeleteRoom" style="color:var(--danger)"><span>채팅방 삭제</span><span>›</span></button>
-          <button id="mLogout" style="color:var(--danger)"><span>로그아웃</span><span>›</span></button>
-          <div class="mFontSizeRow">
-            <span>글씨 크기</span>
-            <div class="fontSizeCtrl">
-              <button id="mFontDec" type="button">－</button>
-              <span id="mFontSizeVal">16</span>
-              <button id="mFontInc" type="button">＋</button>
+          <!-- 꾸미기 -->
+          <div class="menuSection">
+            <div class="menuSectionTitle">꾸미기</div>
+            <div class="menuColorRow">
+              <span>내 말풍선</span>
+              <input type="color" id="mMyBubbleColor" style="width:36px;height:28px;border:1px solid var(--line);border-radius:6px;padding:1px;cursor:pointer;background:var(--card)">
+            </div>
+            <div class="menuColorRow">
+              <span>상대 말풍선</span>
+              <input type="color" id="mOtherBubbleColor" style="width:36px;height:28px;border:1px solid var(--line);border-radius:6px;padding:1px;cursor:pointer;background:var(--card)">
+            </div>
+            <div class="menuColorRow">
+              <span>채팅 배경</span>
+              <div class="menuBgActions">
+                <input type="color" id="mChatBgColor" value="#f3f4f6" style="width:36px;height:28px;border:1px solid var(--line);border-radius:6px;padding:1px;cursor:pointer;background:var(--card)">
+                <label for="mChatBgImg" style="font-size:18px;cursor:pointer;line-height:1" title="배경 이미지">🖼️</label>
+                <input type="file" id="mChatBgImg" accept="image/*" style="position:absolute;width:0;height:0;opacity:0;overflow:hidden">
+                <button id="mChatBgReset" type="button" style="font-size:11px;padding:4px 8px;border-radius:6px;border:1px solid var(--line);background:#f8fafc;cursor:pointer;white-space:nowrap;width:auto">초기화</button>
+              </div>
+            </div>
+            <div class="mFontSizeRow">
+              <span>글씨 크기</span>
+              <div class="fontSizeCtrl">
+                <button id="mFontDec" type="button">－</button>
+                <span id="mFontSizeVal">16</span>
+                <button id="mFontInc" type="button">＋</button>
+              </div>
+            </div>
+            <div class="mFontSizeRow">
+              <span>글씨체</span>
+              <select id="mFontFamily" style="font-size:13px;padding:4px 8px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--text);outline:none;max-width:140px">
+                <option value="system">기본</option>
+                <option value="serif">명조 (Serif)</option>
+                <option value="rounded">둥근고딕</option>
+                <option value="mono">고정폭 (Mono)</option>
+                <option value="cute">큐트체</option>
+                <option value="gaegu">개구체</option>
+                <option value="penscript">나눔손글씨</option>
+                <option value="melody">하이멜로디</option>
+                <option value="singleday">싱글데이</option>
+              </select>
             </div>
           </div>
-          <div class="mFontSizeRow">
-            <span>글씨체</span>
-            <select id="mFontFamily" style="font-size:13px;padding:4px 8px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--text);outline:none;max-width:140px">
-              <option value="system">기본</option>
-              <option value="serif">명조 (Serif)</option>
-              <option value="rounded">둥근고딕</option>
-              <option value="mono">고정폭 (Mono)</option>
-              <option value="cute">큐트체</option>
-              <option value="gaegu">개구체</option>
-              <option value="penscript">나눔손글씨</option>
-              <option value="melody">하이멜로디</option>
-              <option value="singleday">싱글데이</option>
-            </select>
+          <!-- 채팅방 설정 -->
+          <div class="menuSection">
+            <div class="menuSectionTitle">채팅방</div>
+            <button id="mEnterNewline" class="mobileOnly"><span>엔터로 줄바꿈</span><span id="mEnterNewlineState">›</span></button>
+            <button id="mNick"><span>닉네임 변경</span><span>›</span></button>
+            <button id="mRoomName"><span>방 이름 변경</span><span>›</span></button>
+            <button id="mRoomPass"><span>비밀번호 설정/변경</span><span>›</span></button>
+          </div>
+          <!-- 기타 -->
+          <div class="menuSection">
+            <div class="menuSectionTitle">기타</div>
+            <button id="mStealth"><span>시크릿모드</span><span>›</span></button>
+            <button id="mLeave"><span>나가기</span><span>›</span></button>
+            <button id="mDeleteRoom" style="color:var(--danger)"><span>채팅방 삭제</span><span>›</span></button>
+            <button id="mLogout" style="color:var(--danger)"><span>로그아웃</span><span>›</span></button>
           </div>
           <div class="hint" id="menuHint"></div>
         </div>
@@ -434,10 +465,10 @@ OneSignalDeferred.push(async function(OneSignal) {
       </div>
       <button class="replyCloseBtn" id="replyCloseBtn">✕</button>
     </div>
-    <div class="emojiBtn clickable" id="emojiBtn">😊</div>
     <label class="photoBtn" id="photoBtn" for="imgInput">📷</label>
     <input type="file" id="imgInput" accept="image/*" style="position:absolute;width:0;height:0;opacity:0;overflow:hidden"/>
     <div class="inputWrap"><textarea id="input" autocomplete="off" placeholder=""></textarea></div>
+    <div class="emojiBtn clickable" id="emojiBtn">😊</div>
     <button class="sendBtn" id="send" disabled>전송</button>
   </div>
 </div>
@@ -505,6 +536,8 @@ const LS_ACCOUNT = 'chat_account_v1'; // 계정명 캐시 (자동 로그인 inpu
 const LS_FONT_SIZE = 'chat_font_size_v1';
 const LS_ENTER_NL = 'chat_enter_newline_v1';
 const LS_FONT_FAMILY = 'chat_font_family_v1';
+const LS_CHAT_BG_COLOR = 'chat_bg_color_v1';
+const LS_CHAT_BG_IMAGE = 'chat_bg_image_v1';
 
 // ================================================================
 // DOM REFS
@@ -659,6 +692,8 @@ let otherBubbleColor = localStorage.getItem(LS_OTHER_BUBBLE_COLOR) || '';
 let chatFontSize  = Math.min(24, Math.max(6, parseInt(localStorage.getItem(LS_FONT_SIZE)||'16',10)));
 let enterNewline  = (localStorage.getItem(LS_ENTER_NL) === '1'); // 모바일: 엔터로 줄바꿈 모드
 let chatFontFamily = localStorage.getItem(LS_FONT_FAMILY) || 'system';
+let chatBgColor = localStorage.getItem(LS_CHAT_BG_COLOR) || '';
+let chatBgImage = localStorage.getItem(LS_CHAT_BG_IMAGE) || '';
 const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || ('ontouchstart' in window && window.innerWidth < 768);
 let onlineNicksCache = [];
 let currentReplyTo = null;
@@ -1014,6 +1049,23 @@ function applyFontFamily() {
 }
 applyFontFamily();
 
+function applyChatBg() {
+  if (chatBgImage) {
+    logEl.style.backgroundImage = 'url(' + chatBgImage + ')';
+    logEl.style.backgroundColor = '';
+    document.documentElement.style.setProperty('--chatBg', 'transparent');
+  } else if (chatBgColor) {
+    logEl.style.backgroundImage = '';
+    document.documentElement.style.setProperty('--chatBg', chatBgColor);
+  } else {
+    logEl.style.backgroundImage = '';
+    document.documentElement.style.setProperty('--chatBg', 'transparent');
+  }
+  const mBgColor = document.getElementById('mChatBgColor');
+  if (mBgColor) mBgColor.value = chatBgColor || '#f3f4f6';
+}
+applyChatBg();
+
 function updateMenuStates() {
   const nosup = isIOS() && !isPWA();
   let notiTxt = '꺼짐';
@@ -1088,6 +1140,49 @@ if (mFontFamily) mFontFamily.addEventListener('change', e => {
   chatFontFamily = mFontFamily.value;
   localStorage.setItem(LS_FONT_FAMILY, chatFontFamily);
   applyFontFamily();
+});
+
+// 채팅 배경 색상
+const mChatBgColor = document.getElementById('mChatBgColor');
+const mChatBgImg = document.getElementById('mChatBgImg');
+const mChatBgReset = document.getElementById('mChatBgReset');
+if (mChatBgColor) mChatBgColor.addEventListener('input', e => {
+  chatBgColor = e.target.value; chatBgImage = '';
+  localStorage.setItem(LS_CHAT_BG_COLOR, chatBgColor);
+  localStorage.removeItem(LS_CHAT_BG_IMAGE);
+  applyChatBg();
+});
+if (mChatBgImg) mChatBgImg.addEventListener('change', async e => {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  if (file.size > 5*1024*1024) { showToast('5MB 이하 이미지만 가능해요'); return; }
+  const reader = new FileReader();
+  reader.onload = ev => {
+    // compress via canvas
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 1200; let w = img.width, h = img.height;
+      if (w > MAX || h > MAX) { if (w > h) { h = Math.round(h*MAX/w); w = MAX; } else { w = Math.round(w*MAX/h); h = MAX; } }
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      chatBgImage = c.toDataURL('image/jpeg', 0.7);
+      chatBgColor = '';
+      try { localStorage.setItem(LS_CHAT_BG_IMAGE, chatBgImage); } catch(e) { showToast('이미지가 너무 큽니다'); chatBgImage=''; }
+      localStorage.removeItem(LS_CHAT_BG_COLOR);
+      applyChatBg();
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+  mChatBgImg.value = '';
+});
+if (mChatBgReset) mChatBgReset.addEventListener('click', e => {
+  e.stopPropagation();
+  chatBgColor = ''; chatBgImage = '';
+  localStorage.removeItem(LS_CHAT_BG_COLOR);
+  localStorage.removeItem(LS_CHAT_BG_IMAGE);
+  applyChatBg();
+  showToast('배경 초기화됨');
 });
 
 // ================================================================
@@ -2753,7 +2848,7 @@ function _doResize() {
     return;
   }
   // 글자 수가 줄지 않았고 높이가 이미 max면 측정 스킵
-  if (val.length >= _prevInputLen && _prevInputH >= 100) {
+  if (val.length >= _prevInputLen && _prevInputH >= 200) {
     _prevInputLen = val.length;
     return;
   }
@@ -2762,11 +2857,11 @@ function _doResize() {
   const m = _getInputMirror();
   m.value = val;
   const sh = m.scrollHeight;
-  const h = Math.max(24, Math.min(sh, 100));
+  const h = Math.max(24, Math.min(sh, 200));
   if (h !== _prevInputH) {
     _prevInputH = h;
     inputEl.style.height = h + 'px';
-    inputEl.style.overflowY = h >= 100 ? 'auto' : 'hidden';
+    inputEl.style.overflowY = h >= 200 ? 'auto' : 'hidden';
     // offsetHeight 대신 계산값 사용 — 강제 reflow 방지
     document.documentElement.style.setProperty('--composerH', Math.max(64, h + 40) + 'px');
   }
@@ -2869,6 +2964,12 @@ function send() {
   sendToFirebase(mid,text,replyToData);
 }
 function focusInput(){try{inputEl.focus({preventScroll:true});}catch(e){try{inputEl.focus();}catch(e2){}}}
+// 컴포저 영역 터치 시 키보드 올리기 (버튼/이모지/사진 제외)
+composer.addEventListener('click', e => {
+  const t = e.target;
+  if (t === inputEl || t.closest('.sendBtn') || t.closest('.emojiBtn') || t.closest('.photoBtn') || t.closest('.replyCloseBtn')) return;
+  focusInput();
+});
 sendBtn.addEventListener('pointerdown',async e=>{e.preventDefault();if(soundEnabled)await unlockAudio();send();focusInput();});
 inputEl.addEventListener('keydown',async e=>{
   if(e.key==='Enter'){
