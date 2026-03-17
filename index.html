@@ -60,6 +60,9 @@ header{position:sticky;top:0;z-index:10;padding:12px 14px 10px;border-bottom:1px
 .homeDropdownAccountName{font-size:15px;font-weight:900;color:var(--text)}
 .homeDropdownLogout{width:100%;border:0;background:transparent;text-align:left;padding:12px 16px;font-size:14px;font-weight:700;color:var(--danger);cursor:pointer;display:flex;align-items:center;gap:8px}
 .homeDropdownLogout:hover{background:#fff1f2}
+.homeDropdownNick{padding:10px 16px 8px;border-bottom:1px solid var(--line)}
+.homeDropdownNickBtn{width:100%;border:0;background:transparent;text-align:left;padding:12px 16px;font-size:14px;font-weight:700;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line)}
+.homeDropdownNickBtn:hover{background:#f8fafc}
 .sectionTitle{font-size:12px;color:var(--muted);font-weight:800;margin:14px 0 8px}
 .field{display:flex;flex-direction:column;gap:8px;margin:10px 0}
 .field label{font-size:12px;color:var(--muted)}
@@ -295,7 +298,7 @@ OneSignalDeferred.push(async function(OneSignal) {
       <img src="/icon-512x512.png" class="loginLogo" alt="Chat" draggable="false"/>
       <div class="loginTitle">Chat</div>
       <div class="loginSub">계정을 만들거나 로그인하세요</div>
-      <div class="field" style="text-align:left"><label>계정명</label><input id="loginUser" type="text" placeholder="예: ryoske" autocomplete="username" spellcheck="false"/></div>
+      <div class="field" style="text-align:left"><label>계정명</label><input id="loginUser" type="text" placeholder="계정명을 입력해 주세요" autocomplete="username" spellcheck="false"/></div>
       <div class="field" style="text-align:left"><label>비밀번호 (6자 이상)</label><input id="loginPass" type="password" placeholder="비밀번호" autocomplete="current-password"/></div>
       <div class="loginError" id="loginError"></div>
       <div class="rowBtns" style="margin-top:14px">
@@ -318,6 +321,14 @@ OneSignalDeferred.push(async function(OneSignal) {
               <div class="homeDropdownAccountLabel">로그인된 계정</div>
               <div class="homeDropdownAccountName" id="homeDropdownAccountName">-</div>
             </div>
+            <div class="homeDropdownNick" id="homeDropdownNickSection">
+              <div class="homeDropdownAccountLabel">닉네임</div>
+              <div class="homeDropdownAccountName" id="homeDropdownNickName">-</div>
+            </div>
+            <button class="homeDropdownNickBtn" id="homeDropdownNickBtn">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M11.5 1.5l3 3L5 14H2v-3L11.5 1.5z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              닉네임 변경
+            </button>
             <button class="homeDropdownLogout" id="homeDropdownLogout">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 14H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M11 11l3-3-3-3M14 8H6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
               로그아웃
@@ -330,16 +341,15 @@ OneSignalDeferred.push(async function(OneSignal) {
         <div class="shareIncomingText" id="shareIncomingText"></div>
         <div class="shareIncomingHint">채팅방을 선택하면 자동으로 입력창에 넣어드립니다.</div>
       </div>
-      <div class="field"><label>내 닉네임</label><input id="homeNick" type="text" placeholder="예: 송대호"/></div>
       <div class="sectionTitle">방 만들기</div>
-      <div class="field"><label>방 이름</label><input id="homeRoomName" type="text" placeholder="예: 테스트방"/></div>
+      <div class="field"><label>방 이름</label><input id="homeRoomName" type="text" placeholder="어떤 이름이 좋을까요?"/></div>
       <div class="field">
         <label style="display:flex;align-items:center;gap:8px">
           <input id="homeUsePass" type="checkbox" style="width:18px;height:18px"/>비밀번호 사용(선택)
         </label>
       </div>
       <div class="field" id="homePassField" style="display:none">
-        <label>방 비밀번호</label><input id="homeRoomPass" type="password" placeholder="예: 1234"/>
+        <label>방 비밀번호</label><input id="homeRoomPass" type="password" placeholder="비밀번호를 설정해 주세요"/>
       </div>
       <div class="rowBtns">
         <button class="primaryBtn" id="btnCreate">방 만들기</button>
@@ -490,7 +500,6 @@ const mFontDec = document.getElementById('mFontDec');
 const mFontInc = document.getElementById('mFontInc');
 const mFontSizeVal = document.getElementById('mFontSizeVal');
 const home = document.getElementById('home');
-const homeNick = document.getElementById('homeNick');
 const homeRoomName = document.getElementById('homeRoomName');
 const homeUsePass = document.getElementById('homeUsePass');
 const homePassField = document.getElementById('homePassField');
@@ -848,10 +857,10 @@ function startBlink() {
   _titleTimer = setInterval(() => {
     if (!document.hidden && document.hasFocus()) { stopBlink(); return; }
     if (unread<=0) { stopBlink(); return; }
-    document.title = (f=!f) ? `(${unread}) 새 메시지` : 'Chat';
+    document.title = (f=!f) ? `(${unread}) 새 메시지` : (_stealthMode ? _stealthTitle : 'Chat');
   }, 900);
 }
-function stopBlink() { if (_titleTimer) { clearInterval(_titleTimer); _titleTimer=null; } document.title='Chat'; }
+function stopBlink() { if (_titleTimer) { clearInterval(_titleTimer); _titleTimer=null; } document.title = _stealthMode ? _stealthTitle : 'Chat'; }
 function bumpUnread() {
   unread = Math.min(999, unread+1);
   setAppBadge(unread);
@@ -2116,7 +2125,7 @@ btnJoin.addEventListener('click',()=>alert('방 목록에서 입장해 주세요
 homeUsePass.addEventListener('change',()=>{homePassField.style.display=homeUsePass.checked?'block':'none';if(!homeUsePass.checked)homeRoomPass.value='';});
 
 btnCreate.addEventListener('click',async()=>{
-  if(!setNick(homeNick.value.trim())){alert('닉네임을 입력해 주세요.');return;}
+  if(!myNick){alert('닉네임을 먼저 설정해 주세요.\n우측 상단 ··· 메뉴에서 변경할 수 있습니다.');return;}
   if(!myUid){alert('로그인 확인 중입니다. 잠시 후 다시 시도해 주세요.');return;}
   const rn=(homeRoomName.value.trim()||'새 채팅방').slice(0,60);
   let passEnabled=false,passSalt='',passHash='',passVer=0;
@@ -2145,7 +2154,7 @@ async function loadRoomInfo(rid) {
 
 async function joinFlow(rid) {
   rid=String(rid||'').trim(); if(!rid) return;
-  if(!myNick&&!setNick(homeNick.value.trim())){alert('닉네임을 입력해 주세요.');return;}
+  if(!myNick){alert('닉네임을 먼저 설정해 주세요.\n우측 상단 ··· 메뉴에서 변경할 수 있습니다.');return;}
   if(!myUid){alert('로그인 확인 중입니다. 잠시 후 다시 시도해 주세요.');return;}
   try{
     const info=await loadRoomInfo(rid);
@@ -2351,11 +2360,14 @@ mDeleteRoom.addEventListener('click', async () => {
 const homeMenuBtn = document.getElementById('homeMenuBtn');
 const homeDropdown = document.getElementById('homeDropdown');
 const homeDropdownAccountName = document.getElementById('homeDropdownAccountName');
+const homeDropdownNickName = document.getElementById('homeDropdownNickName');
+const homeDropdownNickBtn = document.getElementById('homeDropdownNickBtn');
 const homeDropdownLogout = document.getElementById('homeDropdownLogout');
 
 function openHomeDropdown() {
   const account = localStorage.getItem(LS_ACCOUNT) || myNick || '-';
   homeDropdownAccountName.textContent = account;
+  homeDropdownNickName.textContent = myNick || '-';
   homeDropdown.classList.add('open');
 }
 function closeHomeDropdown() {
@@ -2367,13 +2379,24 @@ homeMenuBtn.addEventListener('click', (e) => {
   homeDropdown.classList.contains('open') ? closeHomeDropdown() : openHomeDropdown();
 });
 
+homeDropdownNickBtn.addEventListener('click', () => {
+  closeHomeDropdown();
+  const n = prompt('새 닉네임을 입력해 주세요', myNick || '');
+  if (n === null) return;
+  const trimmed = n.trim();
+  if (!trimmed) { alert('닉네임을 입력해 주세요.'); return; }
+  setNick(trimmed);
+  saveUserSettings({ nick: myNick });
+  schedulePushSync();
+});
+
 homeDropdownLogout.addEventListener('click', async () => {
   closeHomeDropdown();
   if (!confirm('로그아웃 하시겠습니까?')) return;
   history.pushState({}, '', NAV_URL);
   try { await firebase.auth().signOut(); } catch(e) {}
   localStorage.removeItem(LS_NICK);
-  myNick = ''; homeNick.value = '';
+  myNick = '';
   showLogin();
 });
 
@@ -2387,14 +2410,13 @@ mLogout.addEventListener('click', async () => {
   history.pushState({}, '', NAV_URL);
   try { await firebase.auth().signOut(); } catch(e) {}
   localStorage.removeItem(LS_NICK);
-  myNick = ''; homeNick.value = '';
+  myNick = '';
   showLogin();
 });
 
 mNick.addEventListener('click',async()=>{
   closeMenu();
   const n=prompt('새 닉네임',myNick||''); if(!n||!setNick(n)) return;
-  homeNick.value=myNick;
   if(roomId){try{db.ref('presence/'+roomId+'/'+myUid).update({nick:myNick,lastActive:SV.TIMESTAMP});db.ref('reads/'+roomId+'/'+myUid).update({nick:myNick}).catch(()=>{});}catch(e){}}
   // 계정 단위로 닉네임 저장
   saveUserSettings({ nick: myNick });
@@ -2444,7 +2466,6 @@ async function doLogin() {
   if (!myNick) {
     myNick = username;
     localStorage.setItem(LS_NICK, myNick);
-    homeNick.value = myNick;
   }
   schedulePushSync();
   applyBubbleTheme();
@@ -2722,7 +2743,6 @@ window.addEventListener('focus', async () => {
 // ================================================================
 async function init() {
   myNick = (localStorage.getItem(LS_NICK) || '').trim();
-  if (myNick) homeNick.value = myNick;
 
   applyBubbleTheme();
 
