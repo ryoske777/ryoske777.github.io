@@ -2162,11 +2162,11 @@ async function syncPushSub() {
     const snap = await db.ref('pushSubs/'+myUid).once('value');
     const existing = snap.val() || {};
     const updates = {};
-    // 같은 기기(동일 onesignalId)의 교체된 구독만 제거 → 다른 기기 구독은 유지
+    // ★ 현재 구독 외 모든 이전 구독 제거 (기기 구분 없이)
+    // 동일 기기에서 재구독 시 onesignalId가 null일 수 있어 기기 비교 불가
+    // → 최신 구독 1개만 유지하여 중복 알림 방지
     Object.keys(existing).forEach(id => {
-      if (id === subId) return;
-      const d = existing[id] || {};
-      if (myOsId && d.onesignalId === myOsId) updates[id] = null;
+      if (id !== subId) updates[id] = null;
     });
     updates[subId] = { onesignalId: myOsId, nick: myNick||'', updatedAt: SV.TIMESTAMP };
     await db.ref('pushSubs/'+myUid).update(updates);
@@ -2188,8 +2188,10 @@ async function collectSubIds(rid) {
     const now     = Date.now();
 
     // ─── lastActive가 최근이면 "방 안에 있는 중"으로 판단 → push 제외
-    // ★ 백그라운드 전환 시 lastActive=0으로 즉시 갱신하므로 5초면 충분
-    const ACTIVE_MS = 5_000;            // 5초
+    // ★ ACTIVE_MS는 하트비트(30초)보다 커야 함. 백그라운드 전환 시 lastActive=0이므로
+    //    방에 있는 사람은 항상 최근 30초 이내 활동 기록 있음 → push 제외됨
+    //    방을 나가거나 백그라운드 가면 lastActive=0 → 즉시 push 대상
+    const ACTIVE_MS = 45_000;           // 45초 (하트비트 30초 + 여유 15초)
     const STALE_MS  = 30 * 86400_000;  // 30일 이상 된 구독은 stale로 무시
 
     const uids = Object.keys(members).filter(u => {
@@ -2203,16 +2205,19 @@ async function collectSubIds(rid) {
     const ss = await Promise.all(uids.map(u => db.ref('pushSubs/'+u).once('value')));
     const ids = [];
     ss.forEach(s => {
+      // ★ 유저당 가장 최신 구독 1개만 사용 (중복 알림 방지)
+      let best = null, bestTs = 0;
       Object.entries(s.val() || {}).forEach(([subId, data]) => {
         if (!subId) return;
-        // 30일 이상 된 stale 구독 무시 → 오래된 anonymous UID 구독 차단
         const updated = Number((data && data.updatedAt) || 0);
+        // 30일 이상 된 stale 구독 무시
         if (updated && (now - updated) > STALE_MS) return;
-        ids.push(subId);
+        if (updated >= bestTs) { best = subId; bestTs = updated; }
       });
+      if (best) ids.push(best);
     });
 
-    return Array.from(new Set(ids)); // 중복 subId 최종 제거
+    return ids;
   } catch(e) { return []; }
 }
 
