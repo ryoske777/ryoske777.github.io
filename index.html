@@ -152,6 +152,17 @@ input[type="text"]{width:100%;border:0;outline:none;font-size:16px;background:tr
 .lpDesc{font-size:11px;color:var(--muted);margin-top:3px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .ytEmbed{margin-top:8px;border-radius:12px;overflow:hidden;max-width:360px;border:1px solid var(--line)}
 .ytEmbed iframe{width:100%;aspect-ratio:16/9;display:block;border:0;border-radius:12px}
+.igPreview{margin-top:8px;border:1px solid var(--line);border-radius:12px;overflow:hidden;max-width:360px;background:#fff;cursor:pointer;text-decoration:none;color:inherit;display:block}
+.igPreview:hover{background:#fafafa}
+.igThumbWrap{position:relative;width:100%;background:#000}
+.igThumbWrap img{width:100%;max-height:360px;object-fit:cover;display:block}
+.igPlayBtn{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:56px;height:56px;background:rgba(0,0,0,.55);border-radius:50%;display:flex;align-items:center;justify-content:center}
+.igPlayBtn::after{content:'';display:block;width:0;height:0;border-style:solid;border-width:10px 0 10px 18px;border-color:transparent transparent transparent #fff;margin-left:3px}
+.igBody{padding:10px 12px;display:flex;align-items:center;gap:8px}
+.igLogo{width:20px;height:20px;flex-shrink:0}
+.igInfo{min-width:0}
+.igSite{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.igTitle{font-size:13px;font-weight:700;line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word}
 .replyPreview{position:absolute;bottom:calc(100% + 2px);left:0;right:0;background:rgba(255,255,255,.97);border-top:1px solid var(--line);padding:8px 12px;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);backdrop-filter:blur(8px);z-index:21}
 .replyPreviewBar{width:3px;height:100%;min-height:28px;background:var(--accent);border-radius:2px;flex-shrink:0}
 .replyPreviewText{flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
@@ -1199,9 +1210,13 @@ function linkifyText(text) {
   if(last<text.length) frag.appendChild(document.createTextNode(text.slice(last)));
   return frag;
 }
+function isInstagramUrl(url) {
+  try { return new URL(url).hostname.match(/^(www\.)?instagram\.com$/); } catch(e) { return false; }
+}
 function renderLinkPreview(url, container) {
   const ytId = extractYouTubeId(url);
   if (ytId) { renderYouTubeEmbed(ytId, url, container); return; }
+  if (isInstagramUrl(url)) { renderInstagramPreview(url, container); return; }
   renderOgPreview(url, container);
 }
 function renderYouTubeEmbed(ytId, url, container) {
@@ -1214,6 +1229,37 @@ function renderYouTubeEmbed(ytId, url, container) {
   wrap.appendChild(iframe);
   wrap.addEventListener('click', e => e.stopPropagation());
   container.appendChild(wrap);
+}
+async function renderInstagramPreview(url, container) {
+  const isReel = /\/(reel|reels)\//i.test(url);
+  const a = document.createElement('a'); a.className='igPreview'; a.href=url; a.target='_blank'; a.rel='noopener noreferrer';
+  a.addEventListener('click', e => e.stopPropagation());
+  // Try to fetch OG image
+  try {
+    const res = await fetch('https://api.allorigins.win/get?url='+encodeURIComponent(url), {signal:AbortSignal.timeout(5000)});
+    if (res.ok) {
+      const {contents} = await res.json();
+      const doc = new DOMParser().parseFromString(contents||'','text/html');
+      const gm = p => { const el=doc.querySelector(`meta[property="${p}"],meta[name="${p}"]`); return el?el.getAttribute('content'):''; };
+      const img = gm('og:image'); const title = gm('og:title')||'';
+      if (img) {
+        const tw = document.createElement('div'); tw.className='igThumbWrap';
+        const im = document.createElement('img'); im.src=img; im.alt=''; im.onerror=()=>tw.remove();
+        tw.appendChild(im);
+        if (isReel || /video/i.test(gm('og:type'))) { const pb=document.createElement('div'); pb.className='igPlayBtn'; tw.appendChild(pb); }
+        a.appendChild(tw);
+      }
+      if (title) {
+        const b=document.createElement('div'); b.className='igBody';
+        b.innerHTML=`<svg class="igLogo" viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="5" stroke="#E1306C" stroke-width="2"/><circle cx="12" cy="12" r="5" stroke="#E1306C" stroke-width="2"/><circle cx="18" cy="6" r="1.5" fill="#E1306C"/></svg><div class="igInfo"><div class="igSite">Instagram</div><div class="igTitle">${esc(title)}</div></div>`;
+        a.appendChild(b); container.appendChild(a); return;
+      }
+    }
+  } catch(e) {}
+  // Fallback: simple card
+  const b=document.createElement('div'); b.className='igBody';
+  b.innerHTML=`<svg class="igLogo" viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="5" stroke="#E1306C" stroke-width="2"/><circle cx="12" cy="12" r="5" stroke="#E1306C" stroke-width="2"/><circle cx="18" cy="6" r="1.5" fill="#E1306C"/></svg><div class="igInfo"><div class="igSite">Instagram</div><div class="igTitle">${isReel?'Reel':'게시물'}을 Instagram에서 보기</div></div>`;
+  a.appendChild(b); container.appendChild(a);
 }
 async function renderOgPreview(url, container) {
   try {
