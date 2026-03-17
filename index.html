@@ -1025,7 +1025,7 @@ function updateMenuStates() {
   mSoundState.textContent = soundEnabled ? '켜짐':'꺼짐';
   // bubble color is now handled by color pickers directly
   if (mEnterNewlineState) mEnterNewlineState.textContent = enterNewline ? '켜짐':'꺼짐';
-  menuHint.textContent = `도메인: ${location.hostname}${nosup?'\niPhone Safari: PWA(홈 화면 추가) 필요':''}`;
+  menuHint.textContent = `도메인: ${location.hostname}${nosup?'\niPhone Safari: PWA(홈 화면 추가) 필요':''}${myUid?'\nUID: '+myUid:''}`;
 }
 
 menuBtn.addEventListener('click', () => {
