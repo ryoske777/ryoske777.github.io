@@ -105,8 +105,9 @@ header{position:sticky;top:0;z-index:10;padding:12px 14px 10px;border-bottom:1px
 .composer{position:fixed;left:0;right:0;bottom:0;min-height:var(--composerH);padding:14px 12px;border-top:1px solid var(--line);background:rgba(255,255,255,.97);display:flex;gap:10px;align-items:flex-end;z-index:20;cursor:text}
 .composer::before{display:none}
 .emojiBtn{width:48px;height:48px;border-radius:14px;border:1px solid var(--line);background:#fff;font-size:22px;display:flex;align-items:center;justify-content:center;user-select:none;box-shadow:0 6px 18px rgba(0,0,0,.06)}
-.inputWrap{flex:1;min-height:48px;border-radius:14px;border:1px solid var(--line);background:#fff;display:flex;align-items:center;padding:0 12px;contain:layout style;isolation:isolate}
-#input{width:100%;border:0;outline:none;font-size:16px;background:transparent;resize:none;font-family:inherit;line-height:24px;height:24px;max-height:200px;overflow-y:hidden;padding:0;margin:0;display:block;box-sizing:border-box;-webkit-font-smoothing:antialiased}
+.inputWrap{flex:1;min-height:48px;border-radius:14px;border:1px solid var(--line);background:#fff;display:flex;align-items:flex-start;padding:12px;contain:style;isolation:isolate}
+#input{width:100%;border:0;outline:none;font-size:16px;background:transparent;resize:none;font-family:inherit;line-height:24px;height:24px;max-height:40vh;overflow-y:hidden;padding:0;margin:0;display:block;box-sizing:border-box;-webkit-font-smoothing:antialiased;scrollbar-width:none;-ms-overflow-style:none}
+#input::-webkit-scrollbar{display:none}
 .sendBtn{width:64px;height:48px;border-radius:14px;border:0;background:#111827;color:#fff;font-size:15px;font-weight:900;box-shadow:0 10px 18px rgba(17,24,39,.14);transition:opacity .15s}
 .sendBtn:disabled{opacity:.45;box-shadow:none}
 .emojiPanel{position:fixed;left:12px;right:12px;bottom:calc(var(--composerH) + 10px);background:#fff;border:1px solid var(--line);border-radius:16px;padding:10px;box-shadow:var(--shadow);display:none;z-index:30}
@@ -2833,9 +2834,11 @@ function _getInputMirror() {
   return _inputMirror;
 }
 let _resizeRaf = 0;
+function _getInputMaxH() { return Math.max(120, Math.round(window.innerHeight * 0.4)); }
 function _doResize() {
   _resizeRaf = 0;
   const val = inputEl.value || '';
+  const maxH = _getInputMaxH();
   if (!val || !val.includes('\n')) {
     if (_prevInputH !== 24) {
       _prevInputH = 24;
@@ -2848,7 +2851,7 @@ function _doResize() {
     return;
   }
   // 글자 수가 줄지 않았고 높이가 이미 max면 측정 스킵
-  if (val.length >= _prevInputLen && _prevInputH >= 200) {
+  if (val.length >= _prevInputLen && _prevInputH >= maxH) {
     _prevInputLen = val.length;
     return;
   }
@@ -2857,11 +2860,11 @@ function _doResize() {
   const m = _getInputMirror();
   m.value = val;
   const sh = m.scrollHeight;
-  const h = Math.max(24, Math.min(sh, 200));
+  const h = Math.max(24, Math.min(sh, maxH));
   if (h !== _prevInputH) {
     _prevInputH = h;
     inputEl.style.height = h + 'px';
-    inputEl.style.overflowY = h >= 200 ? 'auto' : 'hidden';
+    inputEl.style.overflowY = h >= maxH ? 'auto' : 'hidden';
     // offsetHeight 대신 계산값 사용 — 강제 reflow 방지
     document.documentElement.style.setProperty('--composerH', Math.max(64, h + 40) + 'px');
   }
@@ -2969,6 +2972,10 @@ composer.addEventListener('click', e => {
   const t = e.target;
   if (t === inputEl || t.closest('.sendBtn') || t.closest('.emojiBtn') || t.closest('.photoBtn') || t.closest('.replyCloseBtn')) return;
   focusInput();
+  // 키보드 올라온 후 채팅 영역도 따라서 스크롤
+  updateKb();
+  setTimeout(() => { updateKb(); scrollToBottom(true); }, 300);
+  setTimeout(() => { updateKb(); scrollToBottom(true); }, 600);
 });
 sendBtn.addEventListener('pointerdown',async e=>{e.preventDefault();if(soundEnabled)await unlockAudio();send();focusInput();});
 inputEl.addEventListener('keydown',async e=>{
