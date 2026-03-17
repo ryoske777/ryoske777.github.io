@@ -2609,15 +2609,22 @@ loginUserEl.addEventListener('keydown', e => { if (e.key === 'Enter') loginPassE
 // SEND
 // ================================================================
 function autoResizeInput() {
-  // 1줄 높이로 리셋 후 실제 콘텐츠 높이 측정
-  inputEl.style.height = '24px';
-  const need = inputEl.scrollHeight;
-  // 콘텐츠가 1줄(24px) 이하면 24px, 아니면 콘텐츠 높이 (최대 100px)
-  inputEl.style.height = (need <= 24 ? 24 : Math.min(need, 100)) + 'px';
-  inputEl.style.overflowY = need > 100 ? 'auto' : 'hidden';
-  // --composerH 동기화 (최소 64px)
-  document.documentElement.style.setProperty('--composerH',
-    Math.max(64, inputEl.closest('.composer').offsetHeight) + 'px');
+  const val = inputEl.value || '';
+  if (!val || !val.includes('\n')) {
+    // 빈 값이거나 1줄 → 기본 높이 강제
+    inputEl.style.height = '24px';
+    inputEl.style.overflowY = 'hidden';
+    document.documentElement.style.setProperty('--composerH', '64px');
+    return;
+  }
+  // 멀티라인: height를 auto로 리셋해야 scrollHeight가 콘텐츠 기준으로 재계산됨
+  inputEl.style.height = 'auto';
+  const sh = inputEl.scrollHeight;
+  const h = Math.min(sh, 100);
+  inputEl.style.height = h + 'px';
+  inputEl.style.overflowY = h >= 100 ? 'auto' : 'hidden';
+  const comp = inputEl.closest('.composer');
+  if (comp) document.documentElement.style.setProperty('--composerH', Math.max(64, comp.offsetHeight) + 'px');
 }
 function onInput() { sendBtn.disabled=!inputEl.value.trim(); autoResizeInput(); if(roomId) markTypeActivity(); }
 inputEl.addEventListener('input',onInput);
@@ -2689,7 +2696,12 @@ function send() {
   renderMessage({roomId,messageId:mid,senderId:myUid,senderNick:myNick,text,ts:Date.now(),seq:0,replyTo:replyToData},true);
   scrollToBottom(true);
   pending.set(mid,{text,createdAt:Date.now()}); updateBadges();
-  inputEl.value=''; autoResizeInput(); onInput();
+  inputEl.value='';
+  // ★ 전송 후 높이 강제 리셋
+  inputEl.style.height = '24px';
+  inputEl.style.overflowY = 'hidden';
+  document.documentElement.style.setProperty('--composerH', '64px');
+  onInput();
   try{if(_typRef)_typRef.remove();}catch(e){} _typingOn=false;
   sendToFirebase(mid,text,replyToData);
 }
