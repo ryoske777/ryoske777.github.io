@@ -2197,7 +2197,7 @@ function startTyping(rid) {
     const should=(document.activeElement===inputEl)&&inputEl.value.trim().length>0&&(now-_lastTypeAt)<=4500;
     if(should){
       const doSet=()=>{if(_typRef)_typRef.set({nick:myNick,until:Date.now()+6500});_typingOn=true;};
-      if(now-_lastTypeAt<500&&typeof requestIdleCallback==='function'){requestIdleCallback(doSet);}else{doSet();}
+      if(typeof requestIdleCallback==='function'){requestIdleCallback(doSet,{timeout:1500});}else{doSet();}
     }
     else if(_typingOn){_typRef.remove();_typingOn=false;}
   },3000);
@@ -2759,8 +2759,8 @@ function _doResize() {
     _prevInputH = h;
     inputEl.style.height = h + 'px';
     inputEl.style.overflowY = h >= 100 ? 'auto' : 'hidden';
-    const comp = inputEl.closest('.composer');
-    if (comp) document.documentElement.style.setProperty('--composerH', Math.max(64, comp.offsetHeight) + 'px');
+    // offsetHeight 대신 계산값 사용 — 강제 reflow 방지
+    document.documentElement.style.setProperty('--composerH', Math.max(64, h + 40) + 'px');
   }
 }
 function autoResizeInput() {
@@ -2768,6 +2768,7 @@ function autoResizeInput() {
   if (!_resizeRaf) _resizeRaf = requestAnimationFrame(_doResize);
 }
 let _prevSendDisabled = true;
+let _lastMarkType = 0;
 let _isComposing = false;
 inputEl.addEventListener('compositionstart', () => { _isComposing = true; });
 inputEl.addEventListener('compositionend', () => {
@@ -2780,7 +2781,8 @@ function onInput() {
   const dis = !inputEl.value.trim();
   if (dis !== _prevSendDisabled) { _prevSendDisabled = dis; sendBtn.disabled = dis; }
   autoResizeInput();
-  if (roomId) markTypeActivity();
+  // markTypeActivity는 50ms 쓰로틀 — 빠른 타이핑 시 불필요한 Date.now() 호출 감소
+  if (roomId) { const now = performance.now(); if (now - _lastMarkType > 50) { _lastMarkType = now; markTypeActivity(); } }
 }
 inputEl.addEventListener('input', onInput);
 // focus 시 키보드 높이 변경만 한 번 체크 (과도한 refreshLayout 제거)
