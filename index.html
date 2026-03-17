@@ -1064,6 +1064,14 @@ document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') { _lastEscTime = 0; return; }
   if (!_stealthMode) return;
 
+  // 메뉴/모달/검색 등 UI가 열려있으면 해당 UI를 닫는 ESC이므로 패닉 카운트 무시
+  const anyOverlay = menu.classList.contains('open')
+    || emojiPanel.classList.contains('open')
+    || msgCtxMenu.classList.contains('open')
+    || passModal.classList.contains('open')
+    || searchBar.style.display !== 'none';
+  if (anyOverlay) { _lastEscTime = 0; return; }
+
   const now = Date.now();
   if (now - _lastEscTime < 500) {
     // Esc 더블탭 감지
