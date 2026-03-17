@@ -262,11 +262,9 @@ OneSignalDeferred.push(async function(OneSignal) {
 </script>
 </head>
 <body>
-<div id="splashScreen" style="position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#f3f4f6;gap:12px">
-  <div style="width:44px;height:44px;border:3px solid #e5e7eb;border-top-color:#22c55e;border-radius:50%;animation:splashSpin .7s linear infinite"></div>
-  <div style="font-size:14px;color:#6b7280;font-weight:600">로딩 중...</div>
+<div id="splashScreen" style="position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#f3f4f6">
+  <img src="/icon-192x192.png" alt="Chat" style="width:88px;height:88px;border-radius:22px;box-shadow:0 8px 30px rgba(0,0,0,.10)">
 </div>
-<style>@keyframes splashSpin{to{transform:rotate(360deg)}}</style>
 <div class="app" id="app">
   <header id="header" style="display:none">
     <div class="headTop">
@@ -2702,33 +2700,39 @@ loginUserEl.addEventListener('keydown', e => { if (e.key === 'Enter') loginPassE
 // ================================================================
 // SEND
 // ================================================================
+let _prevInputH = 24;
 function autoResizeInput() {
   const val = inputEl.value || '';
   if (!val || !val.includes('\n')) {
-    // 빈 값이거나 1줄 → 기본 높이 강제
-    inputEl.style.height = '24px';
-    inputEl.style.overflowY = 'hidden';
-    document.documentElement.style.setProperty('--composerH', '64px');
+    if (_prevInputH !== 24) {
+      _prevInputH = 24;
+      inputEl.style.height = '24px';
+      inputEl.style.overflowY = 'hidden';
+      document.documentElement.style.setProperty('--composerH', '64px');
+    }
     return;
   }
-  // 멀티라인: height를 auto로 리셋해야 scrollHeight가 콘텐츠 기준으로 재계산됨
-  inputEl.style.height = 'auto';
+  // 멀티라인: scrollHeight 측정용 임시 리셋 (visibility로 깜빡임 방지)
+  inputEl.style.height = '0';
   const sh = inputEl.scrollHeight;
   const h = Math.min(sh, 100);
-  inputEl.style.height = h + 'px';
-  inputEl.style.overflowY = h >= 100 ? 'auto' : 'hidden';
-  const comp = inputEl.closest('.composer');
-  if (comp) document.documentElement.style.setProperty('--composerH', Math.max(64, comp.offsetHeight) + 'px');
+  if (h !== _prevInputH) {
+    _prevInputH = h;
+    inputEl.style.height = h + 'px';
+    inputEl.style.overflowY = h >= 100 ? 'auto' : 'hidden';
+    const comp = inputEl.closest('.composer');
+    if (comp) document.documentElement.style.setProperty('--composerH', Math.max(64, comp.offsetHeight) + 'px');
+  } else {
+    inputEl.style.height = h + 'px';
+  }
 }
 function onInput() { sendBtn.disabled=!inputEl.value.trim(); autoResizeInput(); if(roomId) markTypeActivity(); }
 inputEl.addEventListener('input',onInput);
-inputEl.addEventListener('focus',refreshLayout);
-inputEl.addEventListener('click',refreshLayout);
-inputEl.addEventListener('touchstart',refreshLayout,{passive:true});
+// focus 시 키보드 높이 변경만 한 번 체크 (과도한 refreshLayout 제거)
+inputEl.addEventListener('focus',()=>{ updateKb(); setTimeout(updateKb,300); });
 inputEl.addEventListener('blur',()=>{setTimeout(updateKb,60);setTimeout(updateKb,220);});
-document.addEventListener('focusin',e=>{if(e&&e.target===inputEl)refreshLayout();});
 
-['touchend','mouseup'].forEach(evt=>logEl.addEventListener(evt,()=>{if(document.activeElement===inputEl)refreshLayout();},{passive:true}));
+['touchend','mouseup'].forEach(evt=>logEl.addEventListener(evt,()=>{if(document.activeElement===inputEl){updateKb();setTimeout(updateKb,200);}},{passive:true}));
 
 async function sendToFirebase(mid, text, replyToData, imageUrl) {
   if(!roomId) return;
