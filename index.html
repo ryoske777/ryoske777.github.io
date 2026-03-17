@@ -479,6 +479,7 @@ OneSignalDeferred.push(async function(OneSignal) {
 const PUSH_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbyyEYvCwwTsmlaQwKIUsA00gHbBVNpGiHr_hRUGREUCgcquHH5lY3SHcBTlKU_v6Lqz/exec";
 const PUSH_SECRET = "ryo1234";
 const MSG_LIMIT = 100;
+const ADMIN_UID = ""; // ← Firebase Console > Authentication에서 대호 계정의 UID를 여기에 입력
 
 firebase.initializeApp({
   apiKey:"AIzaSyC6iyCkpqtaWgFXlJZiogn2SgfIz9j1I4M",
@@ -1027,7 +1028,13 @@ function updateMenuStates() {
   menuHint.textContent = `도메인: ${location.hostname}${nosup?'\niPhone Safari: PWA(홈 화면 추가) 필요':''}`;
 }
 
-menuBtn.addEventListener('click', () => menu.classList.toggle('open'));
+menuBtn.addEventListener('click', () => {
+  menu.classList.toggle('open');
+  if (menu.classList.contains('open')) {
+    const canDelete = myUid && (myUid === ownerUid || (ADMIN_UID && myUid === ADMIN_UID));
+    mDeleteRoom.style.display = canDelete ? '' : 'none';
+  }
+});
 document.addEventListener('click', e => { if (!menuBtn.contains(e.target) && !menu.contains(e.target)) menu.classList.remove('open'); });
 function closeMenu() { menu.classList.remove('open'); }
 
@@ -2557,6 +2564,7 @@ mLeave.addEventListener('click',()=>{closeMenu();saveUserSettings({lastRoom:null
 mDeleteRoom.addEventListener('click', async () => {
   closeMenu();
   if (!roomId) return;
+  if (myUid !== ownerUid && !(ADMIN_UID && myUid === ADMIN_UID)) { alert('방장 또는 운영자만 삭제할 수 있습니다.'); return; }
   if (!confirm('이 채팅방을 삭제하시겠습니까?\n모든 메시지와 데이터가 영구적으로 삭제됩니다.')) return;
   if (!confirm('정말로 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.')) return;
   const rid = roomId;
