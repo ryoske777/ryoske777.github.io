@@ -1372,10 +1372,16 @@ function renderMessage(m, isPending) {
   const row=document.createElement('div'); row.className='row '+(mine?'me':'other');
   const bubble=document.createElement('div'); rebuildBubble(bubble,m);
 
-  if (!isPending && !m.deleted && !m.imageUrl) {
-    const url=extractUrl(String(m.text||'')); if(url) renderLinkPreview(url,wrap);
-  }
   row.appendChild(bubble); wrap.appendChild(row);
+  if (!isPending && !m.deleted && !m.imageUrl) {
+    const url=extractUrl(String(m.text||''));
+    if(url){
+      const lpWrap=document.createElement('div');
+      lpWrap.style.cssText=mine?'display:flex;justify-content:flex-end':'display:flex;justify-content:flex-start';
+      renderLinkPreview(url,lpWrap);
+      wrap.appendChild(lpWrap);
+    }
+  }
 
   const rxBar=document.createElement('div'); rxBar.className='reactionsBar';
   const rxAlign=document.createElement('div');
