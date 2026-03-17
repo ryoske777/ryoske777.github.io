@@ -29,8 +29,8 @@ html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-famil
 button,.clickable{-webkit-tap-highlight-color:transparent;touch-action:manipulation;cursor:pointer;transition:transform .08s,box-shadow .18s,filter .18s,background .18s,border-color .18s}
 button:active,.clickable:active{transform:translateY(1px) scale(.99)}
 button:focus-visible{outline:3px solid rgba(34,197,94,.35);outline-offset:2px}
-.app{height:100vh;height:100dvh;display:flex;flex-direction:column;min-height:0;overflow:hidden;padding-top:var(--safeT);background:var(--bg);will-change:transform}
-header{position:sticky;top:0;z-index:10;padding:12px 14px 10px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.92);backdrop-filter:blur(12px)}
+.app{height:100vh;height:100dvh;display:flex;flex-direction:column;min-height:0;overflow:hidden;padding-top:var(--safeT);background:var(--bg)}
+header{position:sticky;top:0;z-index:10;padding:12px 14px 10px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.97)}
 .headTop{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .title{font-size:16px;font-weight:800;margin:0;line-height:1.2}
 .sub{margin-top:6px;font-size:12px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap}
@@ -95,9 +95,9 @@ header{position:sticky;top:0;z-index:10;padding:12px 14px 10px;border-bottom:1px
 .badgePending{opacity:.78}
 .badgeFail{color:var(--danger);font-weight:900;cursor:pointer}
 .readBadge{font-weight:900;opacity:.85}
-.typingBar{position:fixed;left:0;right:0;bottom:var(--composerH);height:var(--typingH);display:none;align-items:center;padding:0 12px;font-size:12px;color:var(--muted);background:rgba(255,255,255,.95);backdrop-filter:blur(12px);border-top:1px solid var(--line);z-index:19}
+.typingBar{position:fixed;left:0;right:0;bottom:var(--composerH);height:var(--typingH);display:none;align-items:center;padding:0 12px;font-size:12px;color:var(--muted);background:rgba(255,255,255,.98);border-top:1px solid var(--line);z-index:19}
 .composer{position:fixed;left:0;right:0;bottom:0;min-height:var(--composerH);padding:10px 12px;border-top:1px solid var(--line);background:rgba(255,255,255,.97);display:flex;gap:10px;align-items:flex-end;z-index:20}
-.composer::before{content:'';position:absolute;inset:0;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);z-index:-1;border-radius:inherit}
+.composer::before{display:none}
 .emojiBtn{width:48px;height:48px;border-radius:14px;border:1px solid var(--line);background:#fff;font-size:22px;display:flex;align-items:center;justify-content:center;user-select:none;box-shadow:0 6px 18px rgba(0,0,0,.06)}
 .inputWrap{flex:1;min-height:48px;border-radius:14px;border:1px solid var(--line);background:#fff;display:flex;align-items:center;padding:0 12px;contain:layout style;isolation:isolate}
 #input{width:100%;border:0;outline:none;font-size:16px;background:transparent;resize:none;font-family:inherit;line-height:24px;height:24px;max-height:100px;overflow-y:hidden;padding:0;margin:0;display:block;box-sizing:border-box;-webkit-font-smoothing:antialiased}
@@ -167,7 +167,7 @@ header{position:sticky;top:0;z-index:10;padding:12px 14px 10px;border-bottom:1px
 .igInfo{min-width:0}
 .igSite{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
 .igTitle{font-size:13px;font-weight:700;line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word}
-.replyPreview{position:absolute;bottom:calc(100% + 2px);left:0;right:0;background:rgba(255,255,255,.97);border-top:1px solid var(--line);padding:8px 12px;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);backdrop-filter:blur(8px);z-index:21}
+.replyPreview{position:absolute;bottom:calc(100% + 2px);left:0;right:0;background:rgba(255,255,255,.99);border-top:1px solid var(--line);padding:8px 12px;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);z-index:21}
 .replyPreviewBar{width:3px;height:100%;min-height:28px;background:var(--accent);border-radius:2px;flex-shrink:0}
 .replyPreviewText{flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .replyPreviewName{font-weight:700;color:var(--accent);margin-bottom:2px}
@@ -2152,7 +2152,8 @@ function startPresence(rid) {
     const v=snap.val()||{}, now=Date.now(), online=[];
     Object.keys(v).forEach(u=>{ const p=v[u]||{},ts=Number(p.lastActive||0); if(ts&&(now-ts)<=75000&&p.nick)online.push(p.nick); });
     const uniq=[],s=new Set(); for(const n of online){const t=(n||'').trim();if(!t||s.has(t))continue;s.add(t);uniq.push(t);}
-    setHeader(uniq.slice(0,12));
+    const nicks=uniq.slice(0,12);
+    (typeof requestIdleCallback==='function'?requestIdleCallback:function(cb){setTimeout(cb,60);})(()=>setHeader(nicks));
   });
 }
 // visibilitychange: lastActive 갱신
@@ -2195,12 +2196,11 @@ function startTyping(rid) {
     const now=Date.now();
     const should=(document.activeElement===inputEl)&&inputEl.value.trim().length>0&&(now-_lastTypeAt)<=4500;
     if(should){
-      // 활발히 타이핑 중이면(500ms 이내) Firebase 쓰기를 idle로 지연
-      const doSet=()=>{if(_typRef)_typRef.set({nick:myNick,until:Date.now()+5500});_typingOn=true;};
+      const doSet=()=>{if(_typRef)_typRef.set({nick:myNick,until:Date.now()+6500});_typingOn=true;};
       if(now-_lastTypeAt<500&&typeof requestIdleCallback==='function'){requestIdleCallback(doSet);}else{doSet();}
     }
     else if(_typingOn){_typRef.remove();_typingOn=false;}
-  },2000);
+  },3000);
   _typInputHandler = null; // onInput()이 이미 markTypeActivity 호출하므로 중복 리스너 제거
   _typFocusHandler = markTypeActivity;
   _typBlurHandler = ()=>{try{if(_typRef)_typRef.remove();}catch(e){}_typingOn=false;};
@@ -2231,7 +2231,7 @@ function startReads(rid) {
   stopReads();
   _readsRef=db.ref('reads/'+rid);
   _readsRef.on('value',snap=>{_readsCache=snap.val()||{};updateReadBadges();});
-  _readsInterval=setInterval(markRead,2500);
+  _readsInterval=setInterval(markRead,5000);
   _readsScrollHandler=()=>setTimeout(()=>{markRead();if(canRead())clearUnread();},120);
   _readsVisHandler=()=>{if(!document.hidden)markRead();};
   _readsFocusHandler=()=>markRead();
