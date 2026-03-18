@@ -775,7 +775,9 @@ function pushToSubs(ids, title, body, rid, badgeCount) {
         android_badge_count: typeof badgeCount === 'number' ? badgeCount : 1,
         // ★ 같은 채팅방 알림은 최신 1개로 교체 + iOS 그룹핑
         collapse_id: 'room_' + rid,
-        thread_id: 'room_' + rid
+        thread_id: 'room_' + rid,
+        // ★ 웹 푸시 tag 설정 — 알림 클릭 시 같은 방 알림 일괄 삭제용
+        web_push_topic: 'room_' + rid
       })
     }).catch(() => {});
   } catch(e) {}
@@ -1021,11 +1023,18 @@ function clearUnread() {
       window.__OS.Notifications.setBadgeCount && window.__OS.Notifications.setBadgeCount(0);
     }
   } catch(e) {}
-  // ★ 현재 방의 푸시 알림 모두 제거 (같은 tag의 알림 일괄 삭제)
+  // ★ 현재 방의 푸시 알림 모두 제거 (tag 매칭 + 전체 fallback)
   try {
-    if (roomId && 'serviceWorker' in navigator && navigator.serviceWorker.ready) {
+    if ('serviceWorker' in navigator && navigator.serviceWorker.ready) {
       navigator.serviceWorker.ready.then(function(reg) {
-        reg.getNotifications({ tag: 'room_' + roomId }).then(function(ns) {
+        // tag가 있으면 같은 방 알림 제거
+        if (roomId) {
+          reg.getNotifications({ tag: 'room_' + roomId }).then(function(ns) {
+            ns.forEach(function(n) { n.close(); });
+          });
+        }
+        // OneSignal 푸시는 tag가 다를 수 있으므로 전체에서도 검색하여 제거
+        reg.getNotifications().then(function(ns) {
           ns.forEach(function(n) { n.close(); });
         });
       });
