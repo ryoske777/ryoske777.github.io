@@ -2934,7 +2934,8 @@ function _doResize() {
   const m = _getInputMirror();
   m.value = val;
   const sh = m.scrollHeight;
-  const h = Math.max(24, Math.min(sh, maxH));
+  // 한 줄(lineHeight 24px) 이하면 기본 높이 유지, 초과 시에만 확장
+  const h = sh <= 24 ? 24 : Math.min(sh, maxH);
   if (h !== _prevInputH) {
     _prevInputH = h;
     inputEl.style.height = h + 'px';
