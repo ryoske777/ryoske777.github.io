@@ -1191,7 +1191,7 @@ function _buildDotFavicon(baseSrc, callback) {
 function showFavDot() {
   if (_stealthMode) {
     // 스텔스: 파비콘 변경 없이 타이틀만 변경
-    document.title = _stealthTitle + ' Message';
+    document.title = _stealthNotify;
     return;
   }
   _favDotActive = true;
@@ -1477,10 +1477,13 @@ if (mChatBgReset) mChatBgReset.addEventListener('click', e => {
 // STEALTH (시크릿) MODE
 // ================================================================
 const LS_STEALTH_TITLE = 'stealthTitle';
+const LS_STEALTH_NOTIFY = 'stealthNotify';
 const DEFAULT_STEALTH_TITLE = 'Google Sheets';
+const DEFAULT_STEALTH_NOTIFY = '할 일 - Google Sheets';
 const STEALTH_FAVICON = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><path fill="%2334a853" d="M11 6h20l8 8v28c0 1.1-.9 2-2 2H11a2 2 0 01-2-2V8c0-1.1.9-2 2-2z"/><path fill="%23188038" d="M31 6l8 8h-8z"/><rect x="14" y="20" width="20" height="18" rx="1" fill="white"/><path stroke="%23666" stroke-width=".8" d="M14 25h20M14 30h20M14 35h20M24 20v18"/></svg>';
 
 let _stealthTitle = localStorage.getItem(LS_STEALTH_TITLE) || DEFAULT_STEALTH_TITLE;
+let _stealthNotify = localStorage.getItem(LS_STEALTH_NOTIFY) || DEFAULT_STEALTH_NOTIFY;
 let _stealthMode = false;
 let _origTitle = '';
 let _stealthPopup = null;
@@ -1495,6 +1498,8 @@ function initStealthIfPopup() {
   if (params.get('stealth') === '1') {
     const t = params.get('stitle');
     if (t) { _stealthTitle = t; localStorage.setItem(LS_STEALTH_TITLE, t); }
+    const n = params.get('snotify');
+    if (n) { _stealthNotify = n; localStorage.setItem(LS_STEALTH_NOTIFY, n); }
     enterStealthMode();
   }
 }
@@ -1543,16 +1548,22 @@ function exitStealthMode() {
 
 function openStealthPopup() {
   closeMenu();
-  const saved = localStorage.getItem(LS_STEALTH_TITLE) || DEFAULT_STEALTH_TITLE;
-  const title = prompt('작업표시줄에 표시될 이름을 입력하세요:', saved);
-  if (title === null) return; // 취소
+  const savedTitle = localStorage.getItem(LS_STEALTH_TITLE) || DEFAULT_STEALTH_TITLE;
+  const title = prompt('작업표시줄에 표시될 이름을 입력하세요:', savedTitle);
+  if (title === null) return;
   _stealthTitle = title.trim() || DEFAULT_STEALTH_TITLE;
   localStorage.setItem(LS_STEALTH_TITLE, _stealthTitle);
+
+  const savedNotify = localStorage.getItem(LS_STEALTH_NOTIFY) || DEFAULT_STEALTH_NOTIFY;
+  const notify = prompt('메시지 도착 시 표시될 이름을 입력하세요:', savedNotify);
+  if (notify === null) return;
+  _stealthNotify = notify.trim() || DEFAULT_STEALTH_NOTIFY;
+  localStorage.setItem(LS_STEALTH_NOTIFY, _stealthNotify);
 
   const w = 380, h = 520;
   const left = window.screen.width - w - 50;
   const top = window.screen.height - h - 100;
-  const url = location.href.split('?')[0] + '?stealth=1&stitle=' + encodeURIComponent(_stealthTitle) + (roomId ? '&room=' + encodeURIComponent(roomId) : '');
+  const url = location.href.split('?')[0] + '?stealth=1&stitle=' + encodeURIComponent(_stealthTitle) + '&snotify=' + encodeURIComponent(_stealthNotify) + (roomId ? '&room=' + encodeURIComponent(roomId) : '');
   _stealthPopup = window.open(url, '_blank',
     `width=${w},height=${h},left=${left},top=${top},resizable=yes,scrollbars=no,toolbar=no,menubar=no,location=no,status=no`
   );
