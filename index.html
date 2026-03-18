@@ -506,6 +506,25 @@ OneSignalDeferred.push(async function(OneSignal) {
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
 <script>
+// Firebase SDK 로드 실패 감지
+if (typeof firebase === 'undefined' || !firebase.initializeApp) {
+  var sp = document.getElementById('splashScreen');
+  if (sp) {
+    sp.innerHTML = '<div style="text-align:center;padding:20px;color:#374151">'
+      + '<img src="/icon-512x512.png" alt="Chat" style="width:50vw;max-width:200px;margin-bottom:24px;opacity:.5">'
+      + '<div style="font-size:18px;font-weight:700;margin-bottom:8px">연결할 수 없습니다</div>'
+      + '<div style="font-size:14px;color:#6b7280;line-height:1.6">'
+      + '네트워크 환경에서 필요한 서비스에<br>접근이 차단되었을 수 있습니다.'
+      + '<br><br>회사/학교 네트워크라면<br>방화벽 설정을 확인해주세요.'
+      + '<br><br><span style="font-size:12px;color:#9ca3af">gstatic.com, firebaseapp.com 접근 필요</span>'
+      + '</div>'
+      + '<button onclick="location.reload()" style="margin-top:20px;padding:10px 28px;border:none;border-radius:8px;background:#374151;color:#fff;font-size:14px;cursor:pointer">다시 시도</button>'
+      + '</div>';
+  }
+  throw new Error('Firebase SDK failed to load');
+}
+</script>
+<script>
 // ================================================================
 // CONFIG
 // ================================================================
@@ -3254,7 +3273,20 @@ firebase.auth().onAuthStateChanged(user => {
 });
 
 initShareTarget();
-init();
+init().catch(function(e) {
+  console.error('Init failed:', e);
+  var sp = document.getElementById('splashScreen');
+  if (sp) {
+    sp.innerHTML = '<div style="text-align:center;padding:20px;color:#374151">'
+      + '<img src="/icon-512x512.png" alt="Chat" style="width:50vw;max-width:200px;margin-bottom:24px;opacity:.5">'
+      + '<div style="font-size:18px;font-weight:700;margin-bottom:8px">연결 오류</div>'
+      + '<div style="font-size:14px;color:#6b7280;line-height:1.6">'
+      + '서버에 연결할 수 없습니다.<br>네트워크 상태를 확인해주세요.'
+      + '</div>'
+      + '<button onclick="location.reload()" style="margin-top:20px;padding:10px 28px;border:none;border-radius:8px;background:#374151;color:#fff;font-size:14px;cursor:pointer">다시 시도</button>'
+      + '</div>';
+  }
+});
 </script>
 </body>
 </html>
