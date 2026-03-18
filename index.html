@@ -347,6 +347,7 @@ OneSignalDeferred.push(async function(OneSignal) {
             <div class="menuSectionTitle">기타</div>
             <button id="mStealth"><span>시크릿모드</span><span>›</span></button>
             <button id="mLeave"><span>나가기</span><span>›</span></button>
+            <button id="mLeaveForever" style="color:var(--danger)"><span>방 탈퇴</span><span>›</span></button>
             <button id="mDeleteRoom" style="color:var(--danger)"><span>채팅방 삭제</span><span>›</span></button>
             <button id="mLogout" style="color:var(--danger)"><span>로그아웃</span><span>›</span></button>
           </div>
@@ -593,6 +594,7 @@ const mNick = document.getElementById('mNick');
 const mRoomName = document.getElementById('mRoomName');
 const mRoomPass = document.getElementById('mRoomPass');
 const mLeave = document.getElementById('mLeave');
+const mLeaveForever = document.getElementById('mLeaveForever');
 const mDeleteRoom = document.getElementById('mDeleteRoom');
 const mStealth = document.getElementById('mStealth');
 const stealthBarEl = document.getElementById('stealthBar');
@@ -2737,6 +2739,23 @@ function applyPendingShare() {
 // MENU ACTIONS
 // ================================================================
 mLeave.addEventListener('click',()=>{closeMenu();saveUserSettings({lastRoom:null});history.pushState({},'',NAV_URL);showHome();});
+
+// ── 방 탈퇴 (완전히 나가기) ──
+mLeaveForever.addEventListener('click', async () => {
+  closeMenu();
+  if (!roomId || !myUid) return;
+  if (!confirm('방을 탈퇴하면 이 방의 알림을 더 이상 받지 않으며,\n다시 입장해야 합니다.\n\n탈퇴하시겠습니까?')) return;
+  const rid = roomId;
+  try {
+    await Promise.all([
+      db.ref('roomMembers/'+rid+'/'+myUid).remove(),
+      db.ref('presence/'+rid+'/'+myUid).remove()
+    ]);
+  } catch(e) {}
+  saveUserSettings({lastRoom:null});
+  history.pushState({},'',NAV_URL);
+  showHome();
+});
 
 // ── 채팅방 삭제 ──
 mDeleteRoom.addEventListener('click', async () => {
