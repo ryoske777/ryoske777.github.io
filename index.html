@@ -53,7 +53,7 @@ header{position:sticky;top:0;z-index:10;padding:12px 14px 10px;border-bottom:1px
 .fontSizeCtrl button{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:#f8fafc;font-size:16px;line-height:1;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer;font-weight:700;color:var(--text)}
 .fontSizeCtrl button:hover{background:#e5e7eb}
 .fontSizeCtrl span{min-width:36px;text-align:center;font-size:14px;font-weight:700;color:var(--text)}
-.home{flex:1;min-height:0;overflow:auto;padding:16px;-webkit-overflow-scrolling:touch}
+.home{flex:1;min-height:0;overflow:auto;padding:16px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 .homeCard{width:100%;max-width:720px;margin:0 auto;background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:var(--shadow)}
 .homeTitle{font-weight:900;font-size:18px;margin:0 0 10px}
 .homeTitleRow{display:flex;align-items:center;justify-content:space-between;margin:0 0 10px}
@@ -88,7 +88,7 @@ header{position:sticky;top:0;z-index:10;padding:12px 14px 10px;border-bottom:1px
 .roomName{font-weight:900;font-size:15px;display:flex;align-items:center;gap:8px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .roomMeta{font-size:12px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap}
 .roomRight{display:flex;align-items:center;gap:8px;flex-shrink:0}
-.log{flex:1;min-height:0;overflow:auto;padding:12px 12px calc(var(--composerH) + var(--typingH) + var(--kb) + 12px);-webkit-overflow-scrolling:touch;background-color:var(--chatBg,transparent);background-size:cover;background-position:center;background-repeat:no-repeat}
+.log{flex:1;min-height:0;overflow:auto;padding:12px 12px calc(var(--composerH) + var(--typingH) + var(--kb) + 12px);-webkit-overflow-scrolling:touch;overscroll-behavior:contain;background-color:var(--chatBg,transparent);background-size:cover;background-position:center;background-repeat:no-repeat}
 .msg{display:flex;flex-direction:column;gap:4px;margin:10px 0;width:100%}
 .row{display:flex;gap:8px;width:100%}
 .row.me{justify-content:flex-end}
