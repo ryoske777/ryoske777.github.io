@@ -1,13 +1,14 @@
 <!doctype html>
-<html lang="ko">
+<html lang="ko" style="background:#d0dcea">
 <head>
+<meta charset="utf-8"/>
+<meta name="theme-color" content="#d0dcea">
 <link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" href="/icon-192x192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Chat">
 <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
-<meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,viewport-fit=cover,shrink-to-fit=no"/>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -338,7 +339,7 @@ OneSignalDeferred.push(async function(OneSignal) {
 });
 </script>
 </head>
-<body>
+<body style="background:#d0dcea">
 <div id="splashScreen" style="position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#d0dcea">
   <img src="/icon-512x512.png" alt="Chat" style="width:75vw;height:75vw;max-width:400px;max-height:400px">
 </div>
@@ -3553,7 +3554,7 @@ window.addEventListener('focus', async () => {
 
 function hideSplash() {
   const sp = document.getElementById('splashScreen');
-  if (sp) { sp.style.opacity='0'; sp.style.transition='opacity .2s'; setTimeout(()=>sp.remove(),250); }
+  if (sp) { sp.style.opacity='0'; sp.style.transition='opacity .2s'; setTimeout(()=>{sp.remove();document.body.style.background='';document.documentElement.style.background='';},250); }
 }
 
 async function init() {
