@@ -2903,6 +2903,7 @@ let _prevInputH = 24;
 let _prevInputLen = 0;
 let _inputMirror = null;
 let _mirrorWidth = '';
+let _mirrorOneLineH = 0;
 function _getInputMirror() {
   if (!_inputMirror) {
     _inputMirror = document.createElement('textarea');
@@ -2913,7 +2914,14 @@ function _getInputMirror() {
   }
   // 너비만 캐싱하여 getComputedStyle 호출 최소화
   const w = inputEl.offsetWidth + 'px';
-  if (w !== _mirrorWidth) { _mirrorWidth = w; _inputMirror.style.width = w; }
+  if (w !== _mirrorWidth) {
+    _mirrorWidth = w;
+    _inputMirror.style.width = w;
+    // 너비 변경 시 한 줄 높이 재측정
+    _inputMirror.value = 'A';
+    _mirrorOneLineH = _inputMirror.scrollHeight;
+    _inputMirror.value = '';
+  }
   return _inputMirror;
 }
 let _resizeRaf = 0;
@@ -2943,8 +2951,9 @@ function _doResize() {
   const m = _getInputMirror();
   m.value = val;
   const sh = m.scrollHeight;
-  // 한 줄(lineHeight 24px) 이하면 기본 높이 유지, 초과 시에만 확장
-  const h = sh <= 24 ? 24 : Math.min(sh, maxH);
+  // 미러의 실제 한 줄 높이 이하면 기본 높이 유지, 초과 시에만 확장
+  const oneLineH = _mirrorOneLineH || 24;
+  const h = sh <= oneLineH ? 24 : Math.min(sh, maxH);
   if (h !== _prevInputH) {
     _prevInputH = h;
     inputEl.style.height = h + 'px';
