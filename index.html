@@ -42,6 +42,9 @@ header{position:sticky;top:0;z-index:10;padding:12px 14px 10px;border-bottom:1px
 .menuSection{padding:0}
 .menuSectionTitle{font-size:11px;font-weight:800;color:var(--muted);padding:10px 12px 4px;text-transform:uppercase;letter-spacing:.5px;background:#f8fafc;border-top:1px solid var(--line)}
 .menuSection:first-child .menuSectionTitle{border-top:none;border-radius:14px 14px 0 0}
+.menuSection.dangerZone{margin-top:12px;border-top:2px solid var(--danger);opacity:.7;transition:opacity .2s}
+.menuSection.dangerZone:hover{opacity:1}
+.menuSection.dangerZone .menuSectionTitle{background:rgba(239,68,68,.06);border-top:none}
 .menu button{width:100%;padding:11px 12px;border:0;background:#fff;text-align:left;font-size:14px;display:flex;justify-content:space-between;align-items:center}
 .menu button:hover{background:#f8fafc}
 .menu .hint{font-size:12px;color:var(--muted);padding:10px 12px;border-top:1px solid var(--line);line-height:1.35;white-space:pre-wrap}
@@ -429,6 +432,10 @@ OneSignalDeferred.push(async function(OneSignal) {
             <div class="menuSectionTitle">기타</div>
             <button id="mStealth"><span>시크릿모드</span><span>›</span></button>
             <button id="mLeave"><span>나가기</span><span>›</span></button>
+          </div>
+          <!-- 위험 영역 -->
+          <div class="menuSection dangerZone">
+            <div class="menuSectionTitle" style="color:var(--danger)">⚠️ 위험 영역</div>
             <button id="mLeaveForever" style="color:var(--danger)"><span>완전히 나가기</span><span>›</span></button>
             <button id="mDeleteRoom" style="color:var(--danger)"><span>채팅방 삭제</span><span>›</span></button>
             <button id="mLogout" style="color:var(--danger)"><span>로그아웃</span><span>›</span></button>
