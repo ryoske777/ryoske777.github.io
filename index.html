@@ -3066,7 +3066,7 @@ const EMOJIS=['😀','😄','😊','😍','😘','😎','🥹','😂','😭','�
 })();
 
 let _emjTouched=false;
-const toggleEmoji=()=>{emojiPanel.classList.toggle('open');const o=emojiPanel.classList.contains('open');emojiPanel.setAttribute('aria-hidden',o?'false':'true');try{inputEl.focus({preventScroll:true});}catch(_){try{inputEl.focus();}catch(__){}}};
+const toggleEmoji=()=>{emojiPanel.classList.toggle('open');const o=emojiPanel.classList.contains('open');emojiPanel.setAttribute('aria-hidden',o?'false':'true');};
 emojiBtn.addEventListener('touchstart',e=>{e.preventDefault();_emjTouched=false;},{passive:false});
 emojiBtn.addEventListener('touchend',e=>{e.preventDefault();_emjTouched=true;toggleEmoji();},{passive:false});
 emojiBtn.addEventListener('mousedown',e=>e.preventDefault());
