@@ -898,6 +898,7 @@ async function ensureRoomAccess(info) {
   if (!hash) return true;
   const saved = getRoomAuth(rid);
   if (saved && saved.ver === ver && saved.hash === hash) return true;
+  hideSplash();
   for (let i = 0; i < 3; i++) {
     const res = await openPassModal({title:'비밀번호 입력', body:'이 방은 비밀번호가 필요합니다.', okText:'입장'});
     if (!res) return false;
