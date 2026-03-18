@@ -1021,6 +1021,16 @@ function clearUnread() {
       window.__OS.Notifications.setBadgeCount && window.__OS.Notifications.setBadgeCount(0);
     }
   } catch(e) {}
+  // ★ 현재 방의 푸시 알림 모두 제거 (같은 tag의 알림 일괄 삭제)
+  try {
+    if (roomId && 'serviceWorker' in navigator && navigator.serviceWorker.ready) {
+      navigator.serviceWorker.ready.then(function(reg) {
+        reg.getNotifications({ tag: 'room_' + roomId }).then(function(ns) {
+          ns.forEach(function(n) { n.close(); });
+        });
+      });
+    }
+  } catch(e) {}
 }
 
 window.addEventListener('focus', () => { if (roomId) clearUnread(); firebase.database().goOnline(); });
@@ -2903,7 +2913,7 @@ function _doResize() {
   _resizeRaf = 0;
   const val = inputEl.value || '';
   const maxH = _getInputMaxH();
-  if (!val || !val.includes('\n')) {
+  if (!val) {
     if (_prevInputH !== 24) {
       _prevInputH = 24;
       _prevInputLen = val.length;
@@ -2920,7 +2930,7 @@ function _doResize() {
     return;
   }
   _prevInputLen = val.length;
-  // 멀티라인: 숨겨진 미러 textarea로 높이 측정 (깜빡임 제거)
+  // 미러 textarea로 높이 측정 (줄바꿈 + word-wrap 모두 반영)
   const m = _getInputMirror();
   m.value = val;
   const sh = m.scrollHeight;
