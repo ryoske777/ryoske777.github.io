@@ -198,10 +198,25 @@ header{position:sticky;top:0;z-index:10;padding:12px 14px 10px;border-bottom:1px
 .searchHighlight{background:rgba(255,213,0,.4);border-radius:2px;padding:0 1px}
 .searchHighlightCurrent{background:rgba(255,140,0,.6);border-radius:2px;padding:0 1px}
 /* ── 스포일러 메시지 ── */
-.spoiler{background:#111;color:transparent;border-radius:4px;padding:1px 4px;cursor:pointer;transition:background .3s,color .3s;user-select:none;-webkit-user-select:none}
+.spoiler{background:#111;color:transparent;border-radius:4px;padding:1px 4px;cursor:pointer;transition:background .3s,color .3s;user-select:none;-webkit-user-select:none;display:inline}
 .spoiler.revealed{background:rgba(0,0,0,.08);color:inherit;user-select:auto;-webkit-user-select:auto}
 .row.me .bubble .spoiler{background:#000;color:transparent}
 .row.me .bubble .spoiler.revealed{background:rgba(255,255,255,.15);color:inherit}
+/* ── + 버튼 / 패널 ── */
+.plusBtn{width:48px;height:48px;border-radius:14px;border:1px solid var(--line);background:#fff;font-size:24px;display:flex;align-items:center;justify-content:center;user-select:none;box-shadow:0 6px 18px rgba(0,0,0,.06);flex-shrink:0;font-weight:300;color:var(--text);line-height:1}
+.plusPanel{position:fixed;left:12px;right:12px;bottom:calc(var(--composerH) + 10px);background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:var(--shadow);display:none;z-index:30}
+.plusPanel.open{display:block}
+.plusGrid{display:flex;gap:16px;justify-content:center}
+.plusItem{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 20px;border-radius:14px;border:1px solid var(--line);background:#fff;cursor:pointer;transition:background .15s}
+.plusItem:hover{background:#f8fafc}
+.plusIcon{font-size:28px;line-height:1}
+.plusLabel{font-size:12px;color:var(--muted);font-weight:700}
+/* ── 전송 버튼 꾹 누르기 메뉴 (스포일러) ── */
+.sendMenu{position:fixed;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 14px 40px rgba(0,0,0,.14);overflow:hidden;z-index:200;min-width:160px;display:none}
+.sendMenu.open{display:block}
+.sendMenu button{width:100%;padding:12px 16px;border:0;background:#fff;text-align:left;font-size:14px;display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:600}
+.sendMenu button:hover{background:#f8fafc}
+.sendMenu button .sendMenuHint{font-size:11px;color:var(--muted);font-weight:400;margin-left:auto}
 /* ── 손글씨/낙서 캔버스 ── */
 .drawOverlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:60;display:none;align-items:center;justify-content:center;flex-direction:column;gap:10px}
 .drawOverlay.open{display:flex}
@@ -265,9 +280,8 @@ body.stealth .inputWrap{min-height:28px;height:auto;border-radius:0;border:none;
 body.stealth .composer #input{font-size:13px;line-height:20px;max-height:60px}
 body.stealth .sendBtn{width:36px;height:28px;border-radius:0;font-size:0;padding:0;display:flex;align-items:center;justify-content:center;background:#5f6368;box-shadow:none;flex-shrink:0}
 body.stealth .sendBtn::after{content:'▶';font-size:11px}
-body.stealth .photoBtn{display:none}
+body.stealth .plusBtn{display:none}
 body.stealth .emojiBtn{display:none}
-body.stealth #drawBtn{display:none}
 body.stealth .stealthBar{display:flex !important}
 .stealthBar{display:none;align-items:center;justify-content:space-between;padding:4px 10px;background:#f0f1f3;border-bottom:1px solid #dadce0;font-size:11px;color:#5f6368;flex-shrink:0;z-index:25}
 .stealthBar button{border:none;background:transparent;font-size:11px;color:#1a73e8;cursor:pointer;padding:2px 6px;border-radius:3px}
@@ -523,6 +537,19 @@ OneSignalDeferred.push(async function(OneSignal) {
   <div class="typingBar" id="typingBar" aria-hidden="true"></div>
   <div class="log" id="log" style="display:none"></div>
 
+  <div class="plusPanel" id="plusPanel" aria-hidden="true">
+    <div class="plusGrid">
+      <label class="plusItem clickable" id="plusPhoto" for="imgInput">
+        <div class="plusIcon">📷</div>
+        <div class="plusLabel">사진</div>
+      </label>
+      <div class="plusItem clickable" id="plusDraw">
+        <div class="plusIcon">✏️</div>
+        <div class="plusLabel">손글씨</div>
+      </div>
+    </div>
+  </div>
+
   <div class="emojiPanel" id="emojiPanel" aria-hidden="true">
     <div class="emojiGrid" id="emojiGrid"></div>
   </div>
@@ -536,10 +563,9 @@ OneSignalDeferred.push(async function(OneSignal) {
       </div>
       <button class="replyCloseBtn" id="replyCloseBtn">✕</button>
     </div>
-    <label class="photoBtn" id="photoBtn" for="imgInput">📷</label>
+    <div class="plusBtn clickable" id="plusBtn">＋</div>
     <input type="file" id="imgInput" accept="image/*" style="position:absolute;width:0;height:0;opacity:0;overflow:hidden"/>
     <div class="inputWrap"><textarea id="input" autocomplete="off" placeholder=""></textarea></div>
-    <div class="emojiBtn clickable" id="drawBtn" title="손글씨" style="font-size:20px">✏️</div>
     <div class="emojiBtn clickable" id="emojiBtn">😊</div>
     <button class="sendBtn" id="send" disabled>전송</button>
   </div>
@@ -553,6 +579,12 @@ OneSignalDeferred.push(async function(OneSignal) {
   <button id="ctxReply">↩️ 답글</button>
   <button id="ctxEdit">✏️ 수정</button>
   <button id="ctxDelete" class="danger">🗑 삭제</button>
+</div>
+
+<!-- 전송 메뉴 (꾹 누르기) -->
+<div class="sendMenu" id="sendMenu">
+  <button id="sendNormal">💬 일반 전송</button>
+  <button id="sendSpoiler">🙈 스포일러로 보내기</button>
 </div>
 
 <!-- 손글씨 캔버스 -->
@@ -1756,6 +1788,12 @@ function rebuildBubble(bubble, m) {
     img.addEventListener('click',e=>{e.preventDefault();const ov=document.createElement('div');ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:999;display:flex;align-items:center;justify-content:center;cursor:zoom-out';const fi=document.createElement('img');fi.src=m.imageUrl;fi.style.cssText='max-width:94vw;max-height:90vh;border-radius:10px;object-fit:contain';ov.appendChild(fi);ov.addEventListener('click',()=>ov.remove());document.body.appendChild(ov);});
     a.appendChild(img);bubble.appendChild(a);
     if (m.text) { bubble.appendChild(document.createElement('br')); bubble.appendChild(linkifyText(String(m.text))); }
+  } else if (m.spoiler) {
+    // 스포일러 메시지: 전체를 spoiler span으로 감싸기
+    const sp = document.createElement('span'); sp.className = 'spoiler';
+    sp.appendChild(linkifyText(String(m.text||'')));
+    sp.addEventListener('click', e => { e.stopPropagation(); sp.classList.toggle('revealed'); });
+    bubble.appendChild(sp);
   } else {
     bubble.appendChild(linkifyText(String(m.text||'')));
   }
@@ -1804,12 +1842,12 @@ function renderMessage(m, isPending) {
   }
 
   logEl.appendChild(wrap);
-  seen.set(m.messageId, {seq:Number(m.seq||0),metaEl:meta,senderId:m.senderId,wrapEl:wrap,bubbleEl:bubble,text:String(m.text||''),replyTo:m.replyTo||null,imageUrl:m.imageUrl||null,letter:!!m.letter,letterDeliverAt:Number(m.letterDeliverAt||0),senderNick:m.senderNick||'',ts:m.ts||0});
+  seen.set(m.messageId, {seq:Number(m.seq||0),metaEl:meta,senderId:m.senderId,wrapEl:wrap,bubbleEl:bubble,text:String(m.text||''),replyTo:m.replyTo||null,imageUrl:m.imageUrl||null,letter:!!m.letter,letterDeliverAt:Number(m.letterDeliverAt||0),senderNick:m.senderNick||'',ts:m.ts||0,spoiler:!!m.spoiler});
 }
 
 function applyMsgUpdate(m) {
   const obj=seen.get(m.messageId); if(!obj) return;
-  rebuildBubble(obj.bubbleEl, {text:String(m.text||''),deleted:!!m.deleted,edited:!!m.edited,replyTo:obj.replyTo||null,imageUrl:obj.imageUrl||null,letter:!!obj.letter,letterDeliverAt:obj.letterDeliverAt||0,senderNick:obj.senderNick||'',ts:obj.ts||0});
+  rebuildBubble(obj.bubbleEl, {text:String(m.text||''),deleted:!!m.deleted,edited:!!m.edited,replyTo:obj.replyTo||null,imageUrl:obj.imageUrl||null,letter:!!obj.letter,letterDeliverAt:obj.letterDeliverAt||0,senderNick:obj.senderNick||'',ts:obj.ts||0,spoiler:!!obj.spoiler});
   obj.text=String(m.text||'');
 }
 
@@ -1940,7 +1978,8 @@ function subscribeMessages(rid) {
       replyTo:   m.replyTo||null,
       imageUrl:  m.imageUrl||null,
       letter:    !!m.letter,
-      letterDeliverAt: Number(m.letterDeliverAt||0)
+      letterDeliverAt: Number(m.letterDeliverAt||0),
+      spoiler:   !!m.spoiler
     };
 
     afterSeq = Math.max(afterSeq, msg.seq);
@@ -2048,7 +2087,8 @@ async function loadOlderMessages() {
         replyTo:   m.replyTo||null,
         imageUrl:  m.imageUrl||null,
         letter:    !!m.letter,
-        letterDeliverAt: Number(m.letterDeliverAt||0)
+        letterDeliverAt: Number(m.letterDeliverAt||0),
+        spoiler:   !!m.spoiler
       });
     });
 
@@ -2101,7 +2141,7 @@ async function loadOlderMessages() {
       if (firstMsg) logEl.insertBefore(wrap, firstMsg);
       else logEl.appendChild(wrap);
 
-      seen.set(m.messageId, {seq:Number(m.seq||0),metaEl:meta,senderId:m.senderId,wrapEl:wrap,bubbleEl:bubble,text:String(m.text||''),replyTo:m.replyTo||null,imageUrl:m.imageUrl||null,letter:!!m.letter,letterDeliverAt:Number(m.letterDeliverAt||0),senderNick:m.senderNick||'',ts:m.ts||0});
+      seen.set(m.messageId, {seq:Number(m.seq||0),metaEl:meta,senderId:m.senderId,wrapEl:wrap,bubbleEl:bubble,text:String(m.text||''),replyTo:m.replyTo||null,imageUrl:m.imageUrl||null,letter:!!m.letter,letterDeliverAt:Number(m.letterDeliverAt||0),senderNick:m.senderNick||'',ts:m.ts||0,spoiler:!!m.spoiler});
     }
 
     // 더 로드할 메시지가 있으면 버튼 다시 표시
@@ -3181,7 +3221,86 @@ function send() {
   sendToFirebase(mid,text,replyToData);
 }
 function focusInput(){try{inputEl.focus({preventScroll:true});}catch(e){try{inputEl.focus();}catch(e2){}}}
-sendBtn.addEventListener('pointerdown',async e=>{e.preventDefault();if(soundEnabled)await unlockAudio();send();focusInput();});
+// ── 전송 버튼: 짧게 누르면 일반 전송, 꾹 누르면 스포일러 메뉴 ──
+let _sendLongTimer = null;
+let _sendLongFired = false;
+const sendMenuEl = document.getElementById('sendMenu');
+
+sendBtn.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  _sendLongFired = false;
+  const text = inputEl.value;
+  if (!text.trim() || !roomId) return;
+  _sendLongTimer = setTimeout(() => {
+    _sendLongFired = true;
+    // 전송 메뉴 표시
+    const rect = sendBtn.getBoundingClientRect();
+    sendMenuEl.style.bottom = (window.innerHeight - rect.top + 6) + 'px';
+    sendMenuEl.style.right = (window.innerWidth - rect.right) + 'px';
+    sendMenuEl.style.left = 'auto';
+    sendMenuEl.classList.add('open');
+  }, 500);
+});
+sendBtn.addEventListener('pointerup', async e => {
+  if (_sendLongTimer) { clearTimeout(_sendLongTimer); _sendLongTimer = null; }
+  if (_sendLongFired) return; // 꾹 눌러서 메뉴가 열린 경우 → 메뉴에서 선택
+  e.preventDefault();
+  if (soundEnabled) await unlockAudio();
+  send(); focusInput();
+});
+sendBtn.addEventListener('pointercancel', () => {
+  if (_sendLongTimer) { clearTimeout(_sendLongTimer); _sendLongTimer = null; }
+});
+sendBtn.addEventListener('pointerleave', () => {
+  if (_sendLongTimer) { clearTimeout(_sendLongTimer); _sendLongTimer = null; }
+});
+
+document.getElementById('sendNormal').addEventListener('click', async () => {
+  sendMenuEl.classList.remove('open');
+  if (soundEnabled) await unlockAudio();
+  send(); focusInput();
+});
+document.getElementById('sendSpoiler').addEventListener('click', async () => {
+  sendMenuEl.classList.remove('open');
+  if (soundEnabled) await unlockAudio();
+  sendAsSpoiler(); focusInput();
+});
+document.addEventListener('click', e => {
+  if (!sendMenuEl.contains(e.target) && !sendBtn.contains(e.target)) sendMenuEl.classList.remove('open');
+});
+
+function sendAsSpoiler() {
+  const text = inputEl.value; if (!text.trim() || !roomId) return;
+  const mid = uuid();
+  let replyToData = null;
+  if (currentReplyTo) { replyToData = {...currentReplyTo}; clearReply(); }
+  const spoilerMsg = {roomId, messageId: mid, senderId: myUid, senderNick: myNick, text, ts: Date.now(), seq: 0, replyTo: replyToData, spoiler: true};
+  renderMessage(spoilerMsg, true);
+  scrollToBottom(true);
+  pending.set(mid, {text, createdAt: Date.now()});
+  updateBadges();
+  inputEl.value = '';
+  inputEl.style.height = '24px';
+  inputEl.style.overflowY = 'hidden';
+  document.documentElement.style.setProperty('--composerH', '64px');
+  onInput();
+  try { if (_typRef) _typRef.remove(); } catch(e) {} _typingOn = false;
+  sendSpoilerToFirebase(mid, text, replyToData);
+}
+
+async function sendSpoilerToFirebase(mid, text, replyToData) {
+  if (!roomId) return;
+  try {
+    const tx = await db.ref('rooms/'+roomId+'/lastSeq').transaction(v => (Number(v||0)+1));
+    const seq = Number((tx&&tx.snapshot&&tx.snapshot.val())||0);
+    const msg = {messageId: mid, senderId: myUid, senderNick: myNick, text: String(text||'').slice(0,4000), ts: SV.TIMESTAMP, seq, spoiler: true};
+    if (replyToData) msg.replyTo = replyToData;
+    await db.ref('messages/'+roomId).push(msg);
+    await db.ref('rooms/'+roomId).update({updatedAt: SV.TIMESTAMP, lastMsgTs: SV.TIMESTAMP});
+    try { const ids = await collectSubIds(roomId); if(ids.length) pushToSubs(ids, roomName||'Chat', '🙈 스포일러 메시지', roomId, 1); } catch(e) {}
+  } catch(e) { updateBadges(); }
+}
+
 inputEl.addEventListener('keydown',async e=>{
   if(e.key==='Enter'){
     // PC: Shift+Enter=줄바꿈, Enter=전송
@@ -3384,8 +3503,25 @@ document.getElementById('drawSend').addEventListener('click', () => {
   sendToFirebase(mid, '', null, dataUrl);
   closeDrawPanel();
 });
-document.getElementById('drawBtn').addEventListener('click', () => { if (roomId) openDrawPanel(); });
+document.getElementById('plusDraw').addEventListener('click', () => {
+  closePlusPanel();
+  if (roomId) openDrawPanel();
+});
 drawOverlay.addEventListener('click', e => { if (e.target === drawOverlay) closeDrawPanel(); });
+
+// ── + 버튼 패널 ──
+const plusBtn = document.getElementById('plusBtn');
+const plusPanel = document.getElementById('plusPanel');
+function togglePlusPanel() { plusPanel.classList.toggle('open'); const o=plusPanel.classList.contains('open'); plusPanel.setAttribute('aria-hidden',o?'false':'true'); }
+function closePlusPanel() { plusPanel.classList.remove('open'); plusPanel.setAttribute('aria-hidden','true'); }
+let _plusTouched = false;
+plusBtn.addEventListener('touchstart', e => { e.preventDefault(); _plusTouched = false; }, {passive:false});
+plusBtn.addEventListener('touchend', e => { e.preventDefault(); _plusTouched = true; togglePlusPanel(); }, {passive:false});
+plusBtn.addEventListener('mousedown', e => e.preventDefault());
+plusBtn.addEventListener('click', e => { e.preventDefault(); if(_plusTouched){_plusTouched=false;return;} togglePlusPanel(); });
+document.addEventListener('click', e => { if(!plusBtn.contains(e.target) && !plusPanel.contains(e.target)) closePlusPanel(); });
+// + 패널에서 사진 선택 시 자동 닫기
+document.getElementById('imgInput').addEventListener('change', () => closePlusPanel());
 
 // ================================================================
 // LETTER MODE (편지 모드)
@@ -3540,7 +3676,7 @@ document.addEventListener('visibilitychange', () => {
           mergeServerMsg({ messageId:mid, senderId:String(m.senderId||''), senderNick:String(m.senderNick||''),
             text:String(m.text||''), ts:Number(m.ts||0), seq:Number(m.seq||0),
             deleted:!!m.deleted, edited:!!m.edited, replyTo:m.replyTo||null, imageUrl:m.imageUrl||null,
-            letter:!!m.letter, letterDeliverAt:Number(m.letterDeliverAt||0) });
+            letter:!!m.letter, letterDeliverAt:Number(m.letterDeliverAt||0), spoiler:!!m.spoiler });
           afterSeq = Math.max(afterSeq, Number(m.seq||0));
           added = true;
         });
