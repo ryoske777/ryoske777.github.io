@@ -1927,6 +1927,9 @@ function openSearch() {
   _searchIndex = -1;
   _searchKeyword = '';
   clearSearchHighlights();
+  composer.style.display = 'none';
+  typingBar.style.display = 'none';
+  if(emojiPanel.classList.contains('open')){emojiPanel.classList.remove('open');emojiPanel.setAttribute('aria-hidden','true');}
   setTimeout(() => searchInput.focus(), 100);
 }
 
@@ -1938,6 +1941,8 @@ function closeSearch() {
   _searchIndex = -1;
   _searchKeyword = '';
   clearSearchHighlights();
+  searchInput.blur();
+  composer.style.display = 'flex';
 }
 
 function clearSearchHighlights() {
