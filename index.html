@@ -2447,11 +2447,12 @@ async function refreshRooms() {
       const item=document.createElement('div');item.className='roomItem clickable';
       const left=document.createElement('div');left.className='roomLeft';
       const nm=document.createElement('div');nm.className='roomName';
-      nm.innerHTML=`<span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.passEnabled?'🔒':'🔓'} ${esc(r.roomName||'채팅방')}</span>`;
+      nm.innerHTML=`<span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(r.roomName||'채팅방')}</span>`;
       const mt=document.createElement('div');mt.className='roomMeta';
       mt.textContent=`방장: ${r.ownerNick||'미확정'} · ${r.updatedAt?fmt(r.updatedAt):''}`;
       left.appendChild(nm);left.appendChild(mt);
       const right=document.createElement('div');right.className='roomRight';
+      const lockEl=document.createElement('span');lockEl.style.cssText='font-size:18px;line-height:1';lockEl.textContent=r.passEnabled?'🔒':'🔓';right.appendChild(lockEl);
       const chip=document.createElement('div');chip.className='chip';chip.textContent='입장';right.appendChild(chip);
       item.appendChild(left);item.appendChild(right);
       item.addEventListener('click',async()=>await joinFlow(r.roomId));
