@@ -1137,28 +1137,83 @@ function playBeep() {
 }
 
 // ================================================================
-// TITLE BLINK / UNREAD
+// TITLE BLINK / UNREAD → 파비콘 빨간 점
 // ================================================================
-function startBlink() {
-  if (_titleTimer) return;
-  let f=false;
-  _titleTimer = setInterval(() => {
-    if (!document.hidden && document.hasFocus()) { stopBlink(); return; }
-    if (unread<=0) { stopBlink(); return; }
-    document.title = (f=!f) ? `(${unread}) 새 메시지` : (_stealthMode ? _stealthTitle : 'Chat');
-  }, 900);
+let _favOrigHref = null;
+let _favDotHref  = null;
+
+function _ensureFavLink() {
+  let fav = document.querySelector('link[rel="icon"]');
+  if (!fav) { fav = document.createElement('link'); fav.rel = 'icon'; document.head.appendChild(fav); }
+  return fav;
 }
-function stopBlink() { if (_titleTimer) { clearInterval(_titleTimer); _titleTimer=null; } document.title = _stealthMode ? _stealthTitle : 'Chat'; }
+
+function _buildDotFavicon(callback) {
+  // 이미 캐시된 빨간 점 favicon이 있으면 재사용
+  if (_favDotHref) { callback(_favDotHref); return; }
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  const fav = _ensureFavLink();
+  const src = fav.href || '/favicon.ico';
+  if (!_favOrigHref) _favOrigHref = src;
+  img.onload = () => {
+    const s = 32;
+    const c = document.createElement('canvas'); c.width = s; c.height = s;
+    const ctx = c.getContext('2d');
+    ctx.drawImage(img, 0, 0, s, s);
+    // 빨간 점 (우측 상단)
+    ctx.beginPath();
+    ctx.arc(s - 6, 6, 6, 0, 2 * Math.PI);
+    ctx.fillStyle = '#ef4444';
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    _favDotHref = c.toDataURL('image/png');
+    callback(_favDotHref);
+  };
+  img.onerror = () => {
+    // favicon 로드 실패 시 빈 아이콘에 빨간 점만
+    const s = 32;
+    const c = document.createElement('canvas'); c.width = s; c.height = s;
+    const ctx = c.getContext('2d');
+    ctx.beginPath();
+    ctx.arc(s - 6, 6, 6, 0, 2 * Math.PI);
+    ctx.fillStyle = '#ef4444';
+    ctx.fill();
+    _favDotHref = c.toDataURL('image/png');
+    callback(_favDotHref);
+  };
+  img.src = src;
+}
+
+function showFavDot() {
+  _buildDotFavicon(href => {
+    const fav = _ensureFavLink();
+    fav.href = href;
+  });
+}
+
+function clearFavDot() {
+  const fav = _ensureFavLink();
+  if (_favOrigHref) fav.href = _favOrigHref;
+  else fav.removeAttribute('href');
+}
+
+function startBlink() {
+  if (document.hidden || !document.hasFocus()) showFavDot();
+}
+function stopBlink() { clearFavDot(); }
 function bumpUnread() {
   unread = Math.min(999, unread+1);
   setAppBadge(unread);
-  if (document.hidden || !document.hasFocus()) startBlink(); else stopBlink();
+  if (document.hidden || !document.hasFocus()) showFavDot();
   setHeader();
 }
 function clearUnread() {
   unread=0;
   setAppBadge(0);
-  stopBlink();
+  clearFavDot();
   setHeader();
   // ★ OneSignal 배지도 함께 초기화 (앱 열었을 때 배지 클리어)
   try {
