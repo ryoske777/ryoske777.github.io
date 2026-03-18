@@ -1189,6 +1189,11 @@ function _buildDotFavicon(baseSrc, callback) {
 }
 
 function showFavDot() {
+  if (_stealthMode) {
+    // 스텔스: 파비콘 변경 없이 타이틀만 변경
+    document.title = _stealthTitle + ' Message';
+    return;
+  }
   _favDotActive = true;
   const base = _currentBaseFav();
   _buildDotFavicon(base, href => {
@@ -1199,6 +1204,10 @@ function showFavDot() {
 }
 
 function clearFavDot() {
+  if (_stealthMode) {
+    document.title = _stealthTitle;
+    return;
+  }
   _favDotActive = false;
   const fav = _ensureFavLink();
   fav.href = _currentBaseFav();
