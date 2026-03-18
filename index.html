@@ -850,8 +850,22 @@ function waitForAuth() {
 // ================================================================
 function _rAuthKey(rid) { return LS_ROOM_AUTH + rid; }
 function getRoomAuth(rid) { try { return JSON.parse(localStorage.getItem(_rAuthKey(rid)) || ''); } catch(e) { return null; } }
-function setRoomAuth(rid, o) { try { localStorage.setItem(_rAuthKey(rid), JSON.stringify(o)); } catch(e) {} }
-function clearRoomAuth(rid) { try { localStorage.removeItem(_rAuthKey(rid)); } catch(e) {} }
+function setRoomAuth(rid, o) {
+  try { localStorage.setItem(_rAuthKey(rid), JSON.stringify(o)); } catch(e) {}
+  // 계정 단위로도 저장 (다른 기기에서도 자동 통과)
+  if (myUid) db.ref('userSettings/'+myUid+'/roomAuth/'+rid).set(o).catch(()=>{});
+}
+function clearRoomAuth(rid) {
+  try { localStorage.removeItem(_rAuthKey(rid)); } catch(e) {}
+  if (myUid) db.ref('userSettings/'+myUid+'/roomAuth/'+rid).remove().catch(()=>{});
+}
+async function getRoomAuthCloud(rid) {
+  if (!myUid) return null;
+  try {
+    const snap = await db.ref('userSettings/'+myUid+'/roomAuth/'+rid).once('value');
+    return snap.val();
+  } catch(e) { return null; }
+}
 function randHex(n) {
   const u = new Uint8Array(n);
   try { crypto.getRandomValues(u); } catch(e) { u.forEach((_,i)=>u[i]=Math.floor(Math.random()*256)); }
@@ -896,8 +910,17 @@ async function ensureRoomAccess(info) {
   if (!info || !info.passEnabled) return true;
   const rid = info.roomId, ver = info.passVer, hash = info.passHash, salt = info.passSalt;
   if (!hash) return true;
+  // 방 소유자 또는 관리자는 비밀번호 없이 통과
+  if (myUid && (myUid === info.ownerUid || myUid === ADMIN_UID)) return true;
+  // localStorage 확인 (같은 기기)
   const saved = getRoomAuth(rid);
   if (saved && saved.ver === ver && saved.hash === hash) return true;
+  // 클라우드 확인 (다른 기기에서 이미 인증한 경우)
+  const cloud = await getRoomAuthCloud(rid);
+  if (cloud && cloud.ver === ver && cloud.hash === hash) {
+    try { localStorage.setItem(_rAuthKey(rid), JSON.stringify(cloud)); } catch(e) {}
+    return true;
+  }
   hideSplash();
   for (let i = 0; i < 3; i++) {
     const res = await openPassModal({title:'비밀번호 입력', body:'이 방은 비밀번호가 필요합니다.', okText:'입장'});
