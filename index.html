@@ -3406,11 +3406,31 @@ function openCtx(mid,senderId,wrap,bubble){
   ctxMid=mid;ctxSenderId=senderId;ctxWrap=wrap;ctxBubble=bubble;
   const mine=senderId===myUid;
   ctxEdit.style.display=mine?'flex':'none'; ctxDelete.style.display=mine?'flex':'none';
+  // 메뉴를 보이지 않는 곳에 먼저 표시해서 실제 크기 측정
+  msgCtxMenu.style.top='-9999px';msgCtxMenu.style.left='-9999px';
+  msgCtxMenu.classList.add('open');
+  const menuRect=msgCtxMenu.getBoundingClientRect();
+  const mW=menuRect.width, mH=menuRect.height;
+  // visualViewport: 모바일 키보드/줌 고려한 실제 보이는 영역
+  const vp=window.visualViewport||{offsetTop:0,offsetLeft:0,width:window.innerWidth,height:window.innerHeight};
+  const vpTop=vp.offsetTop, vpLeft=vp.offsetLeft;
+  const vpW=vp.width, vpH=vp.height;
+  const vpBottom=vpTop+vpH, vpRight=vpLeft+vpW;
   const rect=wrap.getBoundingClientRect();
-  let top=rect.bottom+6,left=mine?rect.right-200:rect.left;
-  left=Math.max(8,Math.min(left,window.innerWidth-210));
-  if(top+180>window.innerHeight)top=rect.top-186;
-  msgCtxMenu.style.top=top+'px';msgCtxMenu.style.left=left+'px';msgCtxMenu.classList.add('open');
+  const gap=6;
+  // 위/아래 여유 공간 계산
+  const spaceBelow=vpBottom-rect.bottom-gap;
+  const spaceAbove=rect.top-vpTop-gap;
+  let top;
+  if(spaceBelow>=mH){top=rect.bottom+gap;}
+  else if(spaceAbove>=mH){top=rect.top-mH-gap;}
+  else{top=spaceBelow>spaceAbove?vpBottom-mH-8:vpTop+8;}
+  // 좌우 위치: 내 메시지는 오른쪽 정렬, 상대방은 왼쪽 정렬
+  let left=mine?rect.right-mW:rect.left;
+  left=Math.max(vpLeft+8,Math.min(left,vpRight-mW-8));
+  // 상하 범위 클램핑
+  top=Math.max(vpTop+8,Math.min(top,vpBottom-mH-8));
+  msgCtxMenu.style.top=top+'px';msgCtxMenu.style.left=left+'px';
 }
 function closeCtx(){msgCtxMenu.classList.remove('open');ctxMid=null;}
 document.addEventListener('click',e=>{if(!msgCtxMenu.contains(e.target))closeCtx();});
