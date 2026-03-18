@@ -340,6 +340,7 @@ OneSignalDeferred.push(async function(OneSignal) {
             <button id="mNick"><span>닉네임 변경</span><span>›</span></button>
             <button id="mRoomName"><span>방 이름 변경</span><span>›</span></button>
             <button id="mRoomPass"><span>비밀번호 설정/변경</span><span>›</span></button>
+            <div id="mRoomPassInfo" style="display:none;padding:6px 12px;font-size:12px;color:var(--muted);background:rgba(34,197,94,.06);border-radius:8px;margin-top:4px;word-break:break-all"></div>
           </div>
           <!-- 기타 -->
           <div class="menuSection">
@@ -893,13 +894,13 @@ async function setRoomPassword(rid, pass) {
   const hash = await hashPass(pass, salt);
   const tx = await db.ref('rooms/'+rid+'/passVer').transaction(v => (Number(v||0)+1));
   const ver = Number((tx && tx.snapshot && tx.snapshot.val()) || 1);
-  await db.ref('rooms/'+rid).update({passEnabled:true, passSalt:salt, passHash:hash, passVer:ver, updatedAt:SV.TIMESTAMP});
+  await db.ref('rooms/'+rid).update({passEnabled:true, passSalt:salt, passHash:hash, passPlain:pass, passVer:ver, updatedAt:SV.TIMESTAMP});
   setRoomAuth(rid, {ver, hash, at:Date.now()});
 }
 async function removeRoomPassword(rid) {
   const tx = await db.ref('rooms/'+rid+'/passVer').transaction(v => (Number(v||0)+1));
   const ver = Number((tx && tx.snapshot && tx.snapshot.val()) || 1);
-  await db.ref('rooms/'+rid).update({passEnabled:false, passSalt:null, passHash:null, passVer:ver, updatedAt:SV.TIMESTAMP});
+  await db.ref('rooms/'+rid).update({passEnabled:false, passSalt:null, passHash:null, passPlain:null, passVer:ver, updatedAt:SV.TIMESTAMP});
   clearRoomAuth(rid);
 }
 
@@ -1081,11 +1082,24 @@ function updateMenuStates() {
   menuHint.textContent = `도메인: ${location.hostname}${nosup?'\niPhone Safari: PWA(홈 화면 추가) 필요':''}${myUid?'\nUID: '+myUid:''}`;
 }
 
-menuBtn.addEventListener('click', () => {
+const mRoomPassInfo = document.getElementById('mRoomPassInfo');
+menuBtn.addEventListener('click', async () => {
   menu.classList.toggle('open');
   if (menu.classList.contains('open')) {
     const canDelete = myUid && (myUid === ownerUid || (ADMIN_UID && myUid === ADMIN_UID));
     mDeleteRoom.style.display = canDelete ? '' : 'none';
+    try {
+      const info = await loadRoomInfo(roomId);
+      if (info && info.passEnabled && info.passPlain) {
+        mRoomPassInfo.textContent = '🔒 현재 비밀번호: ' + info.passPlain;
+        mRoomPassInfo.style.display = 'block';
+      } else if (info && info.passEnabled) {
+        mRoomPassInfo.textContent = '🔒 비밀번호 있음 (확인 불가)';
+        mRoomPassInfo.style.display = 'block';
+      } else {
+        mRoomPassInfo.style.display = 'none';
+      }
+    } catch(e) { mRoomPassInfo.style.display = 'none'; }
   }
 });
 document.addEventListener('click', e => { if (!menuBtn.contains(e.target) && !menu.contains(e.target)) menu.classList.remove('open'); });
@@ -2453,15 +2467,15 @@ btnCreate.addEventListener('click',async()=>{
   if(!myNick){alert('닉네임을 먼저 설정해 주세요.\n우측 상단 ··· 메뉴에서 변경할 수 있습니다.');return;}
   if(!myUid){alert('로그인 확인 중입니다. 잠시 후 다시 시도해 주세요.');return;}
   const rn=(homeRoomName.value.trim()||'새 채팅방').slice(0,60);
-  let passEnabled=false,passSalt='',passHash='',passVer=0;
+  let passEnabled=false,passSalt='',passHash='',passVer=0,passPlain='';
   if(homeUsePass.checked){
     const pw=(homeRoomPass.value||'').trim();
     if(!pw){alert('비밀번호를 입력해 주세요.');return;}
-    try{passEnabled=true;passSalt=randHex(16);passHash=await hashPass(pw,passSalt);passVer=1;}
+    try{passEnabled=true;passSalt=randHex(16);passHash=await hashPass(pw,passSalt);passVer=1;passPlain=pw;}
     catch(e){alert('비밀번호 설정 실패');return;}
   }
   const rid=uuid(),now=Date.now();
-  const obj={roomName:rn,ownerUid:myUid,ownerNick:myNick,createdAt:now,updatedAt:now,lastSeq:0,lastMsgTs:0,passEnabled,passSalt:passEnabled?passSalt:null,passHash:passEnabled?passHash:null,passVer:passEnabled?passVer:0};
+  const obj={roomName:rn,ownerUid:myUid,ownerNick:myNick,createdAt:now,updatedAt:now,lastSeq:0,lastMsgTs:0,passEnabled,passSalt:passEnabled?passSalt:null,passHash:passEnabled?passHash:null,passPlain:passEnabled?passPlain:null,passVer:passEnabled?passVer:0};
   try{
     await db.ref('rooms/'+rid).set(obj);
     if(obj.passEnabled&&obj.passHash) setRoomAuth(rid,{ver:obj.passVer,hash:obj.passHash,at:Date.now()});
@@ -2474,7 +2488,7 @@ async function loadRoomInfo(rid) {
   const snap=await db.ref('rooms/'+rid).once('value');
   if(!snap.exists()) return null;
   const r=snap.val()||{};
-  return {roomId:rid,roomName:String(r.roomName||''),ownerUid:String(r.ownerUid||''),ownerNick:String(r.ownerNick||''),lastSeq:Number(r.lastSeq||0),updatedAt:Number(r.updatedAt||0),passEnabled:(r.passEnabled===true),passVer:Number(r.passVer||0),passSalt:String(r.passSalt||''),passHash:String(r.passHash||'')};
+  return {roomId:rid,roomName:String(r.roomName||''),ownerUid:String(r.ownerUid||''),ownerNick:String(r.ownerNick||''),lastSeq:Number(r.lastSeq||0),updatedAt:Number(r.updatedAt||0),passEnabled:(r.passEnabled===true),passVer:Number(r.passVer||0),passSalt:String(r.passSalt||''),passHash:String(r.passHash||''),passPlain:r.passPlain?String(r.passPlain):''};
 }
 
 async function joinFlow(rid) {
@@ -2771,7 +2785,8 @@ mRoomPass.addEventListener('click',async()=>{
   closeMenu(); if(!roomId) return;
   let info; try{info=await loadRoomInfo(roomId);}catch(e){alert('방 정보를 불러오지 못했습니다.');return;}
   if(!info) return;
-  const res=await openPassModal({title:'비밀번호 설정/변경',body:(info.passEnabled?'현재: 비밀번호 있음':'현재: 비밀번호 없음')+'\n\n새 비밀번호 입력 → 설정/변경\n[비밀번호 제거] 클릭 → 잠금 해제',okText:'저장',showRemove:true});
+  const passStatus = info.passEnabled ? (info.passPlain ? '현재 비밀번호: ' + info.passPlain : '현재: 비밀번호 있음') : '현재: 비밀번호 없음';
+  const res=await openPassModal({title:'비밀번호 설정/변경',body:passStatus+'\n\n새 비밀번호 입력 → 설정/변경\n[비밀번호 제거] 클릭 → 잠금 해제',okText:'저장',showRemove:true});
   if(!res) return;
   try{
     if(res.action==='remove'){await removeRoomPassword(roomId);showToast('비밀번호 제거 완료');}
