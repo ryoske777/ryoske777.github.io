@@ -2900,30 +2900,6 @@ loginUserEl.addEventListener('keydown', e => { if (e.key === 'Enter') loginPassE
 // SEND
 // ================================================================
 let _prevInputH = 24;
-let _prevInputLen = 0;
-let _inputMirror = null;
-let _mirrorWidth = '';
-let _mirrorOneLineH = 0;
-function _getInputMirror() {
-  if (!_inputMirror) {
-    _inputMirror = document.createElement('textarea');
-    _inputMirror.setAttribute('tabindex', '-1');
-    _inputMirror.setAttribute('aria-hidden', 'true');
-    _inputMirror.style.cssText = 'position:fixed;top:-9999px;left:0;visibility:hidden;pointer-events:none;overflow:hidden;border:0;padding:0;margin:0;resize:none;white-space:pre-wrap;word-wrap:break-word;font:16px/24px -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",Arial,sans-serif';
-    document.body.appendChild(_inputMirror);
-  }
-  // 너비만 캐싱하여 getComputedStyle 호출 최소화
-  const w = inputEl.offsetWidth + 'px';
-  if (w !== _mirrorWidth) {
-    _mirrorWidth = w;
-    _inputMirror.style.width = w;
-    // 너비 변경 시 한 줄 높이 재측정
-    _inputMirror.value = 'A';
-    _mirrorOneLineH = _inputMirror.scrollHeight;
-    _inputMirror.value = '';
-  }
-  return _inputMirror;
-}
 let _resizeRaf = 0;
 function _getInputMaxH() { return Math.max(120, Math.round(window.innerHeight * 0.4)); }
 function _doResize() {
@@ -2933,32 +2909,20 @@ function _doResize() {
   if (!val) {
     if (_prevInputH !== 24) {
       _prevInputH = 24;
-      _prevInputLen = val.length;
       inputEl.style.height = '24px';
       inputEl.style.overflowY = 'hidden';
       document.documentElement.style.setProperty('--composerH', '64px');
     }
-    _prevInputLen = val.length;
     return;
   }
-  // 글자 수가 줄지 않았고 높이가 이미 max면 측정 스킵
-  if (val.length >= _prevInputLen && _prevInputH >= maxH) {
-    _prevInputLen = val.length;
-    return;
-  }
-  _prevInputLen = val.length;
-  // 미러 textarea로 높이 측정 (줄바꿈 + word-wrap 모두 반영)
-  const m = _getInputMirror();
-  m.value = val;
-  const sh = m.scrollHeight;
-  // 미러의 실제 한 줄 높이 이하면 기본 높이 유지, 초과 시에만 확장
-  const oneLineH = _mirrorOneLineH || 24;
-  const h = sh <= oneLineH ? 24 : Math.min(sh, maxH);
+  // 입력창 자체의 scrollHeight로 직접 측정 (미러 불일치 문제 해결)
+  inputEl.style.height = '0';
+  const sh = inputEl.scrollHeight;
+  const h = Math.max(24, Math.min(sh, maxH));
+  inputEl.style.height = h + 'px';
   if (h !== _prevInputH) {
     _prevInputH = h;
-    inputEl.style.height = h + 'px';
     inputEl.style.overflowY = h >= maxH ? 'auto' : 'hidden';
-    // offsetHeight 대신 계산값 사용 — 강제 reflow 방지
     document.documentElement.style.setProperty('--composerH', Math.max(64, h + 40) + 'px');
   }
 }
