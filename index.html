@@ -684,6 +684,8 @@ let _readsCache = {};
 let _readsScrollHandler = null;
 let _readsVisHandler = null;
 let _readsFocusHandler = null;
+let _membersRef = null;
+let _membersCache = {};
 
 // Reactions — single room-level watcher
 let _rxRoomRef = null;
@@ -1732,8 +1734,9 @@ function updateReadBadges() {
   if (_readBadgeRic) { (typeof cancelIdleCallback==='function'?cancelIdleCallback:clearTimeout)(_readBadgeRic); }
   _readBadgeRic = (typeof requestIdleCallback==='function'?requestIdleCallback:function(cb){return setTimeout(cb,80);})(function(){
     _readBadgeRic = 0;
-    const others=Object.keys(_readsCache||{}).filter(u=>u!==myUid);
-    const total=others.length;
+    const memberSet=new Set(Object.keys(_membersCache||{}));
+    const others=Object.keys(_readsCache||{}).filter(u=>u!==myUid&&(!memberSet.size||memberSet.has(u)));
+    const total=memberSet.size?Math.max(0,memberSet.size-1):others.length;
     for (const [mid,obj] of seen) {
       if (obj.senderId!==myUid||!obj.metaEl) continue;
       const seq=Number(obj.seq||0);
@@ -2401,11 +2404,13 @@ function startTyping(rid) {
 // ================================================================
 function stopReads() {
   if(_readsRef){try{_readsRef.off();}catch(e){}_readsRef=null;}
+  if(_membersRef){try{_membersRef.off();}catch(e){}_membersRef=null;}
   if(_readsInterval){clearInterval(_readsInterval);_readsInterval=null;}
   if(_readsScrollHandler){logEl.removeEventListener('scroll',_readsScrollHandler);_readsScrollHandler=null;}
   if(_readsVisHandler){document.removeEventListener('visibilitychange',_readsVisHandler);_readsVisHandler=null;}
   if(_readsFocusHandler){window.removeEventListener('focus',_readsFocusHandler);_readsFocusHandler=null;}
   _readsCache={};
+  _membersCache={};
 }
 function canRead() { return !!(roomId&&!document.hidden&&document.hasFocus()&&logEl.style.display!=='none'&&isNearBottom()); }
 function markRead() {
@@ -2417,6 +2422,8 @@ function startReads(rid) {
   stopReads();
   _readsRef=db.ref('reads/'+rid);
   _readsRef.on('value',snap=>{_readsCache=snap.val()||{};updateReadBadges();});
+  _membersRef=db.ref('roomMembers/'+rid);
+  _membersRef.on('value',snap=>{_membersCache=snap.val()||{};updateReadBadges();});
   _readsInterval=setInterval(markRead,5000);
   _readsScrollHandler=()=>setTimeout(()=>{markRead();if(canRead())clearUnread();},120);
   _readsVisHandler=()=>{if(!document.hidden)markRead();};
@@ -2749,7 +2756,8 @@ mLeaveForever.addEventListener('click', async () => {
   try {
     await Promise.all([
       db.ref('roomMembers/'+rid+'/'+myUid).remove(),
-      db.ref('presence/'+rid+'/'+myUid).remove()
+      db.ref('presence/'+rid+'/'+myUid).remove(),
+      db.ref('reads/'+rid+'/'+myUid).remove()
     ]);
   } catch(e) {}
   saveUserSettings({lastRoom:null});
