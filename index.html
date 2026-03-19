@@ -311,14 +311,16 @@ body.stealth .stealthBar{display:flex !important}
 @keyframes spin{to{transform:rotate(360deg)}}
 /* 다중 이미지 미리보기 */
 .imgPreviewOverlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:300;display:flex;flex-direction:column;align-items:center;justify-content:flex-end}
-.imgPreviewBar{width:100%;max-width:500px;background:#fff;border-radius:18px 18px 0 0;padding:16px 12px calc(env(safe-area-inset-bottom,0px) + 12px);box-shadow:0 -8px 30px rgba(0,0,0,.15)}
+.imgPreviewBar{width:100%;max-width:500px;background:#fff;border-radius:18px 18px 0 0;padding:16px 12px calc(env(safe-area-inset-bottom,0px) + 12px);box-shadow:0 -8px 30px rgba(0,0,0,.15);transition:max-height .3s ease,padding .3s ease;will-change:max-height}
+.imgPreviewHandle{width:36px;height:4px;border-radius:2px;background:#d1d5db;margin:0 auto 12px;cursor:grab}
 .imgPreviewHeader{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:0 4px}
 .imgPreviewTitle{font-size:15px;font-weight:900}
 .imgPreviewCount{font-size:13px;color:var(--muted)}
-.imgPreviewScroll{display:flex;gap:10px;overflow-x:auto;padding:4px 0;-webkit-overflow-scrolling:touch;scrollbar-width:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.imgPreviewScroll{display:flex;gap:10px;overflow-x:auto;padding:4px 4px;-webkit-overflow-scrolling:touch;scrollbar-width:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .imgPreviewScroll::-webkit-scrollbar{display:none}
-.imgPreviewThumb{position:relative;width:80px;height:80px;border-radius:10px;overflow:hidden;flex-shrink:0;border:2px solid transparent}
-.imgPreviewThumb img{width:100%;height:100%;object-fit:cover}
+.imgPreviewBar.expanded .imgPreviewScroll{flex-wrap:wrap;overflow-x:visible;justify-content:flex-start}
+.imgPreviewThumb{position:relative;width:80px;height:80px;border-radius:10px;flex-shrink:0;border:2px solid transparent;transition:opacity .15s,transform .15s}
+.imgPreviewThumb img{width:100%;height:100%;object-fit:cover;border-radius:8px;display:block}
 .imgPreviewThumb .imgPreviewOrder{position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center}
 .imgPreviewThumb .imgPreviewRemove{position:absolute;top:4px;left:4px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font-size:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;line-height:1}
 .imgPreviewBtns{display:flex;gap:10px;margin-top:14px}
@@ -326,13 +328,17 @@ body.stealth .stealthBar{display:flex !important}
 .imgPreviewSend{background:#111827;color:#fff}
 .imgPreviewCancel{background:#f3f4f6;color:#374151}
 .imgPreviewAdd{width:80px;height:80px;border-radius:10px;border:2px dashed var(--line);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:24px;color:var(--muted);cursor:pointer;background:#fafafa}
-.imgPreviewThumb.dragging{opacity:.4;border-color:var(--accent)}
-.imgPreviewThumb.insert-left::before,.imgPreviewThumb.insert-right::after{content:'';position:absolute;top:6px;bottom:6px;width:3px;border-radius:2px;background:var(--accent);z-index:5;pointer-events:none}
-.imgPreviewThumb.insert-left::before{left:-6px}
-.imgPreviewThumb.insert-right::after{right:-6px}
-.imgPreviewThumb.lift{animation:thumbLift .25s ease forwards}
-@keyframes thumbLift{0%{transform:scale(1)}50%{transform:scale(1.15)}100%{transform:scale(1.05);box-shadow:0 4px 16px rgba(0,0,0,.25)}}
-.imgPreviewMore{position:absolute;right:0;top:0;height:80px;width:36px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:var(--muted);pointer-events:none;background:linear-gradient(to right,transparent,var(--bg) 60%)}
+.imgPreviewThumb.dragging{opacity:.3;transform:scale(.9)}
+.imgPreviewThumb.insert-left{margin-left:6px}.imgPreviewThumb.insert-right{margin-right:6px}
+.imgPreviewThumb.insert-left::before,.imgPreviewThumb.insert-right::after{content:'';position:absolute;top:4px;bottom:4px;width:3px;border-radius:2px;background:var(--accent);z-index:5;pointer-events:none}
+.imgPreviewThumb.insert-left::before{left:-7px}
+.imgPreviewThumb.insert-right::after{right:-7px}
+.imgPreviewThumb.lift{animation:thumbLift .2s ease forwards}
+@keyframes thumbLift{0%{transform:scale(1)}60%{transform:scale(1.12)}100%{transform:scale(1.05);box-shadow:0 4px 16px rgba(0,0,0,.25)}}
+.imgPreviewMore{position:absolute;right:0;top:0;height:80px;width:36px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:var(--muted);pointer-events:none;background:linear-gradient(to right,transparent,#fff 60%)}
+.imgPreviewExpandHint{text-align:center;font-size:11px;color:var(--muted);margin-top:6px;transition:opacity .2s}
+.imgPreviewBar.expanded .imgPreviewMore{display:none}
+.imgPreviewBar.expanded .imgPreviewExpandHint{display:none}
 .imgPreviewOpts{display:flex;align-items:center;gap:10px;margin-top:10px;padding:0 4px}
 .imgPreviewOpts label{display:flex;align-items:center;gap:6px;font-size:13px;color:#374151;cursor:pointer;-webkit-user-select:none;user-select:none}
 .imgPreviewOpts input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent);cursor:pointer}
@@ -3632,106 +3638,149 @@ function openMultiImgPreview(files) {
   renderImgPreview();
 }
 
+function _cleanupImgPreview() {
+  // 잔상 방지: body에 남은 touchClone 모두 제거
+  document.querySelectorAll('.imgPreviewClone').forEach(c => c.remove());
+}
+
 function renderImgPreview() {
+  _cleanupImgPreview();
   let ov = document.getElementById('imgPreviewOverlay');
   if (ov) ov.remove();
   if (!_multiImgFiles.length) return;
   ov = document.createElement('div'); ov.className = 'imgPreviewOverlay'; ov.id = 'imgPreviewOverlay';
   const bar = document.createElement('div'); bar.className = 'imgPreviewBar';
+  // 드래그 핸들 (확장/축소)
+  const handle = document.createElement('div'); handle.className = 'imgPreviewHandle';
+  bar.appendChild(handle);
+  let isExpanded = false;
+  function toggleExpand() {
+    isExpanded = !isExpanded;
+    bar.classList.toggle('expanded', isExpanded);
+    updateMoreTag();
+  }
+  // 핸들 터치로 확장/축소
+  let handleTouchY = 0;
+  handle.addEventListener('touchstart', (e) => { handleTouchY = e.touches[0].clientY; }, {passive:true});
+  handle.addEventListener('touchend', (e) => {
+    const dy = e.changedTouches[0].clientY - handleTouchY;
+    if (dy < -30 && !isExpanded) toggleExpand();
+    else if (dy > 30 && isExpanded) toggleExpand();
+  });
+  handle.addEventListener('click', toggleExpand);
   // 헤더
   const hdr = document.createElement('div'); hdr.className = 'imgPreviewHeader';
   const ttl = document.createElement('span'); ttl.className = 'imgPreviewTitle'; ttl.textContent = '사진 전송';
   const cnt = document.createElement('span'); cnt.className = 'imgPreviewCount'; cnt.textContent = _multiImgFiles.length + '장 선택';
   hdr.appendChild(ttl); hdr.appendChild(cnt); bar.appendChild(hdr);
-  // 썸네일 스크롤 (드래그앤드롭 지원)
+  // 썸네일 스크롤
   const scrollWrap = document.createElement('div');
   scrollWrap.style.cssText = 'position:relative';
   const scroll = document.createElement('div'); scroll.className = 'imgPreviewScroll';
-  let dragIdx = -1;
-  let dragThumbEl = null;
-  let touchClone = null;
+
+  // === 드래그 상태 (클로저) ===
+  let dragIdx = -1, touchClone = null, holdTimer = null, holdFired = false, touchActive = false;
   let touchStartX = 0, touchStartY = 0;
-  let holdTimer = null, holdFired = false;
-  _multiImgFiles.forEach((item, i) => {
+
+  function calcInsertSide(thumbEl, clientX) {
+    const rect = thumbEl.getBoundingClientRect();
+    return clientX < rect.left + rect.width / 2 ? 'left' : 'right';
+  }
+  function clearInsertMarkers() {
+    scroll.querySelectorAll('.imgPreviewThumb').forEach(th => { th.classList.remove('insert-left', 'insert-right'); });
+  }
+  function calcInsertIdx(fromIdx, targetIdx, side) {
+    let insertAt = side === 'left' ? targetIdx : targetIdx + 1;
+    if (fromIdx < targetIdx) insertAt--;
+    return Math.max(0, insertAt);
+  }
+  function performReorder(fromIdx, toIdx, side) {
+    const insertAt = calcInsertIdx(fromIdx, toIdx, side);
+    if (insertAt === fromIdx) return;
+    const [moved] = _multiImgFiles.splice(fromIdx, 1);
+    _multiImgFiles.splice(insertAt, 0, moved);
+    // DOM만 갱신 (전체 리렌더 없이)
+    refreshThumbs();
+  }
+  function refreshThumbs() {
+    // 기존 썸네일 + addBtn 제거
+    const addBtnEl = scroll.querySelector('.imgPreviewAdd');
+    scroll.querySelectorAll('.imgPreviewThumb').forEach(th => th.remove());
+    // 새로 빌드
+    _multiImgFiles.forEach((item, i) => buildThumb(item, i));
+    if (addBtnEl) scroll.insertBefore(addBtnEl, null);
+    // 카운트 갱신
+    cnt.textContent = _multiImgFiles.length + '장 선택';
+    const sendBtnEl = ov.querySelector('.imgPreviewSend');
+    if (sendBtnEl) sendBtnEl.textContent = '전송 (' + _multiImgFiles.length + ')';
+    requestAnimationFrame(updateMoreTag);
+  }
+
+  function buildThumb(item, i) {
     const thumb = document.createElement('div'); thumb.className = 'imgPreviewThumb';
     thumb.dataset.idx = i;
-    thumb.draggable = true;
     const img = document.createElement('img'); img.src = item.url; img.draggable = false;
     const order = document.createElement('div'); order.className = 'imgPreviewOrder'; order.textContent = i + 1;
     const rm = document.createElement('div'); rm.className = 'imgPreviewRemove'; rm.textContent = '✕';
-    rm.addEventListener('click', (e) => { e.stopPropagation(); URL.revokeObjectURL(item.url); _multiImgFiles.splice(i, 1); renderImgPreview(); });
+    rm.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const idx = parseInt(thumb.dataset.idx);
+      URL.revokeObjectURL(_multiImgFiles[idx].url);
+      _multiImgFiles.splice(idx, 1);
+      if (!_multiImgFiles.length) { _cleanupImgPreview(); ov.remove(); return; }
+      refreshThumbs();
+    });
     thumb.appendChild(img); thumb.appendChild(order); thumb.appendChild(rm);
-    // 헬퍼: 터치/마우스 위치 기준으로 insert 방향 계산
-    function calcInsertSide(thumbEl, clientX) {
-      const rect = thumbEl.getBoundingClientRect();
-      return clientX < rect.left + rect.width / 2 ? 'left' : 'right';
-    }
-    function clearInsertMarkers() {
-      scroll.querySelectorAll('.imgPreviewThumb').forEach(th => { th.classList.remove('insert-left', 'insert-right'); });
-    }
-    function calcInsertIdx(targetIdx, side) {
-      // 드래그 중인 아이템이 빠진 뒤의 실제 삽입 위치
-      let insertAt = side === 'left' ? targetIdx : targetIdx + 1;
-      if (dragIdx < targetIdx) insertAt--;
-      if (insertAt < 0) insertAt = 0;
-      return insertAt;
-    }
-    // 마우스 드래그
-    thumb.addEventListener('dragstart', (e) => { dragIdx = i; dragThumbEl = thumb; thumb.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; });
-    thumb.addEventListener('dragend', () => { thumb.classList.remove('dragging'); clearInsertMarkers(); dragIdx = -1; dragThumbEl = null; });
+
+    // === 마우스 드래그 (PC) ===
+    thumb.draggable = true;
+    thumb.addEventListener('dragstart', (e) => { dragIdx = i; thumb.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; });
+    thumb.addEventListener('dragend', () => { thumb.classList.remove('dragging'); clearInsertMarkers(); dragIdx = -1; });
     thumb.addEventListener('dragover', (e) => {
       e.preventDefault(); e.dataTransfer.dropEffect = 'move';
       clearInsertMarkers();
-      if (dragIdx >= 0 && dragIdx !== i) {
-        const side = calcInsertSide(thumb, e.clientX);
-        thumb.classList.add(side === 'left' ? 'insert-left' : 'insert-right');
+      if (dragIdx >= 0 && dragIdx !== parseInt(thumb.dataset.idx)) {
+        thumb.classList.add(calcInsertSide(thumb, e.clientX) === 'left' ? 'insert-left' : 'insert-right');
       }
     });
     thumb.addEventListener('dragleave', () => { thumb.classList.remove('insert-left', 'insert-right'); });
     thumb.addEventListener('drop', (e) => {
-      e.preventDefault();
-      const side = calcInsertSide(thumb, e.clientX);
-      clearInsertMarkers();
+      e.preventDefault(); clearInsertMarkers();
       const toIdx = parseInt(thumb.dataset.idx);
       if (dragIdx >= 0 && dragIdx !== toIdx) {
-        const [moved] = _multiImgFiles.splice(dragIdx, 1);
-        const insertAt = calcInsertIdx(toIdx, side);
-        _multiImgFiles.splice(insertAt, 0, moved);
-        renderImgPreview();
+        performReorder(dragIdx, toIdx, calcInsertSide(thumb, e.clientX));
       }
     });
-    // 터치: 꾹 눌러서 떼어내기 (long press → detach → drag)
-    let touchActive = false;
+
+    // === 터치 드래그 (모바일) - 꾹 눌러서 떼어내기 ===
     thumb.addEventListener('touchstart', (e) => {
       if (e.target.closest('.imgPreviewRemove')) return;
       const t = e.touches[0]; touchStartX = t.clientX; touchStartY = t.clientY;
-      dragIdx = i; touchActive = false; holdFired = false;
+      dragIdx = parseInt(thumb.dataset.idx); touchActive = false; holdFired = false;
       holdTimer = setTimeout(() => {
         holdFired = true; touchActive = true;
-        // "툭" 떼어지는 애니메이션
         thumb.classList.add('lift');
-        if (navigator.vibrate) navigator.vibrate(20);
+        if (navigator.vibrate) navigator.vibrate(15);
         setTimeout(() => {
           thumb.classList.remove('lift');
           thumb.classList.add('dragging');
-          // 플로팅 클론 생성
           touchClone = thumb.cloneNode(true);
-          touchClone.style.cssText = 'position:fixed;z-index:999;pointer-events:none;opacity:.85;width:80px;height:80px;border-radius:10px;overflow:hidden;box-shadow:0 6px 20px rgba(0,0,0,.3);transition:none;';
+          touchClone.className = 'imgPreviewClone';
+          touchClone.style.cssText = 'position:fixed;z-index:9999;pointer-events:none;opacity:.85;width:80px;height:80px;border-radius:10px;overflow:hidden;box-shadow:0 6px 20px rgba(0,0,0,.3);';
           touchClone.style.left = (touchStartX - 40) + 'px';
           touchClone.style.top = (touchStartY - 40) + 'px';
           document.body.appendChild(touchClone);
-        }, 250);
-      }, 400);
+        }, 200);
+      }, 350);
     }, {passive: true});
+
     thumb.addEventListener('touchmove', (e) => {
-      if (dragIdx !== i) return;
+      const ci = parseInt(thumb.dataset.idx);
+      if (dragIdx !== ci) return;
       const t = e.touches[0];
       const dx = Math.abs(t.clientX - touchStartX), dy = Math.abs(t.clientY - touchStartY);
-      // 아직 hold 안 됐는데 움직이면 hold 취소 (스크롤 허용)
-      if (!holdFired && (dx > 10 || dy > 10)) {
-        clearTimeout(holdTimer); holdTimer = null;
-        dragIdx = -1;
-        return;
+      if (!holdFired && (dx > 8 || dy > 8)) {
+        clearTimeout(holdTimer); holdTimer = null; dragIdx = -1; return;
       }
       if (!touchActive) return;
       e.preventDefault();
@@ -3739,49 +3788,48 @@ function renderImgPreview() {
         touchClone.style.left = (t.clientX - 40) + 'px';
         touchClone.style.top = (t.clientY - 40) + 'px';
       }
-      // highlight insert position
-      const tmpClone = touchClone; if (tmpClone) tmpClone.style.display = 'none';
+      if (touchClone) touchClone.style.display = 'none';
       const el = document.elementFromPoint(t.clientX, t.clientY);
-      if (tmpClone) tmpClone.style.display = '';
+      if (touchClone) touchClone.style.display = '';
       clearInsertMarkers();
       const target = el && el.closest('.imgPreviewThumb');
       if (target && target !== thumb) {
-        const side = calcInsertSide(target, t.clientX);
-        target.classList.add(side === 'left' ? 'insert-left' : 'insert-right');
+        target.classList.add(calcInsertSide(target, t.clientX) === 'left' ? 'insert-left' : 'insert-right');
       }
     }, {passive: false});
+
     thumb.addEventListener('touchend', (e) => {
       clearTimeout(holdTimer); holdTimer = null;
-      if (dragIdx !== i) return;
-      thumb.classList.remove('dragging');
-      thumb.classList.remove('lift');
+      const ci = parseInt(thumb.dataset.idx);
+      if (dragIdx !== ci) return;
+      thumb.classList.remove('dragging', 'lift');
       clearInsertMarkers();
       if (touchClone) { touchClone.remove(); touchClone = null; }
       if (touchActive && e.changedTouches.length) {
         const t = e.changedTouches[0];
         const el = document.elementFromPoint(t.clientX, t.clientY);
         const target = el && el.closest('.imgPreviewThumb');
-        if (target && target.dataset.idx !== undefined) {
+        if (target) {
           const toIdx = parseInt(target.dataset.idx);
-          if (toIdx !== i) {
-            const side = calcInsertSide(target, t.clientX);
-            const [moved] = _multiImgFiles.splice(i, 1);
-            const insertAt = calcInsertIdx(toIdx, side);
-            _multiImgFiles.splice(insertAt, 0, moved);
-            renderImgPreview();
-          }
+          if (toIdx !== ci) performReorder(ci, toIdx, calcInsertSide(target, t.clientX));
         }
       }
       dragIdx = -1; touchActive = false; holdFired = false;
     });
     thumb.addEventListener('touchcancel', () => {
       clearTimeout(holdTimer); holdTimer = null;
-      thumb.classList.remove('dragging'); thumb.classList.remove('lift');
+      thumb.classList.remove('dragging', 'lift');
       if (touchClone) { touchClone.remove(); touchClone = null; }
       dragIdx = -1; touchActive = false; holdFired = false;
     });
-    scroll.appendChild(thumb);
-  });
+
+    const addBtnEl = scroll.querySelector('.imgPreviewAdd');
+    if (addBtnEl) scroll.insertBefore(thumb, addBtnEl);
+    else scroll.appendChild(thumb);
+  }
+
+  _multiImgFiles.forEach((item, i) => buildThumb(item, i));
+
   // 추가 버튼
   const addBtn = document.createElement('div'); addBtn.className = 'imgPreviewAdd'; addBtn.textContent = '+';
   addBtn.addEventListener('click', () => {
@@ -3790,29 +3838,32 @@ function renderImgPreview() {
       if (inp.files.length) {
         const newFiles = Array.from(inp.files).filter(f => f.type.startsWith('image/') && f.size <= 15*1024*1024);
         newFiles.forEach(f => _multiImgFiles.push({ file: f, url: URL.createObjectURL(f) }));
-        renderImgPreview();
+        refreshThumbs();
       }
     });
     inp.click();
   });
   scroll.appendChild(addBtn);
   scrollWrap.appendChild(scroll);
-  // +N 표시 (스크롤 시 보이지 않는 사진 수)
+  // +N 표시
   const moreTag = document.createElement('div'); moreTag.className = 'imgPreviewMore'; moreTag.style.display = 'none';
   scrollWrap.appendChild(moreTag);
   function updateMoreTag() {
+    if (isExpanded) { moreTag.style.display = 'none'; return; }
     const sr = scroll.getBoundingClientRect();
     let hidden = 0;
     scroll.querySelectorAll('.imgPreviewThumb').forEach(th => {
-      const tr = th.getBoundingClientRect();
-      if (tr.right > sr.right + 4) hidden++;
+      if (th.getBoundingClientRect().right > sr.right + 4) hidden++;
     });
-    if (hidden > 0) { moreTag.textContent = '+' + hidden; moreTag.style.display = ''; }
-    else { moreTag.style.display = 'none'; }
+    moreTag.textContent = '+' + hidden; moreTag.style.display = hidden > 0 ? '' : 'none';
   }
   scroll.addEventListener('scroll', updateMoreTag);
   requestAnimationFrame(updateMoreTag);
   bar.appendChild(scrollWrap);
+  // 확장 힌트
+  const expandHint = document.createElement('div'); expandHint.className = 'imgPreviewExpandHint';
+  expandHint.textContent = '위로 밀어 확장';
+  bar.appendChild(expandHint);
   // 묶음 보내기 옵션 (2장 이상일 때만)
   if (_multiImgFiles.length >= 2) {
     const opts = document.createElement('div'); opts.className = 'imgPreviewOpts';
@@ -3827,9 +3878,12 @@ function renderImgPreview() {
   // 버튼
   const btns = document.createElement('div'); btns.className = 'imgPreviewBtns';
   const cancelBtn = document.createElement('button'); cancelBtn.className = 'imgPreviewCancel'; cancelBtn.textContent = '취소';
-  cancelBtn.addEventListener('click', () => { _multiImgFiles.forEach(item => URL.revokeObjectURL(item.url)); _multiImgFiles = []; ov.remove(); });
+  cancelBtn.addEventListener('click', () => {
+    _cleanupImgPreview();
+    _multiImgFiles.forEach(item => URL.revokeObjectURL(item.url)); _multiImgFiles = []; ov.remove();
+  });
   const sendBtn = document.createElement('button'); sendBtn.className = 'imgPreviewSend'; sendBtn.textContent = '전송 (' + _multiImgFiles.length + ')';
-  sendBtn.addEventListener('click', () => { sendMultiImages(); ov.remove(); });
+  sendBtn.addEventListener('click', () => { _cleanupImgPreview(); sendMultiImages(); ov.remove(); });
   btns.appendChild(cancelBtn); btns.appendChild(sendBtn); bar.appendChild(btns);
   ov.appendChild(bar);
   ov.addEventListener('click', (e) => { if (e.target === ov) { cancelBtn.click(); } });
