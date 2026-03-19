@@ -199,6 +199,11 @@ header{position:sticky;top:0;z-index:10;padding:12px 14px 10px;border-bottom:1px
 .replyQuoteText{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .replyQuoteRow{display:flex;align-items:center;gap:6px}
 .replyQuoteImg{width:32px;height:32px;object-fit:cover;border-radius:4px;flex-shrink:0}
+/* 스와이프 답장 */
+.msg{overflow:hidden}
+.msg .row{transition:none;will-change:transform}
+.msg .swipeReplyIcon{position:absolute;left:8px;top:50%;transform:translateY(-50%) scale(0);width:32px;height:32px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;opacity:0;transition:transform .15s ease,opacity .15s ease;pointer-events:none;z-index:2}
+.msg .swipeReplyIcon.show{opacity:1;transform:translateY(-50%) scale(1)}
 .searchBtn{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;line-height:1;user-select:none;box-shadow:0 6px 18px rgba(0,0,0,.06)}
 .searchBar{display:flex;align-items:center;gap:6px;padding:8px 0 0;margin-top:8px;border-top:1px solid var(--line)}
 .searchBar input{flex:1;height:36px;border-radius:10px;border:1px solid var(--line);padding:0 10px;font-size:14px;outline:none;min-width:0;transition:border-color .15s}
@@ -1900,12 +1905,8 @@ function renderMessage(m, isPending) {
   wrap.appendChild(meta);
 
   if (!m.deleted) {
-    let lt=null;
-    const ctx=(e)=>{e.preventDefault();openCtx(m.messageId,m.senderId,wrap,bubble);};
-    wrap.addEventListener('contextmenu',ctx);
-    wrap.addEventListener('touchstart',()=>{lt=setTimeout(()=>openCtx(m.messageId,m.senderId,wrap,bubble),550);},{passive:true});
-    wrap.addEventListener('touchend',()=>clearTimeout(lt));
-    wrap.addEventListener('touchmove',()=>clearTimeout(lt));
+    wrap.addEventListener('contextmenu',(e)=>{e.preventDefault();openCtx(m.messageId,m.senderId,wrap,bubble);});
+    attachSwipeReply(wrap, m.messageId, m.senderId);
   }
 
   logEl.appendChild(wrap);
@@ -2165,12 +2166,8 @@ async function loadOlderMessages() {
       wrap.appendChild(meta);
 
       if (!m.deleted) {
-        let lt = null;
-        const ctx = (e) => { e.preventDefault(); openCtx(m.messageId,m.senderId,wrap,bubble); };
-        wrap.addEventListener('contextmenu', ctx);
-        wrap.addEventListener('touchstart', () => { lt=setTimeout(()=>openCtx(m.messageId,m.senderId,wrap,bubble),550); }, {passive:true});
-        wrap.addEventListener('touchend', () => clearTimeout(lt));
-        wrap.addEventListener('touchmove', () => clearTimeout(lt));
+        wrap.addEventListener('contextmenu', (e) => { e.preventDefault(); openCtx(m.messageId,m.senderId,wrap,bubble); });
+        attachSwipeReply(wrap, m.messageId, m.senderId);
       }
 
       if (firstMsg) logEl.insertBefore(wrap, firstMsg);
@@ -2452,12 +2449,8 @@ async function loadMessagesAroundSeq(targetSeq) {
       wrap.appendChild(meta);
 
       if (!m.deleted) {
-        let lt = null;
-        const ctx = (e) => { e.preventDefault(); openCtx(m.messageId, m.senderId, wrap, bubble); };
-        wrap.addEventListener('contextmenu', ctx);
-        wrap.addEventListener('touchstart', () => { lt = setTimeout(() => openCtx(m.messageId, m.senderId, wrap, bubble), 550); }, { passive: true });
-        wrap.addEventListener('touchend', () => clearTimeout(lt));
-        wrap.addEventListener('touchmove', () => clearTimeout(lt));
+        wrap.addEventListener('contextmenu', (e) => { e.preventDefault(); openCtx(m.messageId, m.senderId, wrap, bubble); });
+        attachSwipeReply(wrap, m.messageId, m.senderId);
       }
 
       let inserted = false;
@@ -3582,6 +3575,119 @@ ctxDelete.addEventListener('click',async()=>{
   try{const s=await db.ref('messages/'+roomId).orderByChild('messageId').equalTo(mid).once('value');s.forEach(c=>c.ref.update({deleted:true,text:''}));showToast('삭제되었습니다.');}
   catch(e){showToast('삭제 실패');}
 });
+
+// 스와이프 답장 (카카오톡 스타일) + 롱프레스 컨텍스트메뉴
+function attachSwipeReply(wrap, mid, senderId) {
+  let sx=0, sy=0, swiping=false, moved=false, row=null, icon=null, lt=null;
+  const THRESHOLD = 60; // 답장 트리거 거리
+
+  wrap.addEventListener('touchstart', (e) => {
+    if (e.touches.length !== 1) return;
+    const t = e.touches[0]; sx = t.clientX; sy = t.clientY;
+    swiping = false; moved = false;
+    row = wrap.querySelector('.row');
+    // long-press 컨텍스트 메뉴 타이머
+    lt = setTimeout(() => {
+      lt = null;
+      if (!moved && !swiping) {
+        const bubble = wrap.querySelector('.bubble');
+        openCtx(mid, senderId, wrap, bubble);
+      }
+    }, 550);
+  }, {passive: true});
+
+  wrap.addEventListener('touchmove', (e) => {
+    if (!row || e.touches.length !== 1) return;
+    const t = e.touches[0];
+    const dx = t.clientX - sx;
+    const dy = t.clientY - sy;
+
+    if (!moved && Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+    moved = true;
+
+    // 첫 움직임: 가로 vs 세로 판별
+    if (!swiping) {
+      if (Math.abs(dx) > Math.abs(dy) && dx < -8) {
+        swiping = true;
+        if (lt) { clearTimeout(lt); lt = null; }
+        // 아이콘 생성
+        if (!icon) {
+          icon = document.createElement('div');
+          icon.className = 'swipeReplyIcon';
+          icon.textContent = '↩';
+          wrap.style.position = 'relative';
+          wrap.appendChild(icon);
+        }
+      } else {
+        return; // 세로 스크롤 - 간섭 안 함
+      }
+    }
+
+    if (!swiping) return;
+    e.preventDefault();
+
+    // 왼쪽으로만, 최대 -100px, 저항감 추가
+    const raw = Math.min(0, dx);
+    const clamped = raw > -100 ? raw : -100 + (raw + 100) * 0.2;
+    row.style.transform = 'translateX(' + clamped + 'px)';
+
+    // 아이콘 표시/크기
+    if (icon) {
+      const progress = Math.min(Math.abs(raw) / THRESHOLD, 1);
+      icon.style.left = Math.max(8, -clamped - 40) + 'px';
+      if (Math.abs(raw) >= THRESHOLD) {
+        icon.classList.add('show');
+      } else {
+        icon.classList.remove('show');
+        icon.style.opacity = String(progress);
+        icon.style.transform = 'translateY(-50%) scale(' + (0.5 + progress * 0.5) + ')';
+      }
+    }
+  }, {passive: false});
+
+  wrap.addEventListener('touchend', (e) => {
+    if (lt) { clearTimeout(lt); lt = null; }
+    if (!swiping || !row) { row = null; return; }
+    const t = e.changedTouches[0];
+    const dx = t.clientX - sx;
+    const triggered = dx < -THRESHOLD;
+
+    // 스냅백 애니메이션
+    row.style.transition = 'transform .25s ease';
+    row.style.transform = '';
+    setTimeout(() => { row.style.transition = ''; }, 260);
+
+    if (icon) {
+      icon.style.transition = 'opacity .2s, transform .2s';
+      icon.classList.remove('show');
+      icon.style.opacity = '0';
+      icon.style.transform = 'translateY(-50%) scale(0)';
+      const iconRef = icon;
+      setTimeout(() => iconRef.remove(), 250);
+      icon = null;
+    }
+
+    if (triggered) {
+      // 진동 피드백
+      if (navigator.vibrate) navigator.vibrate(10);
+      // 답장 활성화
+      const obj = seen.get(mid);
+      if (obj) {
+        const nick = obj.wrapEl ? (obj.wrapEl.querySelector('.meta span')?.textContent || '') : '';
+        setReply(mid, nick, obj.text || '', obj.imageUrl || null);
+      }
+    }
+
+    swiping = false; row = null;
+  }, {passive: true});
+
+  wrap.addEventListener('touchcancel', () => {
+    if (lt) { clearTimeout(lt); lt = null; }
+    if (row) { row.style.transition = 'transform .2s ease'; row.style.transform = ''; setTimeout(() => { if(row) row.style.transition = ''; }, 220); }
+    if (icon) { icon.remove(); icon = null; }
+    swiping = false; row = null;
+  });
+}
 
 function setReply(mid,nick,text,imageUrl){
   currentReplyTo={mid,nick,text:String(text||'').slice(0,100),imageUrl:imageUrl||null};
