@@ -96,7 +96,8 @@ header{position:sticky;top:0;z-index:10;padding:12px 14px 10px;border-bottom:1px
 .row{display:flex;gap:8px;width:100%}
 .row.me{justify-content:flex-end}
 .row.other{justify-content:flex-start}
-.bubble{max-width:82%;padding:12px;border-radius:16px;border:1px solid var(--line);background:var(--other);color:var(--otherText);white-space:pre-wrap;word-break:break-word;font-size:var(--bubbleFontSize,16px);line-height:1.35;font-family:var(--chatFontFamily,inherit)}
+.bubble{max-width:82%;padding:12px;border-radius:16px;border:1px solid var(--line);background:var(--other);color:var(--otherText);white-space:pre-wrap;word-break:break-word;font-size:var(--bubbleFontSize,16px);line-height:1.35;font-family:var(--chatFontFamily,inherit);-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.bubble.selectable{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
 .row.me .bubble{background:var(--me);color:var(--meText);border-color:transparent;border-bottom-right-radius:6px;box-shadow:none}
 .row.other .bubble{border-bottom-left-radius:6px}
 .meta{font-size:11px;color:var(--muted);display:flex;gap:8px;align-items:center}
@@ -583,6 +584,8 @@ OneSignalDeferred.push(async function(OneSignal) {
     <span data-e="👍">👍</span><span data-e="❤️">❤️</span><span data-e="😂">😂</span>
     <span data-e="😮">😮</span><span data-e="😢">😢</span><span data-e="🔥">🔥</span>
   </div>
+  <button id="ctxCopy">📋 복사</button>
+  <button id="ctxSelectCopy">✂️ 선택 복사</button>
   <button id="ctxReply">↩️ 답글</button>
   <button id="ctxEdit">✏️ 수정</button>
   <button id="ctxDelete" class="danger">🗑 삭제</button>
@@ -782,6 +785,8 @@ const passModalCancel = document.getElementById('passModalCancel');
 const passModalOwnerRow = document.getElementById('passModalOwnerRow');
 const passModalRemove = document.getElementById('passModalRemove');
 const msgCtxMenu = document.getElementById('msgCtxMenu');
+const ctxCopy = document.getElementById('ctxCopy');
+const ctxSelectCopy = document.getElementById('ctxSelectCopy');
 const ctxReply = document.getElementById('ctxReply');
 const ctxEdit = document.getElementById('ctxEdit');
 const ctxDelete = document.getElementById('ctxDelete');
@@ -3412,6 +3417,9 @@ inputEl.addEventListener('keydown',async e=>{
 function openCtx(mid,senderId,wrap,bubble){
   ctxMid=mid;ctxSenderId=senderId;ctxWrap=wrap;ctxBubble=bubble;
   const mine=senderId===myUid;
+  const obj=seen.get(mid);const hasText=!!(obj&&obj.text);
+  ctxCopy.style.display=hasText?'flex':'none';
+  ctxSelectCopy.style.display=hasText?'flex':'none';
   ctxEdit.style.display=mine?'flex':'none'; ctxDelete.style.display=mine?'flex':'none';
   // 메뉴를 보이지 않는 곳에 먼저 표시해서 실제 크기 측정
   msgCtxMenu.style.top='-9999px';msgCtxMenu.style.left='-9999px';
@@ -3442,6 +3450,41 @@ function openCtx(mid,senderId,wrap,bubble){
 function closeCtx(){msgCtxMenu.classList.remove('open');ctxMid=null;}
 document.addEventListener('click',e=>{if(!msgCtxMenu.contains(e.target))closeCtx();});
 quickReactBar.addEventListener('click',async e=>{const sp=e.target.closest('[data-e]');if(!sp||!ctxMid)return;await toggleRx(ctxMid,sp.dataset.e);closeCtx();});
+
+// 복사: 메시지 텍스트 전체를 클립보드에 복사
+ctxCopy.addEventListener('click',()=>{
+  if(!ctxMid)return;const obj=seen.get(ctxMid);if(!obj)return;
+  const text=obj.text||'';
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(()=>showToast('복사되었습니다.')).catch(()=>showToast('복사 실패'));}
+  else{const ta=document.createElement('textarea');ta.value=text;ta.style.cssText='position:fixed;left:-9999px';document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();showToast('복사되었습니다.');}
+  closeCtx();
+});
+
+// 선택 복사: 버블 텍스트를 선택 가능하게 만들어서 부분 복사 허용
+ctxSelectCopy.addEventListener('click',()=>{
+  if(!ctxMid||!ctxBubble)return;
+  const bubble=ctxBubble;
+  closeCtx();
+  bubble.classList.add('selectable');
+  // 텍스트 전체 선택
+  const range=document.createRange();range.selectNodeContents(bubble);
+  const sel=window.getSelection();sel.removeAllRanges();sel.addRange(range);
+  // 선택 모드 해제: 바깥 터치 또는 복사 후
+  const exit=()=>{
+    bubble.classList.remove('selectable');
+    window.getSelection().removeAllRanges();
+    document.removeEventListener('touchstart',onOutside,true);
+    document.removeEventListener('mousedown',onOutside,true);
+    document.removeEventListener('copy',onCopy,true);
+  };
+  const onOutside=(e)=>{if(!bubble.contains(e.target)){exit();}};
+  const onCopy=()=>{setTimeout(exit,100);};
+  setTimeout(()=>{
+    document.addEventListener('touchstart',onOutside,true);
+    document.addEventListener('mousedown',onOutside,true);
+    document.addEventListener('copy',onCopy,true);
+  },50);
+});
 
 ctxEdit.addEventListener('click',()=>{
   if(!ctxMid||!ctxBubble) return;
