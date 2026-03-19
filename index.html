@@ -2015,6 +2015,7 @@ function subscribeMessages(rid) {
       edited:    !!m.edited,
       replyTo:   m.replyTo||null,
       imageUrl:  m.imageUrl||null,
+      imageBundle: m.imageBundle||null,
       letter:    !!m.letter,
       letterDeliverAt: Number(m.letterDeliverAt||0),
       spoiler:   !!m.spoiler
@@ -2111,6 +2112,7 @@ async function loadOlderMessages() {
         edited:    !!m.edited,
         replyTo:   m.replyTo||null,
         imageUrl:  m.imageUrl||null,
+        imageBundle: m.imageBundle||null,
         letter:    !!m.letter,
         letterDeliverAt: Number(m.letterDeliverAt||0),
         spoiler:   !!m.spoiler
@@ -2133,7 +2135,7 @@ async function loadOlderMessages() {
       const row = document.createElement('div'); row.className = 'row '+(mine?'me':'other');
       const bubble = document.createElement('div'); rebuildBubble(bubble, m);
 
-      if (!m.deleted && !m.imageUrl) {
+      if (!m.deleted && !m.imageUrl && !m.imageBundle) {
         const url = extractUrl(String(m.text||'')); if(url) renderLinkPreview(url, wrap);
       }
       row.appendChild(bubble); wrap.appendChild(row);
@@ -2404,7 +2406,8 @@ async function loadMessagesAroundSeq(targetSeq) {
         deleted: !!m.deleted,
         edited: !!m.edited,
         replyTo: m.replyTo || null,
-        imageUrl: m.imageUrl || null
+        imageUrl: m.imageUrl || null,
+        imageBundle: m.imageBundle || null
       });
     });
 
@@ -2419,7 +2422,7 @@ async function loadMessagesAroundSeq(targetSeq) {
       const row = document.createElement('div'); row.className = 'row ' + (mine ? 'me' : 'other');
       const bubble = document.createElement('div'); rebuildBubble(bubble, m);
 
-      if (!m.deleted && !m.imageUrl) {
+      if (!m.deleted && !m.imageUrl && !m.imageBundle) {
         const url = extractUrl(String(m.text || '')); if (url) renderLinkPreview(url, wrap);
       }
       row.appendChild(bubble); wrap.appendChild(row);
@@ -4007,7 +4010,7 @@ document.addEventListener('visibilitychange', () => {
           mergeServerMsg({ messageId:mid, senderId:String(m.senderId||''), senderNick:String(m.senderNick||''),
             text:String(m.text||''), ts:Number(m.ts||0), seq:Number(m.seq||0),
             deleted:!!m.deleted, edited:!!m.edited, replyTo:m.replyTo||null, imageUrl:m.imageUrl||null,
-            letter:!!m.letter, letterDeliverAt:Number(m.letterDeliverAt||0), spoiler:!!m.spoiler });
+            imageBundle:m.imageBundle||null, letter:!!m.letter, letterDeliverAt:Number(m.letterDeliverAt||0), spoiler:!!m.spoiler });
           afterSeq = Math.max(afterSeq, Number(m.seq||0));
           added = true;
         });
