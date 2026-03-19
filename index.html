@@ -40,14 +40,16 @@ button,.clickable{-webkit-tap-highlight-color:transparent;touch-action:manipulat
 button:active,.clickable:active{transform:translateY(1px) scale(.99)}
 button:focus-visible{outline:3px solid rgba(34,197,94,.35);outline-offset:2px}
 .app{height:100vh;height:100dvh;display:flex;flex-direction:column;min-height:0;overflow:hidden;padding-top:var(--safeT);background:var(--bg)}
-header{position:sticky;top:0;z-index:10;padding:12px 14px 10px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.97)}
-.headTop{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.title{font-size:16px;font-weight:800;margin:0;line-height:1.2}
-.sub{margin-top:6px;font-size:12px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap}
-.pill,.chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:#fff;font-size:12px;color:var(--muted)}
-.menuWrap{position:relative;display:flex;align-items:center;gap:8px}
-.menuBtn{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;line-height:1;user-select:none;box-shadow:0 6px 18px rgba(0,0,0,.06)}
-.menu{position:absolute;right:0;top:46px;min-width:280px;max-height:70vh;overflow-y:auto;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow2);display:none;-webkit-overflow-scrolling:touch}
+header{position:sticky;top:0;z-index:10;padding:8px 14px 7px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.97)}
+.headTop{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.headLeft{display:flex;align-items:center;gap:8px;min-width:0;flex:1}
+.title{font-size:16px;font-weight:800;margin:0;line-height:1;white-space:nowrap;flex-shrink:0}
+.sub{font-size:11px;color:var(--muted);display:flex;gap:4px;align-items:center;min-width:0;overflow:hidden}
+.pill,.chip{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:999px;border:1px solid var(--line);background:#fff;font-size:11px;color:var(--muted);white-space:nowrap;flex-shrink:0}
+.pill.clickable{cursor:pointer}.pill.clickable:hover{background:#f0fdf4;border-color:rgba(34,197,94,.3)}
+.menuWrap{position:relative;display:flex;align-items:center;gap:4px;flex-shrink:0}
+.menuBtn{width:32px;height:32px;border-radius:10px;border:1px solid var(--line);background:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;line-height:1;user-select:none;box-shadow:0 4px 12px rgba(0,0,0,.05)}
+.menu{position:absolute;right:0;top:38px;min-width:280px;max-height:70vh;overflow-y:auto;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow2);display:none;-webkit-overflow-scrolling:touch}
 .menu.open{display:block}
 .menuSection{padding:0}
 .menuSectionTitle{font-size:11px;font-weight:800;color:var(--muted);padding:10px 12px 4px;text-transform:uppercase;letter-spacing:.5px;background:#f8fafc;border-top:1px solid var(--line)}
@@ -201,7 +203,7 @@ header{position:sticky;top:0;z-index:10;padding:12px 14px 10px;border-bottom:1px
 .replyQuoteImg{width:32px;height:32px;object-fit:cover;border-radius:4px;flex-shrink:0}
 /* 스와이프 답장 */
 .msg .row{transition:none;will-change:transform}
-.searchBtn{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;line-height:1;user-select:none;box-shadow:0 6px 18px rgba(0,0,0,.06)}
+.searchBtn{width:32px;height:32px;border-radius:10px;border:1px solid var(--line);background:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;line-height:1;user-select:none;box-shadow:0 4px 12px rgba(0,0,0,.05)}
 .searchBar{display:flex;align-items:center;gap:6px;padding:8px 0 0;margin-top:8px;border-top:1px solid var(--line)}
 .searchBar input{flex:1;height:36px;border-radius:10px;border:1px solid var(--line);padding:0 10px;font-size:14px;outline:none;min-width:0;transition:border-color .15s}
 .searchBar input:focus{border-color:rgba(34,197,94,.6);box-shadow:0 0 0 3px rgba(34,197,94,.1)}
@@ -404,7 +406,7 @@ OneSignalDeferred.push(async function(OneSignal) {
 <div class="app" id="app">
   <header id="header" style="display:none">
     <div class="headTop">
-      <div>
+      <div class="headLeft">
         <div class="title" id="roomTitle">채팅방</div>
         <div class="sub" id="roomSub"></div>
       </div>
@@ -1636,16 +1638,62 @@ function setNick(n) { myNick=String(n||'').trim(); if(!myNick) return false; loc
 function setHeader(nicks) {
   if (Array.isArray(nicks)) onlineNicksCache=nicks;
   roomTitle.textContent = roomName||'채팅방';
-  let onlHtml = '없음';
-  if (onlineNicksCache.length) {
-    onlHtml = onlineNicksCache.map(n => {
-      const st = _onlineStatusCache && _onlineStatusCache[n];
-      return esc(n) + (st ? ' <span class="statusBadge">' + esc(st) + '</span>' : '');
-    }).join(', ');
+  roomSub.innerHTML = '';
+  const MAX_SHOW = 3;
+  const list = onlineNicksCache;
+  if (list.length <= MAX_SHOW) {
+    list.forEach(n => {
+      const p = document.createElement('span'); p.className = 'pill';
+      p.textContent = n;
+      roomSub.appendChild(p);
+    });
+  } else {
+    for (let i = 0; i < MAX_SHOW; i++) {
+      const p = document.createElement('span'); p.className = 'pill';
+      p.textContent = list[i];
+      roomSub.appendChild(p);
+    }
+    const more = document.createElement('span'); more.className = 'pill clickable';
+    more.textContent = '참여 인원 ' + list.length + '명';
+    more.addEventListener('click', showMembersPopup);
+    roomSub.appendChild(more);
   }
-  const unr = unread>0 ? `<span class="pill">새 메시지 ${unread}개</span>` : '';
-  roomSub.innerHTML = `<span class="pill">나: ${esc(myNick)}${_myStatus?' <span class="statusBadge">'+esc(_myStatus)+'</span>':''}</span><span class="pill">온라인: ${onlHtml}</span>${unr}`;
+  if (list.length === 0) {
+    const p = document.createElement('span'); p.className = 'pill';
+    p.textContent = '오프라인';
+    roomSub.appendChild(p);
+  }
   updateMenuStates();
+}
+
+function showMembersPopup() {
+  let existing = document.getElementById('membersPopup');
+  if (existing) { existing.remove(); return; }
+  const popup = document.createElement('div'); popup.id = 'membersPopup';
+  popup.style.cssText = 'position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;';
+  const card = document.createElement('div');
+  card.style.cssText = 'background:#fff;border-radius:16px;padding:20px;min-width:220px;max-width:320px;max-height:60vh;overflow-y:auto;box-shadow:0 12px 40px rgba(0,0,0,.15);';
+  const title = document.createElement('div');
+  title.style.cssText = 'font-size:15px;font-weight:800;margin-bottom:12px;';
+  title.textContent = '참여 인원 (' + onlineNicksCache.length + ')';
+  card.appendChild(title);
+  onlineNicksCache.forEach(n => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 4px;border-bottom:1px solid #f3f4f6;font-size:13px;';
+    const dot = document.createElement('span');
+    dot.style.cssText = 'width:8px;height:8px;border-radius:50%;background:#22c55e;flex-shrink:0;';
+    const name = document.createElement('span'); name.textContent = n;
+    row.appendChild(dot); row.appendChild(name);
+    const st = _onlineStatusCache && _onlineStatusCache[n];
+    if (st) {
+      const badge = document.createElement('span'); badge.className = 'statusBadge'; badge.textContent = st;
+      row.appendChild(badge);
+    }
+    card.appendChild(row);
+  });
+  popup.appendChild(card);
+  popup.addEventListener('click', (e) => { if (e.target === popup) popup.remove(); });
+  document.body.appendChild(popup);
 }
 
 function isNearBottom() { return (logEl.scrollHeight - logEl.scrollTop - logEl.clientHeight) < 150; }
