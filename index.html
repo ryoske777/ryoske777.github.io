@@ -315,7 +315,7 @@ body.stealth .stealthBar{display:flex !important}
 .imgPreviewHeader{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:0 4px}
 .imgPreviewTitle{font-size:15px;font-weight:900}
 .imgPreviewCount{font-size:13px;color:var(--muted)}
-.imgPreviewScroll{display:flex;gap:8px;overflow-x:auto;padding:4px 0;-webkit-overflow-scrolling:touch;scrollbar-width:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.imgPreviewScroll{display:flex;gap:10px;overflow-x:auto;padding:4px 0;-webkit-overflow-scrolling:touch;scrollbar-width:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .imgPreviewScroll::-webkit-scrollbar{display:none}
 .imgPreviewThumb{position:relative;width:80px;height:80px;border-radius:10px;overflow:hidden;flex-shrink:0;border:2px solid transparent}
 .imgPreviewThumb img{width:100%;height:100%;object-fit:cover}
@@ -327,7 +327,9 @@ body.stealth .stealthBar{display:flex !important}
 .imgPreviewCancel{background:#f3f4f6;color:#374151}
 .imgPreviewAdd{width:80px;height:80px;border-radius:10px;border:2px dashed var(--line);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:24px;color:var(--muted);cursor:pointer;background:#fafafa}
 .imgPreviewThumb.dragging{opacity:.4;border-color:var(--accent)}
-.imgPreviewThumb.drag-over{border-color:var(--accent);transform:scale(1.08);transition:transform .15s}
+.imgPreviewThumb.insert-left::before,.imgPreviewThumb.insert-right::after{content:'';position:absolute;top:6px;bottom:6px;width:3px;border-radius:2px;background:var(--accent);z-index:5;pointer-events:none}
+.imgPreviewThumb.insert-left::before{left:-6px}
+.imgPreviewThumb.insert-right::after{right:-6px}
 .imgPreviewThumb.lift{animation:thumbLift .25s ease forwards}
 @keyframes thumbLift{0%{transform:scale(1)}50%{transform:scale(1.15)}100%{transform:scale(1.05);box-shadow:0 4px 16px rgba(0,0,0,.25)}}
 .imgPreviewMore{position:absolute;right:0;top:0;height:80px;width:36px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:var(--muted);pointer-events:none;background:linear-gradient(to right,transparent,var(--bg) 60%)}
@@ -3659,17 +3661,42 @@ function renderImgPreview() {
     const rm = document.createElement('div'); rm.className = 'imgPreviewRemove'; rm.textContent = '✕';
     rm.addEventListener('click', (e) => { e.stopPropagation(); URL.revokeObjectURL(item.url); _multiImgFiles.splice(i, 1); renderImgPreview(); });
     thumb.appendChild(img); thumb.appendChild(order); thumb.appendChild(rm);
+    // 헬퍼: 터치/마우스 위치 기준으로 insert 방향 계산
+    function calcInsertSide(thumbEl, clientX) {
+      const rect = thumbEl.getBoundingClientRect();
+      return clientX < rect.left + rect.width / 2 ? 'left' : 'right';
+    }
+    function clearInsertMarkers() {
+      scroll.querySelectorAll('.imgPreviewThumb').forEach(th => { th.classList.remove('insert-left', 'insert-right'); });
+    }
+    function calcInsertIdx(targetIdx, side) {
+      // 드래그 중인 아이템이 빠진 뒤의 실제 삽입 위치
+      let insertAt = side === 'left' ? targetIdx : targetIdx + 1;
+      if (dragIdx < targetIdx) insertAt--;
+      if (insertAt < 0) insertAt = 0;
+      return insertAt;
+    }
     // 마우스 드래그
     thumb.addEventListener('dragstart', (e) => { dragIdx = i; dragThumbEl = thumb; thumb.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; });
-    thumb.addEventListener('dragend', () => { thumb.classList.remove('dragging'); dragIdx = -1; dragThumbEl = null; });
-    thumb.addEventListener('dragover', (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; thumb.classList.add('drag-over'); });
-    thumb.addEventListener('dragleave', () => { thumb.classList.remove('drag-over'); });
+    thumb.addEventListener('dragend', () => { thumb.classList.remove('dragging'); clearInsertMarkers(); dragIdx = -1; dragThumbEl = null; });
+    thumb.addEventListener('dragover', (e) => {
+      e.preventDefault(); e.dataTransfer.dropEffect = 'move';
+      clearInsertMarkers();
+      if (dragIdx >= 0 && dragIdx !== i) {
+        const side = calcInsertSide(thumb, e.clientX);
+        thumb.classList.add(side === 'left' ? 'insert-left' : 'insert-right');
+      }
+    });
+    thumb.addEventListener('dragleave', () => { thumb.classList.remove('insert-left', 'insert-right'); });
     thumb.addEventListener('drop', (e) => {
-      e.preventDefault(); thumb.classList.remove('drag-over');
+      e.preventDefault();
+      const side = calcInsertSide(thumb, e.clientX);
+      clearInsertMarkers();
       const toIdx = parseInt(thumb.dataset.idx);
       if (dragIdx >= 0 && dragIdx !== toIdx) {
         const [moved] = _multiImgFiles.splice(dragIdx, 1);
-        _multiImgFiles.splice(toIdx, 0, moved);
+        const insertAt = calcInsertIdx(toIdx, side);
+        _multiImgFiles.splice(insertAt, 0, moved);
         renderImgPreview();
       }
     });
@@ -3712,31 +3739,35 @@ function renderImgPreview() {
         touchClone.style.left = (t.clientX - 40) + 'px';
         touchClone.style.top = (t.clientY - 40) + 'px';
       }
-      // highlight drop target
+      // highlight insert position
       const tmpClone = touchClone; if (tmpClone) tmpClone.style.display = 'none';
       const el = document.elementFromPoint(t.clientX, t.clientY);
       if (tmpClone) tmpClone.style.display = '';
-      scroll.querySelectorAll('.imgPreviewThumb').forEach(th => th.classList.remove('drag-over'));
+      clearInsertMarkers();
       const target = el && el.closest('.imgPreviewThumb');
-      if (target && target !== thumb) target.classList.add('drag-over');
+      if (target && target !== thumb) {
+        const side = calcInsertSide(target, t.clientX);
+        target.classList.add(side === 'left' ? 'insert-left' : 'insert-right');
+      }
     }, {passive: false});
     thumb.addEventListener('touchend', (e) => {
       clearTimeout(holdTimer); holdTimer = null;
       if (dragIdx !== i) return;
       thumb.classList.remove('dragging');
       thumb.classList.remove('lift');
-      scroll.querySelectorAll('.imgPreviewThumb').forEach(th => th.classList.remove('drag-over'));
+      clearInsertMarkers();
       if (touchClone) { touchClone.remove(); touchClone = null; }
       if (touchActive && e.changedTouches.length) {
         const t = e.changedTouches[0];
-        const tmpNode = document.createElement('div');
         const el = document.elementFromPoint(t.clientX, t.clientY);
         const target = el && el.closest('.imgPreviewThumb');
         if (target && target.dataset.idx !== undefined) {
           const toIdx = parseInt(target.dataset.idx);
           if (toIdx !== i) {
+            const side = calcInsertSide(target, t.clientX);
             const [moved] = _multiImgFiles.splice(i, 1);
-            _multiImgFiles.splice(toIdx, 0, moved);
+            const insertAt = calcInsertIdx(toIdx, side);
+            _multiImgFiles.splice(insertAt, 0, moved);
             renderImgPreview();
           }
         }
