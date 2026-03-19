@@ -280,9 +280,9 @@ var LS_TAMA='tama_state_v1';
 var LS_TAMA_ON='tama_enabled_v1';
 
 // ── 메뉴 ──
-var MENU_ITEMS=['meal','snack','game','medicine','clean','light','stats','discipline'];
-var MENU_LABELS=['밥','간식','게임','약','청소','불','능력','훈육'];
-var MENU_ICONS=['🍚','🍬','⚽','💊','🚿','💡','📊','📢'];
+// P1 원본 순서: 상단(밥,불,게임,약) 하단(청소,능력,훈육,간식)
+var MENU_ITEMS=['meal','light','game','medicine','clean','stats','discipline','snack'];
+var MENU_LABELS=['밥','불','게임','약','청소','능력','훈육','간식'];
 
 // ── 게임 상태 ──
 var T=null;
@@ -560,24 +560,25 @@ function drawSprite(ctx,sp,ox,oy,scale,color){
   }
 }
 
-// ── 반다이 스타일 메뉴 아이콘 (픽셀 아트 8x8) ──
+// ── P1 원본 아이콘 (8x8 픽셀) ──
+// 순서: 밥(포크나이프), 불(전구), 게임(야구), 약(주사기), 청소(오리), 능력(하트), 훈육(!), 간식(사탕)
 var MENU_PIXEL_ICONS=[
-  // 0: 밥 (밥그릇)
-  [0x00,0x18,0x24,0x7E,0xFF,0xFF,0x7E,0x00],
-  // 1: 간식 (사탕)
-  [0x08,0x1C,0x3E,0x3E,0x3E,0x1C,0x08,0x08],
-  // 2: 게임 (컨트롤러)
-  [0x00,0x7E,0xFF,0xDB,0xFF,0x7E,0x24,0x00],
-  // 3: 약 (십자가)
-  [0x18,0x18,0x7E,0x7E,0x7E,0x18,0x18,0x00],
-  // 4: 청소 (물방울)
-  [0x10,0x10,0x38,0x38,0x7C,0x7C,0x38,0x00],
-  // 5: 불 (전구)
-  [0x18,0x3C,0x7E,0x7E,0x3C,0x18,0x18,0x00],
-  // 6: 능력 (하트)
+  // 0: 밥 - 포크 & 나이프
+  [0x44,0x44,0x44,0x4C,0x78,0x30,0x10,0x10],
+  // 1: 불 - 전구
+  [0x38,0x44,0x54,0x44,0x38,0x38,0x10,0x00],
+  // 2: 게임 - 야구공
+  [0x38,0x54,0x92,0xBA,0x92,0x54,0x38,0x00],
+  // 3: 약 - 주사기
+  [0x06,0x0C,0x18,0x38,0x70,0xE0,0xC0,0x80],
+  // 4: 청소 - 오리
+  [0x60,0x90,0x6C,0x12,0x1E,0x0C,0x00,0x00],
+  // 5: 능력 - 하트
   [0x00,0x66,0xFF,0xFF,0x7E,0x3C,0x18,0x00],
-  // 7: 훈육 (느낌표)
-  [0x18,0x18,0x18,0x18,0x18,0x00,0x18,0x00]
+  // 6: 훈육 - 느낌표
+  [0x18,0x18,0x18,0x18,0x00,0x18,0x18,0x00],
+  // 7: 간식 - 사탕
+  [0x08,0x1C,0x3E,0x3E,0x3E,0x1C,0x08,0x08]
 ];
 
 function drawPixelIcon(ctx,iconData,ox,oy,scale){
@@ -604,7 +605,9 @@ function animTick(){
   renderMain();
 }
 
-// ── 메인 캔버스 렌더 (128x128) ──
+// ── 메인 캔버스 렌더 (128x128) P1 레이아웃 ──
+// 상단 아이콘 4개 | 캐릭터 영역 | 하단 아이콘 4개
+var ICON_AREA=14; // 아이콘 영역 높이
 function renderMain(){
   if(!mainCtx||!T)return;
   var c=mainCtx.canvas;
@@ -617,73 +620,47 @@ function renderMain(){
   // ── 사망 화면 ──
   if(T.dead){
     var sk=sprites.skull;
-    if(sk)drawSprite(mainCtx,sk,Math.floor((W-sk.w*4)/2),20,4,'#444');
+    if(sk)drawSprite(mainCtx,sk,Math.floor((W-sk.w*4)/2),30,4,'#444');
     mainCtx.fillStyle='#444';
     mainCtx.font='bold 12px monospace';
     mainCtx.textAlign='center';
-    mainCtx.fillText('R.I.P.',W/2,90);
-    mainCtx.font='10px monospace';
-    mainCtx.fillText(T.name,W/2,105);
-    mainCtx.fillText('아무 버튼을 누르세요',W/2,120);
+    mainCtx.fillText('R.I.P.',W/2,95);
+    mainCtx.font='9px monospace';
+    mainCtx.fillText(T.name,W/2,110);
     return;
   }
 
   // ── 수면 + 불 끔 ──
   if(T.sleeping&&T.lightOff){
+    drawIconRows(W,H);
     var zz=sprites.zzz;
-    if(zz)drawSprite(mainCtx,zz,Math.floor((W-zz.w*4)/2),30,4,'#6a7a5a');
-    mainCtx.fillStyle='#6a7a5a';
-    mainCtx.font='10px monospace';
-    mainCtx.textAlign='center';
-    mainCtx.fillText('zzZ...',W/2,100);
+    if(zz)drawSprite(mainCtx,zz,Math.floor((W-zz.w*4)/2),40,4,'#6a7a5a');
     return;
   }
 
-  // ── 상단 메뉴 아이콘 바 (반다이 스타일) ──
-  var iconScale=1.2;
-  var iconW=Math.ceil(8*iconScale);
-  var totalW=MENU_PIXEL_ICONS.length*iconW+(MENU_PIXEL_ICONS.length-1)*2;
-  var startX=Math.floor((W-totalW)/2);
-  for(var i=0;i<MENU_PIXEL_ICONS.length;i++){
-    var ix=startX+i*(iconW+2);
-    if(menuMode==='menu'&&i===menuIdx){
-      // 선택 표시: 삼각형 아래 화살표
-      mainCtx.fillStyle='#222';
-      mainCtx.beginPath();
-      mainCtx.moveTo(ix+iconW/2-3,iconW+3);
-      mainCtx.lineTo(ix+iconW/2+3,iconW+3);
-      mainCtx.lineTo(ix+iconW/2,iconW+7);
-      mainCtx.fill();
-    }
-    drawPixelIcon(mainCtx,MENU_PIXEL_ICONS[i],ix,2,iconScale);
-  }
-
-  // 구분선
-  mainCtx.fillStyle='#8a9a6a';
-  mainCtx.fillRect(4,iconW+8,W-8,1);
+  // ── 상단/하단 아이콘 항상 표시 (P1 원본처럼) ──
+  drawIconRows(W,H);
 
   // ── 게임 화면 ──
   if(menuMode==='game'){
-    mainCtx.fillStyle='#444';
-    mainCtx.font='bold 11px monospace';
+    mainCtx.fillStyle='#222';
+    mainCtx.font='bold 10px monospace';
     mainCtx.textAlign='center';
-    mainCtx.fillText('ROUND '+(gameRound+1)+'/5',W/2,35);
+    mainCtx.fillText('ROUND '+(gameRound+1)+'/5',W/2,ICON_AREA+16);
     var sp=sprites[T.species]||sprites.babytchi;
-    if(sp)drawSprite(mainCtx,sp,Math.floor((W-sp.w*4)/2),42,4);
-    mainCtx.fillText('◀  ?  ▶',W/2,100);
+    if(sp)drawSprite(mainCtx,sp,Math.floor((W-sp.w*3)/2),ICON_AREA+22,3);
+    mainCtx.fillText('◀  ?  ▶',W/2,H-ICON_AREA-16);
     mainCtx.font='9px monospace';
-    mainCtx.fillText('SCORE: '+gameScore,W/2,115);
+    mainCtx.fillText('SCORE: '+gameScore,W/2,H-ICON_AREA-6);
     return;
   }
   if(menuMode==='gameResult'){
-    mainCtx.fillStyle='#444';
-    mainCtx.font='bold 14px monospace';
+    mainCtx.fillStyle='#222';
+    mainCtx.font='bold 13px monospace';
     mainCtx.textAlign='center';
-    mainCtx.fillText(gameScore>=3?'WIN!':'LOSE...',W/2,50);
-    mainCtx.font='bold 12px monospace';
-    mainCtx.fillText(gameScore+' / 5',W/2,70);
-    mainCtx.font='9px monospace';
-    mainCtx.fillText('아무 버튼을 누르세요',W/2,100);
+    mainCtx.fillText(gameScore>=3?'WIN!':'LOSE...',W/2,ICON_AREA+30);
+    mainCtx.font='bold 11px monospace';
+    mainCtx.fillText(gameScore+' / 5',W/2,ICON_AREA+50);
     return;
   }
 
@@ -692,61 +669,97 @@ function renderMain(){
     mainCtx.fillStyle='#222';
     mainCtx.font='bold 10px monospace';
     mainCtx.textAlign='left';
-    var sy=30;
-    var gap=14;
-    mainCtx.fillText('NAME: '+T.name,8,sy);
-    mainCtx.fillText('AGE:  '+T.age,8,sy+gap);
-    mainCtx.fillText('WT:   '+T.weight+'g',8,sy+gap*2);
-    mainCtx.fillText('HUNGRY:'+hearts(T.hunger),8,sy+gap*3);
-    mainCtx.fillText('HAPPY: '+hearts(T.happy),8,sy+gap*4);
-    mainCtx.fillText('TRAIN: '+T.discipline+'%',8,sy+gap*5);
+    var sy=ICON_AREA+14;
+    var gap=13;
+    mainCtx.fillText('NAME:'+T.name,8,sy);
+    mainCtx.fillText('AGE: '+T.age,8,sy+gap);
+    mainCtx.fillText('WT:  '+T.weight+'g',8,sy+gap*2);
+    mainCtx.fillText('HUNG:'+hearts(T.hunger),8,sy+gap*3);
+    mainCtx.fillText('HPPY:'+hearts(T.happy),8,sy+gap*4);
+    mainCtx.fillText('DISC:'+T.discipline+'%',8,sy+gap*5);
     return;
   }
 
-  // ── 캐릭터 영역 (중앙, idle 애니메이션) ──
+  // ── 캐릭터 영역 ──
   var sp=sprites[T.species]||sprites.egg;
   var scale=4;
   var charW=sp.w*scale;
   var charH=sp.h*scale;
-  // 숨쉬기: 살짝 위아래 (사인파)
+  var areaTop=ICON_AREA+2;
+  var areaBot=H-ICON_AREA-2;
+  var areaH=areaBot-areaTop;
+  // 숨쉬기
   var breathe=Math.sin(animFrame*0.15)*2;
-  // 좌우 이동 (idle)
+  // 좌우 이동
   var moveX=(menuMode==='idle'||menuMode==='menu')?idleX:0;
   var cx=Math.floor((W-charW)/2)+moveX;
-  var cy=Math.floor((H-charH)/2)-5+Math.floor(breathe);
+  var cy=areaTop+Math.floor((areaH-charH)/2)+Math.floor(breathe);
 
-  // 수면 중이면 zzz
+  // 수면 zzz
   if(T.sleeping){
     var zz=sprites.zzz;
-    if(zz)drawSprite(mainCtx,zz,cx+charW+2,cy-8,2,'#6a7a5a');
+    if(zz)drawSprite(mainCtx,zz,cx+charW+2,cy-6,2,'#6a7a5a');
   }
-  // 병 표시
+  // 병
   if(T.sick){
-    var sk=sprites.skull;
-    if(sk)drawSprite(mainCtx,sk,cx-16,cy,1.5,'#a33');
+    var sksp=sprites.skull;
+    if(sksp)drawSprite(mainCtx,sksp,cx-16,cy,1.5,'#a33');
   }
   drawSprite(mainCtx,sp,cx,cy,scale);
 
-  // ── 똥 표시 (우하단) ──
+  // 똥
   if(T.poop>0){
     var pp=sprites.poop;
     for(var pi=0;pi<T.poop&&pi<3;pi++){
-      if(pp)drawSprite(mainCtx,pp,W-30+pi*3,H-30-pi*3,1.5,'#654');
+      if(pp)drawSprite(mainCtx,pp,W-26-pi*14,areaBot-18,1.5,'#654');
     }
   }
+}
 
-  // ── 하단: 배고픔/행복 하트 ──
-  mainCtx.fillStyle='#8a9a6a';
-  mainCtx.fillRect(4,H-20,W-8,1);
-  var ht=sprites.heart;
-  if(ht){
-    // 배고픔 (좌)
-    for(var hi=0;hi<MAX_HEARTS;hi++){
-      drawSprite(mainCtx,ht,6+hi*12,H-16,1,hi<T.hunger?'#c44':'#ccc');
+// ── 상단 4개 + 하단 4개 아이콘 그리기 (P1 스타일) ──
+function drawIconRows(W,H){
+  var iconScale=1.2;
+  var iconW=Math.ceil(8*iconScale);
+  var gap=Math.floor((W-4*iconW)/5);
+  // 상단 4개 (인덱스 0~3)
+  for(var i=0;i<4;i++){
+    var ix=gap+i*(iconW+gap);
+    var sel=(menuMode==='menu'&&menuIdx===i);
+    if(sel){
+      mainCtx.fillStyle='rgba(0,0,0,0.12)';
+      mainCtx.fillRect(ix-2,0,iconW+4,ICON_AREA);
     }
-    // 행복 (우)
-    for(var hi2=0;hi2<MAX_HEARTS;hi2++){
-      drawSprite(mainCtx,ht,W-54+hi2*12,H-16,1,hi2<T.happy?'#48c':'#ccc');
+    drawPixelIcon(mainCtx,MENU_PIXEL_ICONS[i],ix,2,iconScale);
+    if(sel){
+      mainCtx.fillStyle='#222';
+      mainCtx.beginPath();
+      mainCtx.moveTo(ix+iconW/2-3,ICON_AREA-1);
+      mainCtx.lineTo(ix+iconW/2+3,ICON_AREA-1);
+      mainCtx.lineTo(ix+iconW/2,ICON_AREA+3);
+      mainCtx.fill();
+    }
+  }
+  // 구분선 상단
+  mainCtx.fillStyle='#8a9a6a';
+  mainCtx.fillRect(2,ICON_AREA,W-4,1);
+  // 하단 4개 (인덱스 4~7)
+  var botY=H-ICON_AREA;
+  mainCtx.fillRect(2,botY-1,W-4,1);
+  for(var j=0;j<4;j++){
+    var jx=gap+j*(iconW+gap);
+    var sel2=(menuMode==='menu'&&menuIdx===(j+4));
+    if(sel2){
+      mainCtx.fillStyle='rgba(0,0,0,0.12)';
+      mainCtx.fillRect(jx-2,botY,iconW+4,ICON_AREA);
+    }
+    drawPixelIcon(mainCtx,MENU_PIXEL_ICONS[j+4],jx,botY+2,iconScale);
+    if(sel2){
+      mainCtx.fillStyle='#222';
+      mainCtx.beginPath();
+      mainCtx.moveTo(jx+iconW/2-3,botY);
+      mainCtx.lineTo(jx+iconW/2+3,botY);
+      mainCtx.lineTo(jx+iconW/2,botY-4);
+      mainCtx.fill();
     }
   }
 }
