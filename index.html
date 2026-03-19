@@ -396,25 +396,29 @@ body.stealth .stealthBar{display:flex !important}
 /* 다마고치 */
 .tamaWalker{position:fixed;z-index:18;pointer-events:none;transition:opacity .3s}
 .tamaWalker canvas{display:block;image-rendering:pixelated}
-.tamaScreen{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;display:none;align-items:center;justify-content:center;padding:16px}
+.tamaScreen{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;display:none;align-items:center;justify-content:center;padding:16px}
 .tamaScreen.open{display:flex}
-.tamaDevice{width:100%;max-width:340px;background:#e8dcc8;border-radius:32px;padding:20px;box-shadow:0 10px 40px rgba(0,0,0,.3);border:3px solid #c9b896}
-.tamaDeviceInner{background:#b8c8a0;border-radius:12px;padding:12px;position:relative;border:2px solid #8a9a6a}
-.tamaCanvasWrap{display:flex;justify-content:center;background:#c5d4a8;border-radius:8px;padding:8px;border:1px solid #9aaa7a}
-.tamaCanvasWrap canvas{display:block;image-rendering:pixelated;width:100%;max-width:260px;aspect-ratio:1/1}
-.tamaInfo{display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-size:12px;color:#4a5a3a;font-weight:700}
-.tamaStats{display:flex;gap:12px;font-size:11px;color:#5a6a4a;margin-top:6px;flex-wrap:wrap}
-.tamaStats span{display:flex;align-items:center;gap:3px}
-.tamaBtnRow{display:flex;gap:10px;margin-top:16px;justify-content:center}
-.tamaBtn{width:44px;height:44px;border-radius:50%;border:2px solid #b0a080;background:#d4c8a8;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;box-shadow:0 3px 8px rgba(0,0,0,.15);transition:transform .1s,background .1s;-webkit-tap-highlight-color:transparent;user-select:none}
-.tamaBtn:active{transform:scale(.9);background:#c8bc98}
-.tamaBtnRow2{display:flex;gap:8px;margin-top:10px;justify-content:center;flex-wrap:wrap}
-.tamaBtn2{padding:8px 14px;border-radius:12px;border:1px solid var(--line);background:#fff;font-size:12px;font-weight:700;cursor:pointer;transition:background .15s;-webkit-tap-highlight-color:transparent}
-.tamaBtn2:active{background:#f0f0f0}
-.tamaBtn2.danger{color:var(--danger);border-color:var(--danger)}
+/* 알 모양 케이스 */
+.tamaDevice{width:300px;max-width:85vw;aspect-ratio:5/6;background:linear-gradient(160deg,#7dd8f0 0%,#42b8e5 30%,#2da0d3 60%,#55c5eb 100%);border-radius:48% 48% 45% 45%/55% 55% 42% 42%;padding:0;box-shadow:0 10px 40px rgba(0,0,0,.4),inset 0 -4px 12px rgba(0,0,0,.15),inset 0 4px 8px rgba(255,255,255,.25);border:3px solid #2890b8;position:relative;display:flex;flex-direction:column;align-items:center;overflow:visible}
+/* 키링 구멍 */
+.tamaDevice::before{content:'';position:absolute;top:-16px;left:50%;transform:translateX(-50%);width:20px;height:20px;border:4px solid #2890b8;border-radius:50%;background:rgba(0,0,0,.08)}
+/* 번개/별 장식 */
+.tamaDevice::after{content:'⚡✦⚡';position:absolute;top:12px;left:50%;transform:translateX(-50%);font-size:14px;color:rgba(255,255,255,.35);letter-spacing:8px;pointer-events:none}
+.tamaCloseBtn{position:absolute;top:8px;right:22px;background:none;border:none;font-size:16px;color:rgba(255,255,255,.6);cursor:pointer;padding:4px;z-index:5}
+/* 핑크 베젤 (화면 프레임) */
+.tamaDeviceInner{background:linear-gradient(145deg,#e84393,#d63384,#c22974);border-radius:12px;padding:8px;position:relative;border:2px solid #b02a6e;margin-top:50px;width:78%;box-shadow:inset 0 2px 4px rgba(255,255,255,.2),0 4px 12px rgba(0,0,0,.2)}
+.tamaCanvasWrap{display:flex;justify-content:center;background:#c5d4a8;border-radius:6px;padding:4px;border:2px solid #888;box-shadow:inset 0 2px 8px rgba(0,0,0,.15)}
+.tamaCanvasWrap canvas{display:block;image-rendering:pixelated;width:100%;aspect-ratio:1/1}
+.tamaInfo{display:flex;justify-content:space-between;align-items:center;margin-top:6px;font-size:11px;color:rgba(255,255,255,.85);font-weight:700;padding:0 4px}
+.tamaStats{display:flex;gap:8px;font-size:10px;color:rgba(255,255,255,.7);margin-top:4px;flex-wrap:wrap;padding:0 4px}
+.tamaStats span{display:flex;align-items:center;gap:2px}
+/* 노란 버튼 3개 */
+.tamaBtnRow{display:flex;gap:16px;margin-top:14px;justify-content:center;margin-bottom:20px}
+.tamaBtn{width:34px;height:34px;border-radius:50%;border:2px solid #cc9900;background:radial-gradient(circle at 40% 35%,#ffe44d,#ffc800,#e6a800);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;color:#886600;cursor:pointer;box-shadow:0 4px 8px rgba(0,0,0,.3),inset 0 2px 3px rgba(255,255,255,.4);transition:transform .1s;-webkit-tap-highlight-color:transparent;user-select:none}
+.tamaBtn:active{transform:scale(.85);box-shadow:0 2px 4px rgba(0,0,0,.3)}
+.tamaBtnRow2{display:none}
 .tamaNameInput{width:100%;height:40px;border-radius:10px;border:2px solid #b0a080;padding:0 12px;font-size:15px;text-align:center;background:#f5f0e0;outline:none;margin-top:8px}
 .tamaNameInput:focus{border-color:#8a9a6a;box-shadow:0 0 0 3px rgba(138,154,106,.2)}
-.tamaCloseBtn{position:absolute;top:6px;right:10px;background:none;border:none;font-size:20px;color:#6a7a5a;cursor:pointer;padding:4px}
 .tamaMateReq{position:fixed;bottom:calc(var(--composerH) + 60px);left:50%;transform:translateX(-50%);background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px 18px;box-shadow:var(--shadow2);z-index:100;display:none;text-align:center;max-width:300px;width:90%}
 .tamaMateReq.show{display:block}
 .tamaMateReq .title{font-weight:900;font-size:14px;margin-bottom:8px}
@@ -738,21 +742,21 @@ OneSignalDeferred.push(async function(OneSignal) {
 <div class="tamaWalker" id="tamaWalker" style="display:none"><canvas width="32" height="32"></canvas></div>
 <div class="tamaScreen" id="tamaScreen">
   <div class="tamaDevice">
+    <button class="tamaCloseBtn" id="tamaCloseBtn">✕</button>
     <div class="tamaDeviceInner">
-      <button class="tamaCloseBtn" id="tamaCloseBtn">✕</button>
       <div class="tamaCanvasWrap"><canvas id="tamaMainCanvas" width="128" height="128"></canvas></div>
       <div class="tamaInfo">
         <span id="tamaNameLabel">-</span>
         <span id="tamaAgeLabel">0살</span>
       </div>
       <div class="tamaStats" id="tamaStatsEl"></div>
-      <div class="tamaBtnRow">
-        <button class="tamaBtn" id="tamaBtnA" title="선택">◀</button>
-        <button class="tamaBtn" id="tamaBtnB" title="결정">●</button>
-        <button class="tamaBtn" id="tamaBtnC" title="취소">▶</button>
-      </div>
-      <div class="tamaBtnRow2" id="tamaBtnRow2"></div>
     </div>
+    <div class="tamaBtnRow">
+      <button class="tamaBtn" id="tamaBtnA" title="선택">A</button>
+      <button class="tamaBtn" id="tamaBtnB" title="결정">B</button>
+      <button class="tamaBtn" id="tamaBtnC" title="취소">C</button>
+    </div>
+    <div class="tamaBtnRow2" id="tamaBtnRow2"></div>
   </div>
 </div>
 <div class="tamaMateReq" id="tamaMateReq">
