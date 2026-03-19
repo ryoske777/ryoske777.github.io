@@ -326,6 +326,23 @@ body.stealth .stealthBar{display:flex !important}
 .imgPreviewSend{background:#111827;color:#fff}
 .imgPreviewCancel{background:#f3f4f6;color:#374151}
 .imgPreviewAdd{width:80px;height:80px;border-radius:10px;border:2px dashed var(--line);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:24px;color:var(--muted);cursor:pointer;background:#fafafa}
+.imgPreviewThumb.dragging{opacity:.4;border-color:var(--accent)}
+.imgPreviewThumb.drag-over{border-color:var(--accent);transform:scale(1.08);transition:transform .15s}
+.imgPreviewOpts{display:flex;align-items:center;gap:10px;margin-top:10px;padding:0 4px}
+.imgPreviewOpts label{display:flex;align-items:center;gap:6px;font-size:13px;color:#374151;cursor:pointer;-webkit-user-select:none;user-select:none}
+.imgPreviewOpts input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent);cursor:pointer}
+/* 사진 묶음 그리드 (카카오톡 스타일) */
+.imgBundle{display:grid;gap:2px;border-radius:12px;overflow:hidden;max-width:260px;cursor:pointer}
+.imgBundle.cnt-2{grid-template-columns:1fr 1fr}
+.imgBundle.cnt-3{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
+.imgBundle.cnt-3 .imgBundleItem:first-child{grid-row:1/3}
+.imgBundle.cnt-4{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
+.imgBundle.cnt-5{grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr}
+.imgBundle.cnt-5 .imgBundleItem:nth-child(1){grid-column:1/2;grid-row:1/2}
+.imgBundle.cnt-5 .imgBundleItem:nth-child(2){grid-column:2/4;grid-row:1/2}
+.imgBundle .imgBundleItem{position:relative;overflow:hidden;min-height:80px}
+.imgBundle .imgBundleItem img{width:100%;height:100%;object-fit:cover;display:block}
+.imgBundle .imgBundleMore{position:absolute;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;font-weight:900}
 /* 이미지 뷰어 (핀치줌 + 슬라이드) */
 .imgViewer{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:999;display:flex;flex-direction:column;touch-action:none;-webkit-user-select:none;user-select:none}
 .imgViewerTop{display:flex;justify-content:space-between;align-items:center;padding:env(safe-area-inset-top,12px) 16px 8px;color:#fff;z-index:1001}
@@ -1798,6 +1815,28 @@ function rebuildBubble(bubble, m) {
     const sp=document.createElement('div');sp.className='imgUploadSpinner';
     const tx=document.createElement('span');tx.textContent='업로드 중...';
     d.appendChild(sp);d.appendChild(tx);bubble.appendChild(d);
+  } else if (m.imageBundle && m.imageBundle.length) {
+    const urls = m.imageBundle;
+    const maxShow = 4;
+    const showCount = Math.min(urls.length, maxShow);
+    const grid = document.createElement('div');
+    grid.className = 'imgBundle cnt-' + Math.min(showCount, 5);
+    for (let bi = 0; bi < showCount; bi++) {
+      const cell = document.createElement('div'); cell.className = 'imgBundleItem';
+      const img = document.createElement('img'); img.src = urls[bi]; img.alt = '사진'; img.loading = 'lazy';
+      cell.appendChild(img);
+      if (bi === showCount - 1 && urls.length > maxShow) {
+        const more = document.createElement('div'); more.className = 'imgBundleMore';
+        more.textContent = '+' + (urls.length - maxShow);
+        cell.appendChild(more);
+      }
+      ((idx) => {
+        cell.addEventListener('click', e => { e.preventDefault(); openImageViewer(urls[idx], urls); });
+      })(bi);
+      grid.appendChild(cell);
+    }
+    bubble.appendChild(grid);
+    if (m.text) { bubble.appendChild(document.createElement('br')); bubble.appendChild(linkifyText(String(m.text))); }
   } else if (m.imageUrl) {
     const a=document.createElement('a');a.className='imgMsg';a.href=m.imageUrl;a.target='_blank';a.rel='noopener noreferrer';
     const img=document.createElement('img');img.src=m.imageUrl;img.alt='사진';img.loading='lazy';
@@ -1824,7 +1863,7 @@ function renderMessage(m, isPending) {
   const bubble=document.createElement('div'); rebuildBubble(bubble,m);
 
   row.appendChild(bubble); wrap.appendChild(row);
-  if (!isPending && !m.deleted && !m.imageUrl) {
+  if (!isPending && !m.deleted && !m.imageUrl && !m.imageBundle) {
     const url=extractUrl(String(m.text||''));
     if(url){
       const lpWrap=document.createElement('div');
@@ -1857,12 +1896,12 @@ function renderMessage(m, isPending) {
   }
 
   logEl.appendChild(wrap);
-  seen.set(m.messageId, {seq:Number(m.seq||0),metaEl:meta,senderId:m.senderId,wrapEl:wrap,bubbleEl:bubble,text:String(m.text||''),replyTo:m.replyTo||null,imageUrl:m.imageUrl||null,letter:!!m.letter,letterDeliverAt:Number(m.letterDeliverAt||0),senderNick:m.senderNick||'',ts:m.ts||0,spoiler:!!m.spoiler});
+  seen.set(m.messageId, {seq:Number(m.seq||0),metaEl:meta,senderId:m.senderId,wrapEl:wrap,bubbleEl:bubble,text:String(m.text||''),replyTo:m.replyTo||null,imageUrl:m.imageUrl||null,imageBundle:m.imageBundle||null,letter:!!m.letter,letterDeliverAt:Number(m.letterDeliverAt||0),senderNick:m.senderNick||'',ts:m.ts||0,spoiler:!!m.spoiler});
 }
 
 function applyMsgUpdate(m) {
   const obj=seen.get(m.messageId); if(!obj) return;
-  rebuildBubble(obj.bubbleEl, {text:String(m.text||''),deleted:!!m.deleted,edited:!!m.edited,replyTo:obj.replyTo||null,imageUrl:obj.imageUrl||null,letter:!!obj.letter,letterDeliverAt:obj.letterDeliverAt||0,senderNick:obj.senderNick||'',ts:obj.ts||0,spoiler:!!obj.spoiler});
+  rebuildBubble(obj.bubbleEl, {text:String(m.text||''),deleted:!!m.deleted,edited:!!m.edited,replyTo:obj.replyTo||null,imageUrl:obj.imageUrl||null,imageBundle:obj.imageBundle||null,letter:!!obj.letter,letterDeliverAt:obj.letterDeliverAt||0,senderNick:obj.senderNick||'',ts:obj.ts||0,spoiler:!!obj.spoiler});
   obj.text=String(m.text||'');
 }
 
@@ -1886,6 +1925,7 @@ function mergeServerMsg(m) {
     if (m.text!==undefined) obj.text=String(m.text||'');
     if (m.replyTo!==undefined) obj.replyTo=m.replyTo||null;
     if (m.imageUrl!==undefined) obj.imageUrl=m.imageUrl||null;
+    if (m.imageBundle!==undefined) obj.imageBundle=m.imageBundle||null;
   }
   updateBadges(); updateReadBadges();
 }
@@ -2121,7 +2161,7 @@ async function loadOlderMessages() {
       if (firstMsg) logEl.insertBefore(wrap, firstMsg);
       else logEl.appendChild(wrap);
 
-      seen.set(m.messageId, {seq:Number(m.seq||0),metaEl:meta,senderId:m.senderId,wrapEl:wrap,bubbleEl:bubble,text:String(m.text||''),replyTo:m.replyTo||null,imageUrl:m.imageUrl||null,letter:!!m.letter,letterDeliverAt:Number(m.letterDeliverAt||0),senderNick:m.senderNick||'',ts:m.ts||0,spoiler:!!m.spoiler});
+      seen.set(m.messageId, {seq:Number(m.seq||0),metaEl:meta,senderId:m.senderId,wrapEl:wrap,bubbleEl:bubble,text:String(m.text||''),replyTo:m.replyTo||null,imageUrl:m.imageUrl||null,imageBundle:m.imageBundle||null,letter:!!m.letter,letterDeliverAt:Number(m.letterDeliverAt||0),senderNick:m.senderNick||'',ts:m.ts||0,spoiler:!!m.spoiler});
     }
 
     if (messages.length >= LOAD_MORE_LIMIT && _earliestSeq > 1) {
@@ -2429,7 +2469,7 @@ async function loadMessagesAroundSeq(targetSeq) {
         if (!inserted) logEl.appendChild(wrap);
       }
 
-      seen.set(m.messageId, { seq: Number(m.seq || 0), metaEl: meta, senderId: m.senderId, wrapEl: wrap, bubbleEl: bubble, text: String(m.text || ''), replyTo: m.replyTo || null, imageUrl: m.imageUrl || null });
+      seen.set(m.messageId, { seq: Number(m.seq || 0), metaEl: meta, senderId: m.senderId, wrapEl: wrap, bubbleEl: bubble, text: String(m.text || ''), replyTo: m.replyTo || null, imageUrl: m.imageUrl || null, imageBundle: m.imageBundle || null });
     }
 
     if (_earliestSeq > 1) {
@@ -3070,15 +3110,26 @@ function getAllChatImages() {
     if (obj.imageUrl && obj.imageUrl !== '__uploading__') {
       imgs.push({ mid, url: obj.imageUrl, ts: obj.ts || 0 });
     }
+    if (obj.imageBundle && obj.imageBundle.length) {
+      obj.imageBundle.forEach((u, bi) => imgs.push({ mid: mid + '-b' + bi, url: u, ts: (obj.ts || 0) + bi * 0.001 }));
+    }
   }
   imgs.sort((a, b) => a.ts - b.ts);
   return imgs;
 }
 
-function openImageViewer(imageUrl) {
-  const allImgs = getAllChatImages();
-  let idx = allImgs.findIndex(i => i.url === imageUrl);
-  if (idx < 0) { allImgs.push({ mid: '', url: imageUrl, ts: 0 }); idx = allImgs.length - 1; }
+function openImageViewer(imageUrl, bundleUrls) {
+  let allImgs;
+  let idx;
+  if (bundleUrls && bundleUrls.length) {
+    allImgs = bundleUrls.map((u, i) => ({ mid: 'bundle-' + i, url: u, ts: 0 }));
+    idx = bundleUrls.indexOf(imageUrl);
+    if (idx < 0) idx = 0;
+  } else {
+    allImgs = getAllChatImages();
+    idx = allImgs.findIndex(i => i.url === imageUrl);
+    if (idx < 0) { allImgs.push({ mid: '', url: imageUrl, ts: 0 }); idx = allImgs.length - 1; }
+  }
 
   const viewer = document.createElement('div'); viewer.className = 'imgViewer';
   // 상단 바
@@ -3109,19 +3160,35 @@ function openImageViewer(imageUrl) {
 
   function applyTransform() { viewImg.style.transform = 'translate(' + posX + 'px,' + posY + 'px) scale(' + scale + ')'; }
   function resetZoom() { scale = 1; posX = 0; posY = 0; viewImg.style.transition = 'transform .2s ease'; applyTransform(); setTimeout(() => { viewImg.style.transition = ''; }, 220); }
+  function clampPos() {
+    const rect = body.getBoundingClientRect();
+    const iw = viewImg.naturalWidth || viewImg.offsetWidth || rect.width;
+    const ih = viewImg.naturalHeight || viewImg.offsetHeight || rect.height;
+    const ratio = Math.min(rect.width / iw, rect.height / ih);
+    const dw = iw * ratio * scale, dh = ih * ratio * scale;
+    const maxX = Math.max(0, (dw - rect.width) / 2);
+    const maxY = Math.max(0, (dh - rect.height) / 2);
+    posX = Math.max(-maxX, Math.min(maxX, posX));
+    posY = Math.max(-maxY, Math.min(maxY, posY));
+  }
 
   function getDist(t) { return Math.hypot(t[1].clientX - t[0].clientX, t[1].clientY - t[0].clientY); }
   function getMid(t) { return { x: (t[0].clientX + t[1].clientX) / 2, y: (t[0].clientY + t[1].clientY) / 2 }; }
+
+  function startPan(cx, cy) {
+    isPanning = true;
+    startX = cx; startY = cy;
+    startPosX = posX; startPosY = posY;
+  }
 
   body.addEventListener('touchstart', (e) => {
     if (e.touches.length === 2) {
       isPinching = true; isPanning = false;
       startDist = getDist(e.touches); startScale = scale;
+      startPosX = posX; startPosY = posY;
     } else if (e.touches.length === 1) {
       if (scale > 1.05) {
-        isPanning = true;
-        startX = e.touches[0].clientX; startY = e.touches[0].clientY;
-        startPosX = posX; startPosY = posY;
+        startPan(e.touches[0].clientX, e.touches[0].clientY);
       } else {
         swipeStartX = e.touches[0].clientX; swipeStartY = e.touches[0].clientY; swipeMoved = false;
       }
@@ -3132,12 +3199,16 @@ function openImageViewer(imageUrl) {
     if (isPinching && e.touches.length === 2) {
       e.preventDefault();
       const dist = getDist(e.touches);
-      scale = Math.max(1, Math.min(5, startScale * (dist / startDist)));
+      const mid = getMid(e.touches);
+      const newScale = Math.max(1, Math.min(5, startScale * (dist / startDist)));
+      scale = newScale;
+      clampPos();
       applyTransform();
-    } else if (isPanning && e.touches.length === 1) {
+    } else if (isPanning && e.touches.length === 1 && scale > 1.05) {
       e.preventDefault();
       posX = startPosX + (e.touches[0].clientX - startX);
       posY = startPosY + (e.touches[0].clientY - startY);
+      clampPos();
       applyTransform();
     } else if (e.touches.length === 1 && scale <= 1.05) {
       const dx = e.touches[0].clientX - swipeStartX;
@@ -3147,8 +3218,19 @@ function openImageViewer(imageUrl) {
   }, { passive: false });
 
   body.addEventListener('touchend', (e) => {
-    if (isPinching) { isPinching = false; if (scale < 1.05) resetZoom(); return; }
-    if (isPanning) { isPanning = false; return; }
+    if (isPinching) {
+      isPinching = false;
+      if (scale < 1.05) { resetZoom(); return; }
+      // 핀치 끝나고 손가락 1개 남으면 바로 패닝 전환
+      if (e.touches.length === 1) {
+        startPan(e.touches[0].clientX, e.touches[0].clientY);
+      }
+      return;
+    }
+    if (isPanning) {
+      if (e.touches.length === 0) isPanning = false;
+      return;
+    }
     if (e.changedTouches.length === 1 && scale <= 1.05) {
       const dx = e.changedTouches[0].clientX - swipeStartX;
       const dy = e.changedTouches[0].clientY - swipeStartY;
@@ -3156,7 +3238,6 @@ function openImageViewer(imageUrl) {
         if (dx < 0 && idx < allImgs.length - 1) show(idx + 1);
         else if (dx > 0 && idx > 0) show(idx - 1);
       } else if (!swipeMoved) {
-        // 탭으로 닫기 (이미지 위 탭은 무시, 배경 탭만)
         if (e.target === body || e.target === viewer) close();
       }
     }
@@ -3168,15 +3249,38 @@ function openImageViewer(imageUrl) {
     const now = Date.now();
     if (now - lastTap < 300) {
       e.preventDefault();
-      if (scale > 1.05) resetZoom(); else { scale = 2.5; applyTransform(); }
+      if (scale > 1.05) resetZoom(); else { scale = 2.5; clampPos(); applyTransform(); }
     }
     lastTap = now;
   });
+
+  // PC 마우스 드래그 패닝
+  let mouseDown = false;
+  body.addEventListener('mousedown', (e) => {
+    if (scale > 1.05 && e.button === 0) {
+      mouseDown = true;
+      startX = e.clientX; startY = e.clientY;
+      startPosX = posX; startPosY = posY;
+      body.style.cursor = 'grabbing';
+      e.preventDefault();
+    }
+  });
+  body.addEventListener('mousemove', (e) => {
+    if (!mouseDown) return;
+    e.preventDefault();
+    posX = startPosX + (e.clientX - startX);
+    posY = startPosY + (e.clientY - startY);
+    clampPos();
+    applyTransform();
+  });
+  body.addEventListener('mouseup', () => { mouseDown = false; body.style.cursor = ''; });
+  body.addEventListener('mouseleave', () => { mouseDown = false; body.style.cursor = ''; });
 
   // PC 마우스 휠 줌
   body.addEventListener('wheel', (e) => {
     e.preventDefault();
     scale = Math.max(1, Math.min(5, scale + (e.deltaY > 0 ? -0.3 : 0.3)));
+    clampPos();
     if (scale < 1.05) resetZoom(); else applyTransform();
   }, { passive: false });
 
@@ -3464,6 +3568,7 @@ document.addEventListener('click',e=>{if(!emojiBtn.contains(e.target)&&!emojiPan
 // ================================================================
 const imgInputEl = document.getElementById('imgInput');
 let _multiImgFiles = []; // 미리보기용 선택된 파일 배열
+let _imgBundleMode = true; // 묶음 보내기 기본 ON
 
 function openMultiImgPreview(files) {
   const valid = Array.from(files).filter(f => f.type.startsWith('image/') && f.size <= 15*1024*1024);
@@ -3483,15 +3588,82 @@ function renderImgPreview() {
   const ttl = document.createElement('span'); ttl.className = 'imgPreviewTitle'; ttl.textContent = '사진 전송';
   const cnt = document.createElement('span'); cnt.className = 'imgPreviewCount'; cnt.textContent = _multiImgFiles.length + '장 선택';
   hdr.appendChild(ttl); hdr.appendChild(cnt); bar.appendChild(hdr);
-  // 썸네일 스크롤
+  // 썸네일 스크롤 (드래그앤드롭 지원)
   const scroll = document.createElement('div'); scroll.className = 'imgPreviewScroll';
+  let dragIdx = -1;
+  let dragThumbEl = null;
+  let touchClone = null;
+  let touchStartX = 0, touchStartY = 0;
   _multiImgFiles.forEach((item, i) => {
     const thumb = document.createElement('div'); thumb.className = 'imgPreviewThumb';
-    const img = document.createElement('img'); img.src = item.url;
+    thumb.dataset.idx = i;
+    thumb.draggable = true;
+    const img = document.createElement('img'); img.src = item.url; img.draggable = false;
     const order = document.createElement('div'); order.className = 'imgPreviewOrder'; order.textContent = i + 1;
     const rm = document.createElement('div'); rm.className = 'imgPreviewRemove'; rm.textContent = '✕';
     rm.addEventListener('click', (e) => { e.stopPropagation(); URL.revokeObjectURL(item.url); _multiImgFiles.splice(i, 1); renderImgPreview(); });
     thumb.appendChild(img); thumb.appendChild(order); thumb.appendChild(rm);
+    // 마우스 드래그
+    thumb.addEventListener('dragstart', (e) => { dragIdx = i; dragThumbEl = thumb; thumb.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; });
+    thumb.addEventListener('dragend', () => { thumb.classList.remove('dragging'); dragIdx = -1; dragThumbEl = null; });
+    thumb.addEventListener('dragover', (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; thumb.classList.add('drag-over'); });
+    thumb.addEventListener('dragleave', () => { thumb.classList.remove('drag-over'); });
+    thumb.addEventListener('drop', (e) => {
+      e.preventDefault(); thumb.classList.remove('drag-over');
+      const toIdx = parseInt(thumb.dataset.idx);
+      if (dragIdx >= 0 && dragIdx !== toIdx) {
+        const [moved] = _multiImgFiles.splice(dragIdx, 1);
+        _multiImgFiles.splice(toIdx, 0, moved);
+        renderImgPreview();
+      }
+    });
+    // 터치 드래그 (모바일)
+    let touchActive = false;
+    thumb.addEventListener('touchstart', (e) => {
+      if (e.target.closest('.imgPreviewRemove')) return;
+      const t = e.touches[0]; touchStartX = t.clientX; touchStartY = t.clientY;
+      dragIdx = i; touchActive = false;
+    }, {passive: true});
+    thumb.addEventListener('touchmove', (e) => {
+      if (dragIdx !== i) return;
+      const t = e.touches[0];
+      const dx = Math.abs(t.clientX - touchStartX), dy = Math.abs(t.clientY - touchStartY);
+      if (!touchActive && dx < 8 && dy < 8) return;
+      if (!touchActive) { touchActive = true; thumb.classList.add('dragging'); }
+      e.preventDefault();
+      if (!touchClone) {
+        touchClone = thumb.cloneNode(true);
+        touchClone.style.cssText = 'position:fixed;z-index:999;pointer-events:none;opacity:.85;width:80px;height:80px;';
+        document.body.appendChild(touchClone);
+      }
+      touchClone.style.left = (t.clientX - 40) + 'px';
+      touchClone.style.top = (t.clientY - 40) + 'px';
+      // highlight drop target
+      const el = document.elementFromPoint(t.clientX, t.clientY);
+      scroll.querySelectorAll('.imgPreviewThumb').forEach(th => th.classList.remove('drag-over'));
+      const target = el && el.closest('.imgPreviewThumb');
+      if (target && target !== thumb) target.classList.add('drag-over');
+    }, {passive: false});
+    thumb.addEventListener('touchend', (e) => {
+      if (dragIdx !== i) return;
+      thumb.classList.remove('dragging');
+      scroll.querySelectorAll('.imgPreviewThumb').forEach(th => th.classList.remove('drag-over'));
+      if (touchClone) { touchClone.remove(); touchClone = null; }
+      if (touchActive && e.changedTouches.length) {
+        const t = e.changedTouches[0];
+        const el = document.elementFromPoint(t.clientX, t.clientY);
+        const target = el && el.closest('.imgPreviewThumb');
+        if (target && target.dataset.idx !== undefined) {
+          const toIdx = parseInt(target.dataset.idx);
+          if (toIdx !== i) {
+            const [moved] = _multiImgFiles.splice(i, 1);
+            _multiImgFiles.splice(toIdx, 0, moved);
+            renderImgPreview();
+          }
+        }
+      }
+      dragIdx = -1; touchActive = false;
+    });
     scroll.appendChild(thumb);
   });
   // 추가 버튼
@@ -3509,6 +3681,17 @@ function renderImgPreview() {
   });
   scroll.appendChild(addBtn);
   bar.appendChild(scroll);
+  // 묶음 보내기 옵션 (2장 이상일 때만)
+  if (_multiImgFiles.length >= 2) {
+    const opts = document.createElement('div'); opts.className = 'imgPreviewOpts';
+    const lbl = document.createElement('label');
+    const chk = document.createElement('input'); chk.type = 'checkbox'; chk.checked = _imgBundleMode;
+    chk.addEventListener('change', () => { _imgBundleMode = chk.checked; });
+    const txt = document.createTextNode('묶음 보내기');
+    lbl.appendChild(chk); lbl.appendChild(txt);
+    opts.appendChild(lbl);
+    bar.appendChild(opts);
+  }
   // 버튼
   const btns = document.createElement('div'); btns.className = 'imgPreviewBtns';
   const cancelBtn = document.createElement('button'); cancelBtn.className = 'imgPreviewCancel'; cancelBtn.textContent = '취소';
@@ -3523,11 +3706,51 @@ function renderImgPreview() {
 
 async function sendMultiImages() {
   const files = _multiImgFiles.map(item => item.file);
+  const isBundle = _imgBundleMode && files.length >= 2;
   _multiImgFiles.forEach(item => URL.revokeObjectURL(item.url));
   _multiImgFiles = [];
-  for (const file of files) {
-    await sendImage(file);
+  if (isBundle) {
+    await sendImageBundle(files);
+  } else {
+    for (const file of files) {
+      await sendImage(file);
+    }
   }
+}
+
+async function sendImageBundle(files) {
+  if (!roomId) return;
+  const mid = uuid();
+  const imageUrls = [];
+  // 로딩 표시
+  renderMessage({messageId:mid,senderId:myUid,senderNick:myNick,text:'',ts:Date.now(),seq:0,replyTo:null,imageUrl:'__uploading__'},true);
+  scrollToBottom(true);
+  pending.set(mid,{text:'',createdAt:Date.now()}); updateBadges();
+  try {
+    for (const file of files) {
+      const url = await compressToBase64(file);
+      if (!url) throw new Error('변환 실패');
+      imageUrls.push(url);
+    }
+    await sendBundleToFirebase(mid, imageUrls);
+  } catch(e) {
+    pending.delete(mid);
+    const obj = seen.get(mid);
+    if (obj && obj.bubbleEl) { obj.bubbleEl.innerHTML=''; obj.bubbleEl.className='bubble deletedBubble'; obj.bubbleEl.textContent='전송 실패'; }
+    updateBadges(); showToast('사진 묶음 전송 실패');
+  }
+}
+
+async function sendBundleToFirebase(mid, imageUrls) {
+  if (!roomId) return;
+  try {
+    const tx = await db.ref('rooms/'+roomId+'/lastSeq').transaction(v=>(Number(v||0)+1));
+    const seq = Number((tx&&tx.snapshot&&tx.snapshot.val())||0);
+    const msg = {messageId:mid,senderId:myUid,senderNick:myNick,text:'',ts:SV.TIMESTAMP,seq,imageBundle:imageUrls};
+    await db.ref('messages/'+roomId).push(msg);
+    await db.ref('rooms/'+roomId).update({updatedAt:SV.TIMESTAMP,lastMsgTs:SV.TIMESTAMP});
+    try{const ids=await collectSubIds(roomId);if(ids.length)pushToSubs(ids,roomName||'Chat','📷 사진 '+imageUrls.length+'장',roomId,1);}catch(e){}
+  } catch(e) { updateBadges(); }
 }
 
 imgInputEl.addEventListener('change', () => {
