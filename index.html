@@ -119,11 +119,9 @@ header{position:sticky;top:0;z-index:10;padding:8px 14px 7px;border-bottom:1px s
 .readBadge{font-weight:900;opacity:.85}
 .typingBar{display:none}
 /* 입력 중 말풍선 (카카오톡 스타일) */
-.typingBubbleWrap{display:none;flex-direction:column;gap:2px;margin:4px 0;padding:0 12px;transition:opacity .2s}
+.typingBubbleWrap{display:none;flex-direction:column;gap:4px;margin:10px 0;width:100%}
 .typingBubbleWrap.show{display:flex}
-.typingBubbleRow{display:flex;align-items:flex-end;gap:6px}
-.typingBubbleNick{font-size:11px;color:var(--muted);margin-bottom:2px;padding-left:2px}
-.typingBubble{display:inline-flex;align-items:center;gap:4px;padding:10px 14px;border-radius:18px 18px 18px 6px;background:var(--card);border:1px solid var(--line);min-height:36px}
+.typingBubble{display:inline-flex;align-items:center;gap:5px;padding:12px 16px;border-radius:16px;border:1px solid var(--line);background:var(--other);color:var(--otherText);border-bottom-left-radius:6px;max-width:82%}
 .typingDot{width:7px;height:7px;border-radius:50%;background:#a0aec0;animation:typingBounce 1.2s ease-in-out infinite}
 .typingDot:nth-child(2){animation-delay:.15s}
 .typingDot:nth-child(3){animation-delay:.3s}
@@ -1712,7 +1710,6 @@ function shouldNotify() { return document.hidden || !document.hasFocus(); }
 
 let _typingBubbleEl = null;
 function showTyping(nick) {
-  // 기존 typingBar 숨김 유지
   typingBar.style.display='none';
   if (!nick) {
     if (_typingBubbleEl) { _typingBubbleEl.remove(); _typingBubbleEl = null; }
@@ -1722,11 +1719,22 @@ function showTyping(nick) {
   if (!_typingBubbleEl) {
     _typingBubbleEl = document.createElement('div');
     _typingBubbleEl.className = 'typingBubbleWrap show';
-    _typingBubbleEl.innerHTML = '<div class="typingBubbleNick"></div><div class="typingBubbleRow"><div class="typingBubble"><span class="typingDot"></span><span class="typingDot"></span><span class="typingDot"></span></div></div>';
+    // 기존 메시지와 동일한 구조: row.other > bubble, meta에 닉네임
+    const row = document.createElement('div');
+    row.className = 'row other';
+    const bubble = document.createElement('div');
+    bubble.className = 'typingBubble';
+    bubble.innerHTML = '<span class="typingDot"></span><span class="typingDot"></span><span class="typingDot"></span>';
+    row.appendChild(bubble);
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    const who = document.createElement('span');
+    meta.appendChild(who);
+    _typingBubbleEl.appendChild(row);
+    _typingBubbleEl.appendChild(meta);
     logEl.appendChild(_typingBubbleEl);
   }
-  _typingBubbleEl.querySelector('.typingBubbleNick').textContent = nick;
-  // 항상 맨 아래에 위치하도록
+  _typingBubbleEl.querySelector('.meta span').textContent = nick;
   if (_typingBubbleEl.nextSibling) logEl.appendChild(_typingBubbleEl);
   if (wasAtBottom) scrollToBottom(false);
 }
