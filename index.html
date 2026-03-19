@@ -315,7 +315,7 @@ body.stealth .stealthBar{display:flex !important}
 .imgPreviewHeader{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:0 4px}
 .imgPreviewTitle{font-size:15px;font-weight:900}
 .imgPreviewCount{font-size:13px;color:var(--muted)}
-.imgPreviewScroll{display:flex;gap:8px;overflow-x:auto;padding:4px 0;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.imgPreviewScroll{display:flex;gap:8px;overflow-x:auto;padding:4px 0;-webkit-overflow-scrolling:touch;scrollbar-width:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .imgPreviewScroll::-webkit-scrollbar{display:none}
 .imgPreviewThumb{position:relative;width:80px;height:80px;border-radius:10px;overflow:hidden;flex-shrink:0;border:2px solid transparent}
 .imgPreviewThumb img{width:100%;height:100%;object-fit:cover}
@@ -328,6 +328,9 @@ body.stealth .stealthBar{display:flex !important}
 .imgPreviewAdd{width:80px;height:80px;border-radius:10px;border:2px dashed var(--line);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:24px;color:var(--muted);cursor:pointer;background:#fafafa}
 .imgPreviewThumb.dragging{opacity:.4;border-color:var(--accent)}
 .imgPreviewThumb.drag-over{border-color:var(--accent);transform:scale(1.08);transition:transform .15s}
+.imgPreviewThumb.lift{animation:thumbLift .25s ease forwards}
+@keyframes thumbLift{0%{transform:scale(1)}50%{transform:scale(1.15)}100%{transform:scale(1.05);box-shadow:0 4px 16px rgba(0,0,0,.25)}}
+.imgPreviewMore{position:absolute;right:0;top:0;height:80px;width:36px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:var(--muted);pointer-events:none;background:linear-gradient(to right,transparent,var(--bg) 60%)}
 .imgPreviewOpts{display:flex;align-items:center;gap:10px;margin-top:10px;padding:0 4px}
 .imgPreviewOpts label{display:flex;align-items:center;gap:6px;font-size:13px;color:#374151;cursor:pointer;-webkit-user-select:none;user-select:none}
 .imgPreviewOpts input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent);cursor:pointer}
@@ -347,6 +350,7 @@ body.stealth .stealthBar{display:flex !important}
 .imgViewerClose{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.15);color:#fff;border:0;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer}
 .imgViewerBody{flex:1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
 .imgViewerImg{max-width:100%;max-height:100%;object-fit:contain;transition:transform .2s ease;transform-origin:center center;will-change:transform}
+.imgViewer.pulling .imgViewerImg{transition:none}
 .imgViewerNav{position:absolute;top:50%;transform:translateY(-50%);width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.18);color:#fff;border:0;font-size:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:1001;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);opacity:.7;transition:opacity .2s}
 .imgViewerNav:hover{opacity:1}
 .imgViewerNav.prev{left:12px}
@@ -3161,6 +3165,8 @@ function openImageViewer(imageUrl, bundleUrls) {
   let scale = 1, posX = 0, posY = 0, startDist = 0, startScale = 1;
   let startX = 0, startY = 0, startPosX = 0, startPosY = 0, isPanning = false, isPinching = false;
   let swipeStartX = 0, swipeStartY = 0, swipeMoved = false;
+  // 드래그-투-클로즈 상태
+  let pullActive = false, pullStartY = 0, pullDY = 0;
 
   function applyTransform() { viewImg.style.transform = 'translate(' + posX + 'px,' + posY + 'px) scale(' + scale + ')'; }
   function resetZoom() { scale = 1; posX = 0; posY = 0; viewImg.style.transition = 'transform .2s ease'; applyTransform(); setTimeout(() => { viewImg.style.transition = ''; }, 220); }
@@ -3175,6 +3181,25 @@ function openImageViewer(imageUrl, bundleUrls) {
     posX = Math.max(-maxX, Math.min(maxX, posX));
     posY = Math.max(-maxY, Math.min(maxY, posY));
   }
+  function applyPull(dy) {
+    pullDY = dy;
+    const progress = Math.min(Math.abs(dy) / 300, 1);
+    const s = 1 - progress * 0.3;
+    viewImg.style.transform = 'translateY(' + dy + 'px) scale(' + s + ')';
+    viewer.style.background = 'rgba(0,0,0,' + (0.92 * (1 - progress * 0.7)) + ')';
+    top.style.opacity = String(1 - progress);
+  }
+  function cancelPull() {
+    pullActive = false;
+    viewer.classList.remove('pulling');
+    viewImg.style.transition = 'transform .25s ease';
+    viewer.style.transition = 'background .25s ease';
+    top.style.transition = 'opacity .25s ease';
+    applyTransform();
+    viewer.style.background = '';
+    top.style.opacity = '';
+    setTimeout(() => { viewImg.style.transition = ''; viewer.style.transition = ''; top.style.transition = ''; }, 260);
+  }
 
   function getDist(t) { return Math.hypot(t[1].clientX - t[0].clientX, t[1].clientY - t[0].clientY); }
   function getMid(t) { return { x: (t[0].clientX + t[1].clientX) / 2, y: (t[0].clientY + t[1].clientY) / 2 }; }
@@ -3187,6 +3212,7 @@ function openImageViewer(imageUrl, bundleUrls) {
 
   body.addEventListener('touchstart', (e) => {
     if (e.touches.length === 2) {
+      if (pullActive) cancelPull();
       isPinching = true; isPanning = false;
       startDist = getDist(e.touches); startScale = scale;
       startPosX = posX; startPosY = posY;
@@ -3195,6 +3221,7 @@ function openImageViewer(imageUrl, bundleUrls) {
         startPan(e.touches[0].clientX, e.touches[0].clientY);
       } else {
         swipeStartX = e.touches[0].clientX; swipeStartY = e.touches[0].clientY; swipeMoved = false;
+        pullStartY = e.touches[0].clientY; pullActive = false;
       }
     }
   }, { passive: true });
@@ -3218,10 +3245,32 @@ function openImageViewer(imageUrl, bundleUrls) {
       const dx = e.touches[0].clientX - swipeStartX;
       const dy = e.touches[0].clientY - swipeStartY;
       if (Math.abs(dx) > 10 || Math.abs(dy) > 10) swipeMoved = true;
+      // 드래그-투-클로즈: 아래로 내리는 제스처 감지
+      if (!pullActive && dy > 15 && Math.abs(dy) > Math.abs(dx) * 1.2) {
+        pullActive = true;
+        viewer.classList.add('pulling');
+      }
+      if (pullActive) {
+        e.preventDefault();
+        applyPull(e.touches[0].clientY - pullStartY);
+      }
     }
   }, { passive: false });
 
   body.addEventListener('touchend', (e) => {
+    if (pullActive) {
+      if (Math.abs(pullDY) > 120) {
+        // 충분히 내렸으면 닫기 애니메이션
+        viewImg.style.transition = 'transform .25s ease';
+        viewer.style.transition = 'background .25s ease, opacity .25s ease';
+        viewImg.style.transform = 'translateY(' + (pullDY > 0 ? 500 : -500) + 'px) scale(0.5)';
+        viewer.style.opacity = '0';
+        setTimeout(close, 260);
+      } else {
+        cancelPull();
+      }
+      return;
+    }
     if (isPinching) {
       isPinching = false;
       if (scale < 1.05) { resetZoom(); return; }
@@ -3593,11 +3642,14 @@ function renderImgPreview() {
   const cnt = document.createElement('span'); cnt.className = 'imgPreviewCount'; cnt.textContent = _multiImgFiles.length + '장 선택';
   hdr.appendChild(ttl); hdr.appendChild(cnt); bar.appendChild(hdr);
   // 썸네일 스크롤 (드래그앤드롭 지원)
+  const scrollWrap = document.createElement('div');
+  scrollWrap.style.cssText = 'position:relative';
   const scroll = document.createElement('div'); scroll.className = 'imgPreviewScroll';
   let dragIdx = -1;
   let dragThumbEl = null;
   let touchClone = null;
   let touchStartX = 0, touchStartY = 0;
+  let holdTimer = null, holdFired = false;
   _multiImgFiles.forEach((item, i) => {
     const thumb = document.createElement('div'); thumb.className = 'imgPreviewThumb';
     thumb.dataset.idx = i;
@@ -3621,40 +3673,63 @@ function renderImgPreview() {
         renderImgPreview();
       }
     });
-    // 터치 드래그 (모바일)
+    // 터치: 꾹 눌러서 떼어내기 (long press → detach → drag)
     let touchActive = false;
     thumb.addEventListener('touchstart', (e) => {
       if (e.target.closest('.imgPreviewRemove')) return;
       const t = e.touches[0]; touchStartX = t.clientX; touchStartY = t.clientY;
-      dragIdx = i; touchActive = false;
+      dragIdx = i; touchActive = false; holdFired = false;
+      holdTimer = setTimeout(() => {
+        holdFired = true; touchActive = true;
+        // "툭" 떼어지는 애니메이션
+        thumb.classList.add('lift');
+        if (navigator.vibrate) navigator.vibrate(20);
+        setTimeout(() => {
+          thumb.classList.remove('lift');
+          thumb.classList.add('dragging');
+          // 플로팅 클론 생성
+          touchClone = thumb.cloneNode(true);
+          touchClone.style.cssText = 'position:fixed;z-index:999;pointer-events:none;opacity:.85;width:80px;height:80px;border-radius:10px;overflow:hidden;box-shadow:0 6px 20px rgba(0,0,0,.3);transition:none;';
+          touchClone.style.left = (touchStartX - 40) + 'px';
+          touchClone.style.top = (touchStartY - 40) + 'px';
+          document.body.appendChild(touchClone);
+        }, 250);
+      }, 400);
     }, {passive: true});
     thumb.addEventListener('touchmove', (e) => {
       if (dragIdx !== i) return;
       const t = e.touches[0];
       const dx = Math.abs(t.clientX - touchStartX), dy = Math.abs(t.clientY - touchStartY);
-      if (!touchActive && dx < 8 && dy < 8) return;
-      if (!touchActive) { touchActive = true; thumb.classList.add('dragging'); }
-      e.preventDefault();
-      if (!touchClone) {
-        touchClone = thumb.cloneNode(true);
-        touchClone.style.cssText = 'position:fixed;z-index:999;pointer-events:none;opacity:.85;width:80px;height:80px;';
-        document.body.appendChild(touchClone);
+      // 아직 hold 안 됐는데 움직이면 hold 취소 (스크롤 허용)
+      if (!holdFired && (dx > 10 || dy > 10)) {
+        clearTimeout(holdTimer); holdTimer = null;
+        dragIdx = -1;
+        return;
       }
-      touchClone.style.left = (t.clientX - 40) + 'px';
-      touchClone.style.top = (t.clientY - 40) + 'px';
+      if (!touchActive) return;
+      e.preventDefault();
+      if (touchClone) {
+        touchClone.style.left = (t.clientX - 40) + 'px';
+        touchClone.style.top = (t.clientY - 40) + 'px';
+      }
       // highlight drop target
+      const tmpClone = touchClone; if (tmpClone) tmpClone.style.display = 'none';
       const el = document.elementFromPoint(t.clientX, t.clientY);
+      if (tmpClone) tmpClone.style.display = '';
       scroll.querySelectorAll('.imgPreviewThumb').forEach(th => th.classList.remove('drag-over'));
       const target = el && el.closest('.imgPreviewThumb');
       if (target && target !== thumb) target.classList.add('drag-over');
     }, {passive: false});
     thumb.addEventListener('touchend', (e) => {
+      clearTimeout(holdTimer); holdTimer = null;
       if (dragIdx !== i) return;
       thumb.classList.remove('dragging');
+      thumb.classList.remove('lift');
       scroll.querySelectorAll('.imgPreviewThumb').forEach(th => th.classList.remove('drag-over'));
       if (touchClone) { touchClone.remove(); touchClone = null; }
       if (touchActive && e.changedTouches.length) {
         const t = e.changedTouches[0];
+        const tmpNode = document.createElement('div');
         const el = document.elementFromPoint(t.clientX, t.clientY);
         const target = el && el.closest('.imgPreviewThumb');
         if (target && target.dataset.idx !== undefined) {
@@ -3666,7 +3741,13 @@ function renderImgPreview() {
           }
         }
       }
-      dragIdx = -1; touchActive = false;
+      dragIdx = -1; touchActive = false; holdFired = false;
+    });
+    thumb.addEventListener('touchcancel', () => {
+      clearTimeout(holdTimer); holdTimer = null;
+      thumb.classList.remove('dragging'); thumb.classList.remove('lift');
+      if (touchClone) { touchClone.remove(); touchClone = null; }
+      dragIdx = -1; touchActive = false; holdFired = false;
     });
     scroll.appendChild(thumb);
   });
@@ -3684,7 +3765,23 @@ function renderImgPreview() {
     inp.click();
   });
   scroll.appendChild(addBtn);
-  bar.appendChild(scroll);
+  scrollWrap.appendChild(scroll);
+  // +N 표시 (스크롤 시 보이지 않는 사진 수)
+  const moreTag = document.createElement('div'); moreTag.className = 'imgPreviewMore'; moreTag.style.display = 'none';
+  scrollWrap.appendChild(moreTag);
+  function updateMoreTag() {
+    const sr = scroll.getBoundingClientRect();
+    let hidden = 0;
+    scroll.querySelectorAll('.imgPreviewThumb').forEach(th => {
+      const tr = th.getBoundingClientRect();
+      if (tr.right > sr.right + 4) hidden++;
+    });
+    if (hidden > 0) { moreTag.textContent = '+' + hidden; moreTag.style.display = ''; }
+    else { moreTag.style.display = 'none'; }
+  }
+  scroll.addEventListener('scroll', updateMoreTag);
+  requestAnimationFrame(updateMoreTag);
+  bar.appendChild(scrollWrap);
   // 묶음 보내기 옵션 (2장 이상일 때만)
   if (_multiImgFiles.length >= 2) {
     const opts = document.createElement('div'); opts.className = 'imgPreviewOpts';
