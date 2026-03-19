@@ -288,9 +288,11 @@ var MENU_ICONS=['🍚','🍬','⚽','💊','🚿','💡','📊','📢'];
 var T=null;
 var enabled=false;
 var mainCtx=null,walkerCtx=null;
-var tickTimer=null,walkerTimer=null,saveTimer=null,renderTimer=null;
+var tickTimer=null,walkerTimer=null,saveTimer=null,animTimer=null;
 var walkerX=0,walkerDir=1,walkerFrame=0;
 var menuIdx=0,menuMode='idle',gameRound=0,gameScore=0,gameAnswer=0;
+var animFrame=0; // 애니메이션 프레임 카운터
+var idleX=0,idleDir=1; // idle 좌우 이동
 
 // ── 새 다마고치 생성 ──
 function createTama(name){
@@ -552,127 +554,199 @@ function drawSprite(ctx,sp,ox,oy,scale,color){
   for(var y=0;y<sp.h;y++){
     for(var x=0;x<sp.rows[y].length;x++){
       if(sp.rows[y][x]){
-        ctx.fillRect(ox+x*scale,oy+y*scale,scale,scale);
+        ctx.fillRect(Math.floor(ox+x*scale),Math.floor(oy+y*scale),Math.ceil(scale),Math.ceil(scale));
       }
     }
   }
 }
 
-// ── 메인 캔버스 렌더 (128x64) ──
+// ── 반다이 스타일 메뉴 아이콘 (픽셀 아트 8x8) ──
+var MENU_PIXEL_ICONS=[
+  // 0: 밥 (밥그릇)
+  [0x00,0x18,0x24,0x7E,0xFF,0xFF,0x7E,0x00],
+  // 1: 간식 (사탕)
+  [0x08,0x1C,0x3E,0x3E,0x3E,0x1C,0x08,0x08],
+  // 2: 게임 (컨트롤러)
+  [0x00,0x7E,0xFF,0xDB,0xFF,0x7E,0x24,0x00],
+  // 3: 약 (십자가)
+  [0x18,0x18,0x7E,0x7E,0x7E,0x18,0x18,0x00],
+  // 4: 청소 (물방울)
+  [0x10,0x10,0x38,0x38,0x7C,0x7C,0x38,0x00],
+  // 5: 불 (전구)
+  [0x18,0x3C,0x7E,0x7E,0x3C,0x18,0x18,0x00],
+  // 6: 능력 (하트)
+  [0x00,0x66,0xFF,0xFF,0x7E,0x3C,0x18,0x00],
+  // 7: 훈육 (느낌표)
+  [0x18,0x18,0x18,0x18,0x18,0x00,0x18,0x00]
+];
+
+function drawPixelIcon(ctx,iconData,ox,oy,scale){
+  ctx.fillStyle='#222';
+  for(var y=0;y<8;y++){
+    var row=iconData[y];
+    for(var x=0;x<8;x++){
+      if(row&(0x80>>x)){
+        ctx.fillRect(Math.floor(ox+x*scale),Math.floor(oy+y*scale),Math.ceil(scale),Math.ceil(scale));
+      }
+    }
+  }
+}
+
+// ── 애니메이션 업데이트 (200ms마다) ──
+function animTick(){
+  animFrame++;
+  // idle 좌우 이동 (매 5프레임마다 1px 이동, ±8px 범위)
+  if(animFrame%5===0){
+    idleX+=idleDir;
+    if(idleX>8){idleDir=-1;}
+    if(idleX<-8){idleDir=1;}
+  }
+  renderMain();
+}
+
+// ── 메인 캔버스 렌더 (128x128) ──
 function renderMain(){
   if(!mainCtx||!T)return;
   var c=mainCtx.canvas;
+  var W=c.width,H=c.height;
+
   // LCD 배경
   mainCtx.fillStyle='#c5d4a8';
-  mainCtx.fillRect(0,0,c.width,c.height);
+  mainCtx.fillRect(0,0,W,H);
 
+  // ── 사망 화면 ──
   if(T.dead){
-    // 사망 화면
     var sk=sprites.skull;
-    if(sk)drawSprite(mainCtx,sk,Math.floor((c.width-sk.w*3)/2),8,3,'#444');
+    if(sk)drawSprite(mainCtx,sk,Math.floor((W-sk.w*4)/2),20,4,'#444');
     mainCtx.fillStyle='#444';
-    mainCtx.font='bold 10px monospace';
+    mainCtx.font='bold 12px monospace';
     mainCtx.textAlign='center';
-    mainCtx.fillText('R.I.P.',c.width/2,56);
+    mainCtx.fillText('R.I.P.',W/2,90);
+    mainCtx.font='10px monospace';
+    mainCtx.fillText(T.name,W/2,105);
+    mainCtx.fillText('아무 버튼을 누르세요',W/2,120);
     return;
   }
 
+  // ── 수면 + 불 끔 ──
   if(T.sleeping&&T.lightOff){
-    // 수면 + 불 끔
     var zz=sprites.zzz;
-    if(zz)drawSprite(mainCtx,zz,Math.floor((c.width-zz.w*3)/2),16,3,'#6a7a5a');
+    if(zz)drawSprite(mainCtx,zz,Math.floor((W-zz.w*4)/2),30,4,'#6a7a5a');
+    mainCtx.fillStyle='#6a7a5a';
+    mainCtx.font='10px monospace';
+    mainCtx.textAlign='center';
+    mainCtx.fillText('zzZ...',W/2,100);
     return;
   }
 
-  // 메뉴 아이콘 바 (상단)
-  if(menuMode==='menu'||menuMode==='idle'){
-    mainCtx.font='12px sans-serif';
-    mainCtx.textAlign='center';
-    for(var i=0;i<MENU_ICONS.length;i++){
-      var ix=4+i*16;
-      if(menuMode==='menu'&&i===menuIdx){
-        mainCtx.fillStyle='rgba(0,0,0,0.15)';
-        mainCtx.fillRect(ix-2,0,16,14);
-      }
-      mainCtx.fillText(MENU_ICONS[i],ix+7,11);
+  // ── 상단 메뉴 아이콘 바 (반다이 스타일) ──
+  var iconScale=1.2;
+  var iconW=Math.ceil(8*iconScale);
+  var totalW=MENU_PIXEL_ICONS.length*iconW+(MENU_PIXEL_ICONS.length-1)*2;
+  var startX=Math.floor((W-totalW)/2);
+  for(var i=0;i<MENU_PIXEL_ICONS.length;i++){
+    var ix=startX+i*(iconW+2);
+    if(menuMode==='menu'&&i===menuIdx){
+      // 선택 표시: 삼각형 아래 화살표
+      mainCtx.fillStyle='#222';
+      mainCtx.beginPath();
+      mainCtx.moveTo(ix+iconW/2-3,iconW+3);
+      mainCtx.lineTo(ix+iconW/2+3,iconW+3);
+      mainCtx.lineTo(ix+iconW/2,iconW+7);
+      mainCtx.fill();
     }
+    drawPixelIcon(mainCtx,MENU_PIXEL_ICONS[i],ix,2,iconScale);
   }
 
-  // 게임 화면
+  // 구분선
+  mainCtx.fillStyle='#8a9a6a';
+  mainCtx.fillRect(4,iconW+8,W-8,1);
+
+  // ── 게임 화면 ──
   if(menuMode==='game'){
     mainCtx.fillStyle='#444';
-    mainCtx.font='bold 10px monospace';
+    mainCtx.font='bold 11px monospace';
     mainCtx.textAlign='center';
-    mainCtx.fillText('Round '+(gameRound+1)+'/5',c.width/2,12);
-    mainCtx.fillText('◀ or ▶ ?',c.width/2,28);
-    mainCtx.fillText('Score: '+gameScore,c.width/2,56);
-    // 캐릭터 (방향 힌트용)
+    mainCtx.fillText('ROUND '+(gameRound+1)+'/5',W/2,35);
     var sp=sprites[T.species]||sprites.babytchi;
-    if(sp)drawSprite(mainCtx,sp,Math.floor((c.width-sp.w*3)/2),32,3);
+    if(sp)drawSprite(mainCtx,sp,Math.floor((W-sp.w*4)/2),42,4);
+    mainCtx.fillText('◀  ?  ▶',W/2,100);
+    mainCtx.font='9px monospace';
+    mainCtx.fillText('SCORE: '+gameScore,W/2,115);
     return;
   }
   if(menuMode==='gameResult'){
     mainCtx.fillStyle='#444';
-    mainCtx.font='bold 11px monospace';
+    mainCtx.font='bold 14px monospace';
     mainCtx.textAlign='center';
-    mainCtx.fillText(gameScore>=3?'승리!':'패배...',c.width/2,20);
-    mainCtx.fillText(gameScore+'/5',c.width/2,36);
-    return;
-  }
-
-  // 스탯 화면
-  if(menuMode==='stats'){
-    mainCtx.fillStyle='#444';
+    mainCtx.fillText(gameScore>=3?'WIN!':'LOSE...',W/2,50);
+    mainCtx.font='bold 12px monospace';
+    mainCtx.fillText(gameScore+' / 5',W/2,70);
     mainCtx.font='9px monospace';
-    mainCtx.textAlign='left';
-    var lines=[
-      'Name: '+T.name,
-      'Age:  '+T.age+'살',
-      'Wt:   '+T.weight+'g',
-      'Hunger:'+hearts(T.hunger),
-      'Happy: '+hearts(T.happy),
-      'Disc:  '+T.discipline+'%'
-    ];
-    for(var li=0;li<lines.length;li++){
-      mainCtx.fillText(lines[li],8,20+li*8);
-    }
+    mainCtx.fillText('아무 버튼을 누르세요',W/2,100);
     return;
   }
 
-  // 캐릭터 렌더
+  // ── 스탯 화면 ──
+  if(menuMode==='stats'){
+    mainCtx.fillStyle='#222';
+    mainCtx.font='bold 10px monospace';
+    mainCtx.textAlign='left';
+    var sy=30;
+    var gap=14;
+    mainCtx.fillText('NAME: '+T.name,8,sy);
+    mainCtx.fillText('AGE:  '+T.age,8,sy+gap);
+    mainCtx.fillText('WT:   '+T.weight+'g',8,sy+gap*2);
+    mainCtx.fillText('HUNGRY:'+hearts(T.hunger),8,sy+gap*3);
+    mainCtx.fillText('HAPPY: '+hearts(T.happy),8,sy+gap*4);
+    mainCtx.fillText('TRAIN: '+T.discipline+'%',8,sy+gap*5);
+    return;
+  }
+
+  // ── 캐릭터 영역 (중앙, idle 애니메이션) ──
   var sp=sprites[T.species]||sprites.egg;
-  var scale=3;
-  var cx=Math.floor((c.width-sp.w*scale)/2);
-  var cy=14;
-  // 수면 중이면 zzz 추가
+  var scale=4;
+  var charW=sp.w*scale;
+  var charH=sp.h*scale;
+  // 숨쉬기: 살짝 위아래 (사인파)
+  var breathe=Math.sin(animFrame*0.15)*2;
+  // 좌우 이동 (idle)
+  var moveX=(menuMode==='idle'||menuMode==='menu')?idleX:0;
+  var cx=Math.floor((W-charW)/2)+moveX;
+  var cy=Math.floor((H-charH)/2)-5+Math.floor(breathe);
+
+  // 수면 중이면 zzz
   if(T.sleeping){
     var zz=sprites.zzz;
-    if(zz)drawSprite(mainCtx,zz,cx+sp.w*scale-4,cy-2,2,'#6a7a5a');
+    if(zz)drawSprite(mainCtx,zz,cx+charW+2,cy-8,2,'#6a7a5a');
   }
   // 병 표시
   if(T.sick){
-    mainCtx.fillStyle='#a33';
-    mainCtx.font='bold 10px sans-serif';
-    mainCtx.fillText('💀',cx-14,cy+10);
+    var sk=sprites.skull;
+    if(sk)drawSprite(mainCtx,sk,cx-16,cy,1.5,'#a33');
   }
   drawSprite(mainCtx,sp,cx,cy,scale);
 
-  // 똥 표시
+  // ── 똥 표시 (우하단) ──
   if(T.poop>0){
     var pp=sprites.poop;
     for(var pi=0;pi<T.poop&&pi<3;pi++){
-      if(pp)drawSprite(mainCtx,pp,90+pi*12,44,1.5,'#654');
+      if(pp)drawSprite(mainCtx,pp,W-30+pi*3,H-30-pi*3,1.5,'#654');
     }
   }
 
-  // 하단 하트 표시
+  // ── 하단: 배고픔/행복 하트 ──
+  mainCtx.fillStyle='#8a9a6a';
+  mainCtx.fillRect(4,H-20,W-8,1);
   var ht=sprites.heart;
   if(ht){
+    // 배고픔 (좌)
     for(var hi=0;hi<MAX_HEARTS;hi++){
-      drawSprite(mainCtx,ht,4+hi*10,54,0.8,hi<T.hunger?'#c44':'#bbb');
+      drawSprite(mainCtx,ht,6+hi*12,H-16,1,hi<T.hunger?'#c44':'#ccc');
     }
+    // 행복 (우)
     for(var hi2=0;hi2<MAX_HEARTS;hi2++){
-      drawSprite(mainCtx,ht,74+hi2*10,54,0.8,hi2<T.happy?'#48c':'#bbb');
+      drawSprite(mainCtx,ht,W-54+hi2*12,H-16,1,hi2<T.happy?'#48c':'#ccc');
     }
   }
 }
@@ -710,35 +784,16 @@ function renderAll(){
   updateBtnRow2();
 }
 
-// ── 보조 버튼 행 업데이트 ──
+// ── 보조 버튼 행 (사망 시만 표시) ──
 function updateBtnRow2(){
   var el=document.getElementById('tamaBtnRow2');
   if(!el||!T)return;
-  if(T.dead){
-    el.innerHTML='<button class="tamaBtn2 danger" id="tamaResetBtn">다시 시작</button>';
-    var rb=document.getElementById('tamaResetBtn');
-    if(rb)rb.onclick=function(){resetTama();};
-    return;
-  }
-  el.innerHTML=
-    '<button class="tamaBtn2" id="tamaRenameBtn">이름</button>'+
-    '<button class="tamaBtn2 danger" id="tamaResetBtn">초기화</button>';
-  var rnb=document.getElementById('tamaRenameBtn');
-  if(rnb)rnb.onclick=function(){promptRename();};
-  var rsb=document.getElementById('tamaResetBtn');
-  if(rsb)rsb.onclick=function(){if(confirm('정말 초기화?'))resetTama();};
-}
-
-function promptRename(){
-  var name=prompt('새 이름:',T?T.name:'');
-  if(name&&name.trim()&&T){
-    T.name=name.trim().substring(0,10);
-    saveTamaLocal();saveTamaFB();renderAll();
-  }
+  // 살아있을 때는 보조 버튼 불필요
+  el.innerHTML='';
 }
 
 function resetTama(){
-  var name=prompt('새 다마고치 이름:','타마');
+  var name=prompt('새 다마고치 이름을 지어주세요:','타마');
   if(!name)name='타마';
   T=createTama(name.trim().substring(0,10));
   menuMode='idle';menuIdx=0;
@@ -795,7 +850,8 @@ function stopWalker(){
 
 // ── 3버튼 메뉴 핸들러 ──
 function onBtnA(){
-  if(!T||T.dead)return;
+  if(!T)return;
+  if(T.dead){resetTama();return;}
   if(menuMode==='idle'){menuMode='menu';menuIdx=0;renderAll();return;}
   if(menuMode==='menu'){menuIdx=(menuIdx+MENU_ITEMS.length-1)%MENU_ITEMS.length;renderAll();return;}
   if(menuMode==='game'){guessGame(0);return;}
@@ -810,23 +866,26 @@ function onBtnB(){
   if(menuMode==='gameResult'||menuMode==='stats'){menuMode='idle';renderAll();return;}
   if(menuMode==='menu'){
     var action=MENU_ITEMS[menuIdx];
+    menuMode='idle'; // 메뉴 닫기 먼저
     switch(action){
       case 'meal':doFeed('meal');break;
       case 'snack':doFeed('snack');break;
-      case 'game':startGame();break;
+      case 'game':startGame();return; // game은 자체 모드
       case 'medicine':doMedicine();break;
       case 'clean':doClean();break;
       case 'light':doLight();break;
-      case 'stats':menuMode='stats';renderAll();break;
+      case 'stats':menuMode='stats';break;
       case 'discipline':doDiscipline();break;
     }
-    if(action!=='game'&&action!=='stats'){menuMode='idle';renderAll();}
+    renderAll();
     return;
   }
 }
 
 function onBtnC(){
-  if(!T||T.dead)return;
+  if(!T)return;
+  if(T.dead){resetTama();return;}
+  // C 버튼 = 취소 (idle로 복귀) 또는 메뉴 오른쪽 이동
   if(menuMode==='idle')return;
   if(menuMode==='menu'){menuIdx=(menuIdx+1)%MENU_ITEMS.length;renderAll();return;}
   if(menuMode==='game'){guessGame(1);return;}
@@ -838,11 +897,20 @@ function openTamaScreen(){
   var el=document.getElementById('tamaScreen');
   if(!el)return;
   if(!T){
-    // 새로 시작
+    // 새로 시작 (항상 알에서 시작)
     var name=prompt('다마고치 이름을 지어주세요:','타마');
     if(!name)return;
     T=createTama(name.trim().substring(0,10));
     saveTamaLocal();saveTamaFB();
+    // 토글도 자동으로 켜기
+    if(!enabled){
+      enabled=true;
+      try{localStorage.setItem(LS_TAMA_ON,'1');}catch(e){}
+      var stateEl=document.getElementById('mTamaState');
+      if(stateEl)stateEl.textContent='켜짐';
+      startTimers();
+      startWalker();
+    }
   }
   el.classList.add('open');
   menuMode='idle';menuIdx=0;
@@ -850,6 +918,8 @@ function openTamaScreen(){
     var cv=document.getElementById('tamaMainCanvas');
     if(cv)mainCtx=cv.getContext('2d');
   }
+  // 애니메이션 타이머가 없으면 시작
+  if(!animTimer)animTimer=setInterval(animTick,200);
   renderAll();
 }
 
@@ -879,15 +949,16 @@ function startTimers(){
   if(tickTimer)clearInterval(tickTimer);
   tickTimer=setInterval(tick,TICK_MS);
   if(saveTimer)clearInterval(saveTimer);
-  saveTimer=setInterval(function(){saveTamaLocal();saveTamaFB();},300000); // 5분마다 저장
-  if(renderTimer)clearInterval(renderTimer);
-  renderTimer=setInterval(renderAll,30000); // 30초마다 렌더 새로고침
+  saveTimer=setInterval(function(){saveTamaLocal();saveTamaFB();},300000);
+  // 애니메이션 타이머 (200ms)
+  if(animTimer)clearInterval(animTimer);
+  animTimer=setInterval(animTick,200);
 }
 
 function stopTimers(){
   if(tickTimer){clearInterval(tickTimer);tickTimer=null;}
   if(saveTimer){clearInterval(saveTimer);saveTimer=null;}
-  if(renderTimer){clearInterval(renderTimer);renderTimer=null;}
+  if(animTimer){clearInterval(animTimer);animTimer=null;}
 }
 
 /* ═══ Part 5: 교배 시스템 + init ═══ */
