@@ -200,10 +200,7 @@ header{position:sticky;top:0;z-index:10;padding:12px 14px 10px;border-bottom:1px
 .replyQuoteRow{display:flex;align-items:center;gap:6px}
 .replyQuoteImg{width:32px;height:32px;object-fit:cover;border-radius:4px;flex-shrink:0}
 /* 스와이프 답장 */
-.msg{overflow:hidden}
 .msg .row{transition:none;will-change:transform}
-.msg .swipeReplyIcon{position:absolute;left:8px;top:50%;transform:translateY(-50%) scale(0);width:32px;height:32px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;opacity:0;transition:transform .15s ease,opacity .15s ease;pointer-events:none;z-index:2}
-.msg .swipeReplyIcon.show{opacity:1;transform:translateY(-50%) scale(1)}
 .searchBtn{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;line-height:1;user-select:none;box-shadow:0 6px 18px rgba(0,0,0,.06)}
 .searchBar{display:flex;align-items:center;gap:6px;padding:8px 0 0;margin-top:8px;border-top:1px solid var(--line)}
 .searchBar input{flex:1;height:36px;border-radius:10px;border:1px solid var(--line);padding:0 10px;font-size:14px;outline:none;min-width:0;transition:border-color .15s}
@@ -1848,7 +1845,7 @@ function rebuildBubble(bubble, m) {
         cell.appendChild(more);
       }
       ((idx) => {
-        cell.addEventListener('click', e => { e.preventDefault(); openImageViewer(urls[idx], urls); });
+        cell.addEventListener('click', e => { e.preventDefault(); openImageViewer(urls[idx], urls, img); });
       })(bi);
       grid.appendChild(cell);
     }
@@ -1858,7 +1855,7 @@ function rebuildBubble(bubble, m) {
   } else if (m.imageUrl) {
     const a=document.createElement('a');a.className='imgMsg';a.href=m.imageUrl;a.target='_blank';a.rel='noopener noreferrer';
     const img=document.createElement('img');img.src=m.imageUrl;img.alt='사진';img.loading='lazy';
-    img.addEventListener('click',e=>{e.preventDefault();openImageViewer(m.imageUrl);});
+    img.addEventListener('click',e=>{e.preventDefault();openImageViewer(m.imageUrl,null,img);});
     a.appendChild(img);bubble.appendChild(a);
     if (m.text) { bubble.appendChild(document.createElement('br')); bubble.appendChild(linkifyText(String(m.text))); }
   } else if (m.spoiler) {
@@ -3127,9 +3124,10 @@ function getAllChatImages() {
   return imgs;
 }
 
-function openImageViewer(imageUrl, bundleUrls) {
+function openImageViewer(imageUrl, bundleUrls, sourceEl) {
   let allImgs;
   let idx;
+  let _sourceEl = sourceEl || null;
   if (bundleUrls && bundleUrls.length) {
     allImgs = bundleUrls.map((u, i) => ({ mid: 'bundle-' + i, url: u, ts: 0 }));
     idx = bundleUrls.indexOf(imageUrl);
@@ -3260,13 +3258,8 @@ function openImageViewer(imageUrl, bundleUrls) {
 
   body.addEventListener('touchend', (e) => {
     if (pullActive) {
-      if (Math.abs(pullDY) > 120) {
-        // 충분히 내렸으면 닫기 애니메이션
-        viewImg.style.transition = 'transform .25s ease';
-        viewer.style.transition = 'background .25s ease, opacity .25s ease';
-        viewImg.style.transform = 'translateY(' + (pullDY > 0 ? 500 : -500) + 'px) scale(0.5)';
-        viewer.style.opacity = '0';
-        setTimeout(close, 260);
+      if (Math.abs(pullDY) > 100) {
+        closeToSource();
       } else {
         cancelPull();
       }
@@ -3351,6 +3344,47 @@ function openImageViewer(imageUrl, bundleUrls) {
   document.addEventListener('keydown', onKey);
 
   function close() { document.removeEventListener('keydown', onKey); viewer.remove(); }
+
+  // 원본 사진으로 돌아가는 닫기 애니메이션
+  function closeToSource() {
+    // 현재 보고 있는 사진의 원본 img 찾기
+    let srcRect = null;
+    const curUrl = allImgs[idx] && allImgs[idx].url;
+    // sourceEl 우선, 없으면 채팅에서 같은 URL의 img 찾기
+    const srcEl = _sourceEl || (curUrl ? logEl.querySelector('img[src="' + CSS.escape(curUrl) + '"]') : null);
+    if (srcEl && srcEl.getBoundingClientRect) {
+      const r = srcEl.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) srcRect = r;
+    }
+
+    if (srcRect) {
+      const viewRect = viewImg.getBoundingClientRect();
+      const scaleX = srcRect.width / Math.max(viewRect.width, 1);
+      const scaleY = srcRect.height / Math.max(viewRect.height, 1);
+      const s = Math.max(scaleX, scaleY);
+      const tx = (srcRect.left + srcRect.width / 2) - (viewRect.left + viewRect.width / 2);
+      const ty = (srcRect.top + srcRect.height / 2) - (viewRect.top + viewRect.height / 2);
+
+      viewImg.style.transition = 'transform .3s ease, opacity .3s ease, border-radius .3s ease';
+      viewer.style.transition = 'background .25s ease';
+      top.style.transition = 'opacity .15s ease';
+
+      viewImg.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + s + ')';
+      viewImg.style.opacity = '0.6';
+      viewImg.style.borderRadius = '12px';
+      viewer.style.background = 'rgba(0,0,0,0)';
+      top.style.opacity = '0';
+      setTimeout(close, 310);
+    } else {
+      // 원본 못 찾으면 기본 페이드
+      viewImg.style.transition = 'transform .25s ease, opacity .25s ease';
+      viewer.style.transition = 'background .25s ease, opacity .25s ease';
+      viewImg.style.transform = 'translateY(80px) scale(0.85)';
+      viewImg.style.opacity = '0';
+      viewer.style.opacity = '0';
+      setTimeout(close, 260);
+    }
+  }
 
   show(idx);
 }
@@ -3578,15 +3612,15 @@ ctxDelete.addEventListener('click',async()=>{
 
 // 스와이프 답장 (카카오톡 스타일) + 롱프레스 컨텍스트메뉴
 function attachSwipeReply(wrap, mid, senderId) {
-  let sx=0, sy=0, swiping=false, moved=false, row=null, icon=null, lt=null;
-  const THRESHOLD = 60; // 답장 트리거 거리
+  let sx=0, sy=0, swiping=false, moved=false, row=null, lt=null;
+  const THRESHOLD = 50;
+  const MAX_MOVE = 52;
 
   wrap.addEventListener('touchstart', (e) => {
     if (e.touches.length !== 1) return;
     const t = e.touches[0]; sx = t.clientX; sy = t.clientY;
     swiping = false; moved = false;
     row = wrap.querySelector('.row');
-    // long-press 컨텍스트 메뉴 타이머
     lt = setTimeout(() => {
       lt = null;
       if (!moved && !swiping) {
@@ -3605,44 +3639,22 @@ function attachSwipeReply(wrap, mid, senderId) {
     if (!moved && Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
     moved = true;
 
-    // 첫 움직임: 가로 vs 세로 판별
     if (!swiping) {
       if (Math.abs(dx) > Math.abs(dy) && dx < -8) {
         swiping = true;
         if (lt) { clearTimeout(lt); lt = null; }
-        // 아이콘 생성
-        if (!icon) {
-          icon = document.createElement('div');
-          icon.className = 'swipeReplyIcon';
-          icon.textContent = '↩';
-          wrap.style.position = 'relative';
-          wrap.appendChild(icon);
-        }
       } else {
-        return; // 세로 스크롤 - 간섭 안 함
+        return;
       }
     }
-
     if (!swiping) return;
     e.preventDefault();
 
-    // 왼쪽으로만, 최대 -100px, 저항감 추가
+    // 살짝만 밀리는 느낌 - 강한 저항감
     const raw = Math.min(0, dx);
-    const clamped = raw > -100 ? raw : -100 + (raw + 100) * 0.2;
-    row.style.transform = 'translateX(' + clamped + 'px)';
-
-    // 아이콘 표시/크기
-    if (icon) {
-      const progress = Math.min(Math.abs(raw) / THRESHOLD, 1);
-      icon.style.left = Math.max(8, -clamped - 40) + 'px';
-      if (Math.abs(raw) >= THRESHOLD) {
-        icon.classList.add('show');
-      } else {
-        icon.classList.remove('show');
-        icon.style.opacity = String(progress);
-        icon.style.transform = 'translateY(-50%) scale(' + (0.5 + progress * 0.5) + ')';
-      }
-    }
+    const abs = Math.abs(raw);
+    const dampened = Math.min(abs, MAX_MOVE) * (abs < MAX_MOVE ? 0.35 : 0.35 + (abs - MAX_MOVE) * 0.002);
+    row.style.transform = 'translateX(' + (-dampened) + 'px)';
   }, {passive: false});
 
   wrap.addEventListener('touchend', (e) => {
@@ -3652,25 +3664,13 @@ function attachSwipeReply(wrap, mid, senderId) {
     const dx = t.clientX - sx;
     const triggered = dx < -THRESHOLD;
 
-    // 스냅백 애니메이션
-    row.style.transition = 'transform .25s ease';
+    row.style.transition = 'transform .2s ease';
     row.style.transform = '';
-    setTimeout(() => { row.style.transition = ''; }, 260);
-
-    if (icon) {
-      icon.style.transition = 'opacity .2s, transform .2s';
-      icon.classList.remove('show');
-      icon.style.opacity = '0';
-      icon.style.transform = 'translateY(-50%) scale(0)';
-      const iconRef = icon;
-      setTimeout(() => iconRef.remove(), 250);
-      icon = null;
-    }
+    const rowRef = row;
+    setTimeout(() => { rowRef.style.transition = ''; }, 220);
 
     if (triggered) {
-      // 진동 피드백
       if (navigator.vibrate) navigator.vibrate(10);
-      // 답장 활성화
       const obj = seen.get(mid);
       if (obj) {
         const nick = obj.wrapEl ? (obj.wrapEl.querySelector('.meta span')?.textContent || '') : '';
@@ -3683,8 +3683,7 @@ function attachSwipeReply(wrap, mid, senderId) {
 
   wrap.addEventListener('touchcancel', () => {
     if (lt) { clearTimeout(lt); lt = null; }
-    if (row) { row.style.transition = 'transform .2s ease'; row.style.transform = ''; setTimeout(() => { if(row) row.style.transition = ''; }, 220); }
-    if (icon) { icon.remove(); icon = null; }
+    if (row) { row.style.transition = 'transform .2s ease'; row.style.transform = ''; const r=row; setTimeout(() => { r.style.transition = ''; }, 220); }
     swiping = false; row = null;
   });
 }
