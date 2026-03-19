@@ -313,6 +313,10 @@ body.stealth .stealthBar{display:flex !important}
 .loadMoreBtn:hover{background:#f0f0f0}
 .loadMoreBtn:disabled{opacity:.5;cursor:default}
 @media(hover:hover)and(pointer:fine){.mobileOnly{display:none!important}}
+.scrollDownBtn{position:fixed;right:16px;bottom:calc(var(--composerH) + var(--typingH) + var(--kb) + 16px);width:40px;height:40px;border-radius:50%;border:none;background:rgba(0,0,0,.55);color:#fff;font-size:0;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:19;transform:scale(0);opacity:0;transition:transform .25s cubic-bezier(.34,1.56,.64,1),opacity .25s ease;pointer-events:none;box-shadow:0 2px 10px rgba(0,0,0,.2);-webkit-tap-highlight-color:transparent}
+.scrollDownBtn.show{transform:scale(1);opacity:1;pointer-events:auto}
+.scrollDownBtn:active{transform:scale(.9);opacity:.8}
+.scrollDownBtn svg{width:22px;height:22px}
 .toast{position:fixed;bottom:calc(var(--composerH) + 12px);left:50%;transform:translateX(-50%) translateY(20px);background:#111827;color:#fff;padding:9px 18px;border-radius:999px;font-size:13px;font-weight:700;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;z-index:400;white-space:nowrap}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .photoBtn{width:48px;height:48px;border-radius:14px;border:1px solid var(--line);background:#fff;font-size:22px;display:flex;align-items:center;justify-content:center;user-select:none;box-shadow:0 6px 18px rgba(0,0,0,.06);cursor:pointer;flex-shrink:0}
@@ -608,6 +612,7 @@ OneSignalDeferred.push(async function(OneSignal) {
 
   <div class="typingBar" id="typingBar" aria-hidden="true"></div>
   <div class="log" id="log" style="display:none"></div>
+  <button class="scrollDownBtn" id="scrollDownBtn" aria-label="최신 메시지로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 10 12 16 18 10"/></svg></button>
 
   <div class="plusPanel" id="plusPanel" aria-hidden="true">
     <div class="plusGrid">
@@ -1738,7 +1743,22 @@ function showMembersPopup() {
 }
 
 function isNearBottom() { return (logEl.scrollHeight - logEl.scrollTop - logEl.clientHeight) < 150; }
-function scrollToBottom(force) { if (force || isNearBottom()) logEl.scrollTop = logEl.scrollHeight; }
+function scrollToBottom(force) { if (force || isNearBottom()) logEl.scrollTop = logEl.scrollHeight; updateScrollDownBtn(); }
+
+/* 스크롤-투-바텀 버튼 */
+const _scrollDownBtn = document.getElementById('scrollDownBtn');
+let _scrollDownVisible = false;
+function updateScrollDownBtn() {
+  const shouldShow = logEl.style.display !== 'none' && !isNearBottom();
+  if (shouldShow === _scrollDownVisible) return;
+  _scrollDownVisible = shouldShow;
+  if (shouldShow) _scrollDownBtn.classList.add('show');
+  else _scrollDownBtn.classList.remove('show');
+}
+logEl.addEventListener('scroll', updateScrollDownBtn, { passive: true });
+_scrollDownBtn.addEventListener('click', () => {
+  logEl.scrollTo({ top: logEl.scrollHeight, behavior: 'smooth' });
+});
 function shouldNotify() { return document.hidden || !document.hasFocus(); }
 
 let _typingBubbleEl = null;
