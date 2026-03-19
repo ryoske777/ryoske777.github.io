@@ -306,6 +306,35 @@ body.stealth .stealthBar{display:flex !important}
 .imgUploading{width:180px;height:110px;border-radius:12px;background:#f3f4f6;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-size:13px;color:var(--muted);border:1px solid var(--line)}
 .imgUploadSpinner{width:22px;height:22px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+/* 다중 이미지 미리보기 */
+.imgPreviewOverlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:300;display:flex;flex-direction:column;align-items:center;justify-content:flex-end}
+.imgPreviewBar{width:100%;max-width:500px;background:#fff;border-radius:18px 18px 0 0;padding:16px 12px calc(env(safe-area-inset-bottom,0px) + 12px);box-shadow:0 -8px 30px rgba(0,0,0,.15)}
+.imgPreviewHeader{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:0 4px}
+.imgPreviewTitle{font-size:15px;font-weight:900}
+.imgPreviewCount{font-size:13px;color:var(--muted)}
+.imgPreviewScroll{display:flex;gap:8px;overflow-x:auto;padding:4px 0;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.imgPreviewScroll::-webkit-scrollbar{display:none}
+.imgPreviewThumb{position:relative;width:80px;height:80px;border-radius:10px;overflow:hidden;flex-shrink:0;border:2px solid transparent}
+.imgPreviewThumb img{width:100%;height:100%;object-fit:cover}
+.imgPreviewThumb .imgPreviewOrder{position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center}
+.imgPreviewThumb .imgPreviewRemove{position:absolute;top:4px;left:4px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font-size:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;line-height:1}
+.imgPreviewBtns{display:flex;gap:10px;margin-top:14px}
+.imgPreviewBtns button{flex:1;height:44px;border-radius:12px;border:0;font-size:14px;font-weight:700;cursor:pointer}
+.imgPreviewSend{background:#111827;color:#fff}
+.imgPreviewCancel{background:#f3f4f6;color:#374151}
+.imgPreviewAdd{width:80px;height:80px;border-radius:10px;border:2px dashed var(--line);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:24px;color:var(--muted);cursor:pointer;background:#fafafa}
+/* 이미지 뷰어 (핀치줌 + 슬라이드) */
+.imgViewer{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:999;display:flex;flex-direction:column;touch-action:none;-webkit-user-select:none;user-select:none}
+.imgViewerTop{display:flex;justify-content:space-between;align-items:center;padding:env(safe-area-inset-top,12px) 16px 8px;color:#fff;z-index:1001}
+.imgViewerCounter{font-size:14px;font-weight:700;opacity:.85}
+.imgViewerClose{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.15);color:#fff;border:0;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.imgViewerBody{flex:1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.imgViewerImg{max-width:100%;max-height:100%;object-fit:contain;transition:transform .2s ease;transform-origin:center center;will-change:transform}
+.imgViewerNav{position:absolute;top:50%;transform:translateY(-50%);width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.18);color:#fff;border:0;font-size:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:1001;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);opacity:.7;transition:opacity .2s}
+.imgViewerNav:hover{opacity:1}
+.imgViewerNav.prev{left:12px}
+.imgViewerNav.next{right:12px}
+.imgViewerNav:disabled{opacity:0;pointer-events:none}
 .loginScreen{flex:1;min-height:0;overflow:auto;padding:24px 16px 40px;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg)}
 .loginCard{width:100%;max-width:400px;background:#fff;border:1px solid var(--line);border-radius:28px;padding:32px 24px 28px;box-shadow:var(--shadow2);text-align:center}
 .loginLogo{width:148px;height:148px;object-fit:contain;margin:0 auto 16px;display:block;border-radius:24px}
@@ -572,7 +601,7 @@ OneSignalDeferred.push(async function(OneSignal) {
       <button class="replyCloseBtn" id="replyCloseBtn">✕</button>
     </div>
     <div class="plusBtn clickable" id="plusBtn">＋</div>
-    <input type="file" id="imgInput" accept="image/*" style="position:absolute;width:0;height:0;opacity:0;overflow:hidden"/>
+    <input type="file" id="imgInput" accept="image/*" multiple style="position:absolute;width:0;height:0;opacity:0;overflow:hidden"/>
     <div class="inputWrap"><textarea id="input" autocomplete="off" placeholder=""></textarea></div>
     <div class="emojiBtn clickable" id="emojiBtn">😊</div>
     <button class="sendBtn" id="send" disabled>전송</button>
@@ -1884,7 +1913,7 @@ function rebuildBubble(bubble, m) {
   } else if (m.imageUrl) {
     const a=document.createElement('a');a.className='imgMsg';a.href=m.imageUrl;a.target='_blank';a.rel='noopener noreferrer';
     const img=document.createElement('img');img.src=m.imageUrl;img.alt='사진';img.loading='lazy';
-    img.addEventListener('click',e=>{e.preventDefault();const ov=document.createElement('div');ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:999;display:flex;align-items:center;justify-content:center;cursor:zoom-out';const fi=document.createElement('img');fi.src=m.imageUrl;fi.style.cssText='max-width:94vw;max-height:90vh;border-radius:10px;object-fit:contain';ov.appendChild(fi);ov.addEventListener('click',()=>ov.remove());document.body.appendChild(ov);});
+    img.addEventListener('click',e=>{e.preventDefault();openImageViewer(m.imageUrl);});
     a.appendChild(img);bubble.appendChild(a);
     if (m.text) { bubble.appendChild(document.createElement('br')); bubble.appendChild(linkifyText(String(m.text))); }
   } else if (m.spoiler) {
@@ -3281,6 +3310,142 @@ async function compressToBase64(file) {
   });
 }
 
+// ================================================================
+// IMAGE VIEWER (핀치줌 + 슬라이드 네비게이션)
+// ================================================================
+function getAllChatImages() {
+  const imgs = [];
+  for (const [mid, obj] of seen) {
+    if (obj.imageUrl && obj.imageUrl !== '__uploading__') {
+      imgs.push({ mid, url: obj.imageUrl, ts: obj.ts || 0 });
+    }
+  }
+  imgs.sort((a, b) => a.ts - b.ts);
+  return imgs;
+}
+
+function openImageViewer(imageUrl) {
+  const allImgs = getAllChatImages();
+  let idx = allImgs.findIndex(i => i.url === imageUrl);
+  if (idx < 0) { allImgs.push({ mid: '', url: imageUrl, ts: 0 }); idx = allImgs.length - 1; }
+
+  const viewer = document.createElement('div'); viewer.className = 'imgViewer';
+  // 상단 바
+  const top = document.createElement('div'); top.className = 'imgViewerTop';
+  const counter = document.createElement('span'); counter.className = 'imgViewerCounter';
+  const closeBtn = document.createElement('button'); closeBtn.className = 'imgViewerClose'; closeBtn.textContent = '✕';
+  top.appendChild(counter); top.appendChild(closeBtn);
+  // 본문
+  const body = document.createElement('div'); body.className = 'imgViewerBody';
+  const viewImg = document.createElement('img'); viewImg.className = 'imgViewerImg';
+  const prevBtn = document.createElement('button'); prevBtn.className = 'imgViewerNav prev'; prevBtn.innerHTML = '‹';
+  const nextBtn = document.createElement('button'); nextBtn.className = 'imgViewerNav next'; nextBtn.innerHTML = '›';
+  body.appendChild(prevBtn); body.appendChild(viewImg); body.appendChild(nextBtn);
+  viewer.appendChild(top); viewer.appendChild(body);
+  document.body.appendChild(viewer);
+
+  function show(i) {
+    idx = i; viewImg.src = allImgs[idx].url;
+    counter.textContent = (idx + 1) + ' / ' + allImgs.length;
+    prevBtn.disabled = idx <= 0; nextBtn.disabled = idx >= allImgs.length - 1;
+    resetZoom();
+  }
+
+  // 핀치줌 상태
+  let scale = 1, posX = 0, posY = 0, startDist = 0, startScale = 1;
+  let startX = 0, startY = 0, startPosX = 0, startPosY = 0, isPanning = false, isPinching = false;
+  let swipeStartX = 0, swipeStartY = 0, swipeMoved = false;
+
+  function applyTransform() { viewImg.style.transform = 'translate(' + posX + 'px,' + posY + 'px) scale(' + scale + ')'; }
+  function resetZoom() { scale = 1; posX = 0; posY = 0; viewImg.style.transition = 'transform .2s ease'; applyTransform(); setTimeout(() => { viewImg.style.transition = ''; }, 220); }
+
+  function getDist(t) { return Math.hypot(t[1].clientX - t[0].clientX, t[1].clientY - t[0].clientY); }
+  function getMid(t) { return { x: (t[0].clientX + t[1].clientX) / 2, y: (t[0].clientY + t[1].clientY) / 2 }; }
+
+  body.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 2) {
+      isPinching = true; isPanning = false;
+      startDist = getDist(e.touches); startScale = scale;
+    } else if (e.touches.length === 1) {
+      if (scale > 1.05) {
+        isPanning = true;
+        startX = e.touches[0].clientX; startY = e.touches[0].clientY;
+        startPosX = posX; startPosY = posY;
+      } else {
+        swipeStartX = e.touches[0].clientX; swipeStartY = e.touches[0].clientY; swipeMoved = false;
+      }
+    }
+  }, { passive: true });
+
+  body.addEventListener('touchmove', (e) => {
+    if (isPinching && e.touches.length === 2) {
+      e.preventDefault();
+      const dist = getDist(e.touches);
+      scale = Math.max(1, Math.min(5, startScale * (dist / startDist)));
+      applyTransform();
+    } else if (isPanning && e.touches.length === 1) {
+      e.preventDefault();
+      posX = startPosX + (e.touches[0].clientX - startX);
+      posY = startPosY + (e.touches[0].clientY - startY);
+      applyTransform();
+    } else if (e.touches.length === 1 && scale <= 1.05) {
+      const dx = e.touches[0].clientX - swipeStartX;
+      const dy = e.touches[0].clientY - swipeStartY;
+      if (Math.abs(dx) > 10 || Math.abs(dy) > 10) swipeMoved = true;
+    }
+  }, { passive: false });
+
+  body.addEventListener('touchend', (e) => {
+    if (isPinching) { isPinching = false; if (scale < 1.05) resetZoom(); return; }
+    if (isPanning) { isPanning = false; return; }
+    if (e.changedTouches.length === 1 && scale <= 1.05) {
+      const dx = e.changedTouches[0].clientX - swipeStartX;
+      const dy = e.changedTouches[0].clientY - swipeStartY;
+      if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+        if (dx < 0 && idx < allImgs.length - 1) show(idx + 1);
+        else if (dx > 0 && idx > 0) show(idx - 1);
+      } else if (!swipeMoved) {
+        // 탭으로 닫기 (이미지 위 탭은 무시, 배경 탭만)
+        if (e.target === body || e.target === viewer) close();
+      }
+    }
+  }, { passive: true });
+
+  // 더블탭 줌
+  let lastTap = 0;
+  viewImg.addEventListener('touchend', (e) => {
+    const now = Date.now();
+    if (now - lastTap < 300) {
+      e.preventDefault();
+      if (scale > 1.05) resetZoom(); else { scale = 2.5; applyTransform(); }
+    }
+    lastTap = now;
+  });
+
+  // PC 마우스 휠 줌
+  body.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    scale = Math.max(1, Math.min(5, scale + (e.deltaY > 0 ? -0.3 : 0.3)));
+    if (scale < 1.05) resetZoom(); else applyTransform();
+  }, { passive: false });
+
+  closeBtn.addEventListener('click', close);
+  prevBtn.addEventListener('click', (e) => { e.stopPropagation(); if (idx > 0) show(idx - 1); });
+  nextBtn.addEventListener('click', (e) => { e.stopPropagation(); if (idx < allImgs.length - 1) show(idx + 1); });
+
+  // 키보드 (PC)
+  function onKey(e) {
+    if (e.key === 'Escape') close();
+    else if (e.key === 'ArrowLeft' && idx > 0) show(idx - 1);
+    else if (e.key === 'ArrowRight' && idx < allImgs.length - 1) show(idx + 1);
+  }
+  document.addEventListener('keydown', onKey);
+
+  function close() { document.removeEventListener('keydown', onKey); viewer.remove(); }
+
+  show(idx);
+}
+
 async function sendImage(file) {
   if(!file||!roomId) return;
   if(!file.type.startsWith('image/'))return showToast('이미지 파일만 전송할 수 있어요');
@@ -3564,16 +3729,94 @@ emojiBtn.addEventListener('click',e=>{e.preventDefault();if(_emjTouched){_emjTou
 document.addEventListener('click',e=>{if(!emojiBtn.contains(e.target)&&!emojiPanel.contains(e.target)){emojiPanel.classList.remove('open');emojiPanel.setAttribute('aria-hidden','true');}});
 
 // ================================================================
-// PHOTO UPLOAD
+// PHOTO UPLOAD (다중 이미지 지원)
 // ================================================================
 const imgInputEl = document.getElementById('imgInput');
-imgInputEl.addEventListener('change',()=>{if(imgInputEl.files[0]){sendImage(imgInputEl.files[0]);imgInputEl.value='';}});
+let _multiImgFiles = []; // 미리보기용 선택된 파일 배열
+
+function openMultiImgPreview(files) {
+  const valid = Array.from(files).filter(f => f.type.startsWith('image/') && f.size <= 15*1024*1024);
+  if (!valid.length) { showToast('유효한 이미지가 없어요'); return; }
+  _multiImgFiles = valid.map(f => ({ file: f, url: URL.createObjectURL(f) }));
+  renderImgPreview();
+}
+
+function renderImgPreview() {
+  let ov = document.getElementById('imgPreviewOverlay');
+  if (ov) ov.remove();
+  if (!_multiImgFiles.length) return;
+  ov = document.createElement('div'); ov.className = 'imgPreviewOverlay'; ov.id = 'imgPreviewOverlay';
+  const bar = document.createElement('div'); bar.className = 'imgPreviewBar';
+  // 헤더
+  const hdr = document.createElement('div'); hdr.className = 'imgPreviewHeader';
+  const ttl = document.createElement('span'); ttl.className = 'imgPreviewTitle'; ttl.textContent = '사진 전송';
+  const cnt = document.createElement('span'); cnt.className = 'imgPreviewCount'; cnt.textContent = _multiImgFiles.length + '장 선택';
+  hdr.appendChild(ttl); hdr.appendChild(cnt); bar.appendChild(hdr);
+  // 썸네일 스크롤
+  const scroll = document.createElement('div'); scroll.className = 'imgPreviewScroll';
+  _multiImgFiles.forEach((item, i) => {
+    const thumb = document.createElement('div'); thumb.className = 'imgPreviewThumb';
+    const img = document.createElement('img'); img.src = item.url;
+    const order = document.createElement('div'); order.className = 'imgPreviewOrder'; order.textContent = i + 1;
+    const rm = document.createElement('div'); rm.className = 'imgPreviewRemove'; rm.textContent = '✕';
+    rm.addEventListener('click', (e) => { e.stopPropagation(); URL.revokeObjectURL(item.url); _multiImgFiles.splice(i, 1); renderImgPreview(); });
+    thumb.appendChild(img); thumb.appendChild(order); thumb.appendChild(rm);
+    scroll.appendChild(thumb);
+  });
+  // 추가 버튼
+  const addBtn = document.createElement('div'); addBtn.className = 'imgPreviewAdd'; addBtn.textContent = '+';
+  addBtn.addEventListener('click', () => {
+    const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*'; inp.multiple = true;
+    inp.addEventListener('change', () => {
+      if (inp.files.length) {
+        const newFiles = Array.from(inp.files).filter(f => f.type.startsWith('image/') && f.size <= 15*1024*1024);
+        newFiles.forEach(f => _multiImgFiles.push({ file: f, url: URL.createObjectURL(f) }));
+        renderImgPreview();
+      }
+    });
+    inp.click();
+  });
+  scroll.appendChild(addBtn);
+  bar.appendChild(scroll);
+  // 버튼
+  const btns = document.createElement('div'); btns.className = 'imgPreviewBtns';
+  const cancelBtn = document.createElement('button'); cancelBtn.className = 'imgPreviewCancel'; cancelBtn.textContent = '취소';
+  cancelBtn.addEventListener('click', () => { _multiImgFiles.forEach(item => URL.revokeObjectURL(item.url)); _multiImgFiles = []; ov.remove(); });
+  const sendBtn = document.createElement('button'); sendBtn.className = 'imgPreviewSend'; sendBtn.textContent = '전송 (' + _multiImgFiles.length + ')';
+  sendBtn.addEventListener('click', () => { sendMultiImages(); ov.remove(); });
+  btns.appendChild(cancelBtn); btns.appendChild(sendBtn); bar.appendChild(btns);
+  ov.appendChild(bar);
+  ov.addEventListener('click', (e) => { if (e.target === ov) { cancelBtn.click(); } });
+  document.body.appendChild(ov);
+}
+
+async function sendMultiImages() {
+  const files = _multiImgFiles.map(item => item.file);
+  _multiImgFiles.forEach(item => URL.revokeObjectURL(item.url));
+  _multiImgFiles = [];
+  for (const file of files) {
+    await sendImage(file);
+  }
+}
+
+imgInputEl.addEventListener('change', () => {
+  if (!imgInputEl.files.length) return;
+  if (imgInputEl.files.length === 1) {
+    sendImage(imgInputEl.files[0]);
+  } else {
+    openMultiImgPreview(imgInputEl.files);
+  }
+  imgInputEl.value = '';
+});
 document.addEventListener('paste',e=>{
   if(!roomId)return;
   const items=e.clipboardData&&e.clipboardData.items; if(!items)return;
+  const imageFiles = [];
   for(const item of items){
-    if(item.type.startsWith('image/')){e.preventDefault();sendImage(item.getAsFile());return;}
+    if(item.type.startsWith('image/')){imageFiles.push(item.getAsFile());}
   }
+  if (imageFiles.length > 1) { e.preventDefault(); openMultiImgPreview(imageFiles); }
+  else if (imageFiles.length === 1) { e.preventDefault(); sendImage(imageFiles[0]); }
 });
 
 // ================================================================
