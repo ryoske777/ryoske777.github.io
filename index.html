@@ -3160,19 +3160,35 @@ function openImageViewer(imageUrl, bundleUrls) {
 
   function applyTransform() { viewImg.style.transform = 'translate(' + posX + 'px,' + posY + 'px) scale(' + scale + ')'; }
   function resetZoom() { scale = 1; posX = 0; posY = 0; viewImg.style.transition = 'transform .2s ease'; applyTransform(); setTimeout(() => { viewImg.style.transition = ''; }, 220); }
+  function clampPos() {
+    const rect = body.getBoundingClientRect();
+    const iw = viewImg.naturalWidth || viewImg.offsetWidth || rect.width;
+    const ih = viewImg.naturalHeight || viewImg.offsetHeight || rect.height;
+    const ratio = Math.min(rect.width / iw, rect.height / ih);
+    const dw = iw * ratio * scale, dh = ih * ratio * scale;
+    const maxX = Math.max(0, (dw - rect.width) / 2);
+    const maxY = Math.max(0, (dh - rect.height) / 2);
+    posX = Math.max(-maxX, Math.min(maxX, posX));
+    posY = Math.max(-maxY, Math.min(maxY, posY));
+  }
 
   function getDist(t) { return Math.hypot(t[1].clientX - t[0].clientX, t[1].clientY - t[0].clientY); }
   function getMid(t) { return { x: (t[0].clientX + t[1].clientX) / 2, y: (t[0].clientY + t[1].clientY) / 2 }; }
+
+  function startPan(cx, cy) {
+    isPanning = true;
+    startX = cx; startY = cy;
+    startPosX = posX; startPosY = posY;
+  }
 
   body.addEventListener('touchstart', (e) => {
     if (e.touches.length === 2) {
       isPinching = true; isPanning = false;
       startDist = getDist(e.touches); startScale = scale;
+      startPosX = posX; startPosY = posY;
     } else if (e.touches.length === 1) {
       if (scale > 1.05) {
-        isPanning = true;
-        startX = e.touches[0].clientX; startY = e.touches[0].clientY;
-        startPosX = posX; startPosY = posY;
+        startPan(e.touches[0].clientX, e.touches[0].clientY);
       } else {
         swipeStartX = e.touches[0].clientX; swipeStartY = e.touches[0].clientY; swipeMoved = false;
       }
@@ -3183,12 +3199,16 @@ function openImageViewer(imageUrl, bundleUrls) {
     if (isPinching && e.touches.length === 2) {
       e.preventDefault();
       const dist = getDist(e.touches);
-      scale = Math.max(1, Math.min(5, startScale * (dist / startDist)));
+      const mid = getMid(e.touches);
+      const newScale = Math.max(1, Math.min(5, startScale * (dist / startDist)));
+      scale = newScale;
+      clampPos();
       applyTransform();
-    } else if (isPanning && e.touches.length === 1) {
+    } else if (isPanning && e.touches.length === 1 && scale > 1.05) {
       e.preventDefault();
       posX = startPosX + (e.touches[0].clientX - startX);
       posY = startPosY + (e.touches[0].clientY - startY);
+      clampPos();
       applyTransform();
     } else if (e.touches.length === 1 && scale <= 1.05) {
       const dx = e.touches[0].clientX - swipeStartX;
@@ -3198,8 +3218,19 @@ function openImageViewer(imageUrl, bundleUrls) {
   }, { passive: false });
 
   body.addEventListener('touchend', (e) => {
-    if (isPinching) { isPinching = false; if (scale < 1.05) resetZoom(); return; }
-    if (isPanning) { isPanning = false; return; }
+    if (isPinching) {
+      isPinching = false;
+      if (scale < 1.05) { resetZoom(); return; }
+      // 핀치 끝나고 손가락 1개 남으면 바로 패닝 전환
+      if (e.touches.length === 1) {
+        startPan(e.touches[0].clientX, e.touches[0].clientY);
+      }
+      return;
+    }
+    if (isPanning) {
+      if (e.touches.length === 0) isPanning = false;
+      return;
+    }
     if (e.changedTouches.length === 1 && scale <= 1.05) {
       const dx = e.changedTouches[0].clientX - swipeStartX;
       const dy = e.changedTouches[0].clientY - swipeStartY;
@@ -3207,7 +3238,6 @@ function openImageViewer(imageUrl, bundleUrls) {
         if (dx < 0 && idx < allImgs.length - 1) show(idx + 1);
         else if (dx > 0 && idx > 0) show(idx - 1);
       } else if (!swipeMoved) {
-        // 탭으로 닫기 (이미지 위 탭은 무시, 배경 탭만)
         if (e.target === body || e.target === viewer) close();
       }
     }
@@ -3219,15 +3249,38 @@ function openImageViewer(imageUrl, bundleUrls) {
     const now = Date.now();
     if (now - lastTap < 300) {
       e.preventDefault();
-      if (scale > 1.05) resetZoom(); else { scale = 2.5; applyTransform(); }
+      if (scale > 1.05) resetZoom(); else { scale = 2.5; clampPos(); applyTransform(); }
     }
     lastTap = now;
   });
+
+  // PC 마우스 드래그 패닝
+  let mouseDown = false;
+  body.addEventListener('mousedown', (e) => {
+    if (scale > 1.05 && e.button === 0) {
+      mouseDown = true;
+      startX = e.clientX; startY = e.clientY;
+      startPosX = posX; startPosY = posY;
+      body.style.cursor = 'grabbing';
+      e.preventDefault();
+    }
+  });
+  body.addEventListener('mousemove', (e) => {
+    if (!mouseDown) return;
+    e.preventDefault();
+    posX = startPosX + (e.clientX - startX);
+    posY = startPosY + (e.clientY - startY);
+    clampPos();
+    applyTransform();
+  });
+  body.addEventListener('mouseup', () => { mouseDown = false; body.style.cursor = ''; });
+  body.addEventListener('mouseleave', () => { mouseDown = false; body.style.cursor = ''; });
 
   // PC 마우스 휠 줌
   body.addEventListener('wheel', (e) => {
     e.preventDefault();
     scale = Math.max(1, Math.min(5, scale + (e.deltaY > 0 ? -0.3 : 0.3)));
+    clampPos();
     if (scale < 1.05) resetZoom(); else applyTransform();
   }, { passive: false });
 
