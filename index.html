@@ -3365,16 +3365,16 @@ function openImageViewer(imageUrl, bundleUrls, sourceEl) {
       const tx = (srcRect.left + srcRect.width / 2) - (viewRect.left + viewRect.width / 2);
       const ty = (srcRect.top + srcRect.height / 2) - (viewRect.top + viewRect.height / 2);
 
-      viewImg.style.transition = 'transform .3s ease, opacity .3s ease, border-radius .3s ease';
-      viewer.style.transition = 'background .25s ease';
-      top.style.transition = 'opacity .15s ease';
+      viewImg.style.transition = 'transform .18s ease-in, opacity .18s ease-in, border-radius .18s ease-in';
+      viewer.style.transition = 'background .15s ease-in';
+      top.style.transition = 'opacity .1s ease-in';
 
       viewImg.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + s + ')';
-      viewImg.style.opacity = '0.6';
+      viewImg.style.opacity = '0';
       viewImg.style.borderRadius = '12px';
       viewer.style.background = 'rgba(0,0,0,0)';
       top.style.opacity = '0';
-      setTimeout(close, 310);
+      setTimeout(close, 200);
     } else {
       // 원본 못 찾으면 기본 페이드
       viewImg.style.transition = 'transform .25s ease, opacity .25s ease';
