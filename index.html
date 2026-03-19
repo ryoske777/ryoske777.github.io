@@ -30,7 +30,7 @@
   --accent:#22c55e;--danger:#ef4444;
   --safeB:env(safe-area-inset-bottom,0px);--safeBComp:var(--safeB);
   --safeT:env(safe-area-inset-top,0px);--kb:0px;--kbFix:40px;
-  --appH:100dvh;--composerH:64px;--typingH:34px;
+  --appH:100dvh;--composerH:64px;--typingH:0px;
   --shadow:0 10px 30px rgba(0,0,0,.06);--shadow2:0 14px 40px rgba(0,0,0,.12);
   --bubbleFontSize:16px;
 }
@@ -117,7 +117,17 @@ header{position:sticky;top:0;z-index:10;padding:8px 14px 7px;border-bottom:1px s
 .badgePending{opacity:.78}
 .badgeFail{color:var(--danger);font-weight:900;cursor:pointer}
 .readBadge{font-weight:900;opacity:.85}
-.typingBar{position:fixed;left:0;right:0;bottom:var(--composerH);height:var(--typingH);display:none;align-items:center;padding:0 12px;font-size:12px;color:var(--muted);background:rgba(255,255,255,.98);border-top:1px solid var(--line);z-index:19}
+.typingBar{display:none}
+/* 입력 중 말풍선 (카카오톡 스타일) */
+.typingBubbleWrap{display:none;flex-direction:column;gap:2px;margin:4px 0;padding:0 12px;transition:opacity .2s}
+.typingBubbleWrap.show{display:flex}
+.typingBubbleRow{display:flex;align-items:flex-end;gap:6px}
+.typingBubbleNick{font-size:11px;color:var(--muted);margin-bottom:2px;padding-left:2px}
+.typingBubble{display:inline-flex;align-items:center;gap:4px;padding:10px 14px;border-radius:18px 18px 18px 6px;background:var(--card);border:1px solid var(--line);min-height:36px}
+.typingDot{width:7px;height:7px;border-radius:50%;background:#a0aec0;animation:typingBounce 1.2s ease-in-out infinite}
+.typingDot:nth-child(2){animation-delay:.15s}
+.typingDot:nth-child(3){animation-delay:.3s}
+@keyframes typingBounce{0%,60%,100%{transform:translateY(0);opacity:.4}30%{transform:translateY(-6px);opacity:1}}
 .composer{position:fixed;left:0;right:0;bottom:0;min-height:var(--composerH);padding:10px 12px;border-top:1px solid var(--line);background:rgba(255,255,255,.97);display:flex;gap:10px;align-items:flex-end;z-index:20}
 .composer::before{display:none}
 .emojiBtn{width:48px;height:48px;border-radius:14px;border:1px solid var(--line);background:#fff;font-size:22px;display:flex;align-items:center;justify-content:center;user-select:none;box-shadow:0 6px 18px rgba(0,0,0,.06)}
@@ -1700,9 +1710,25 @@ function isNearBottom() { return (logEl.scrollHeight - logEl.scrollTop - logEl.c
 function scrollToBottom(force) { if (force || isNearBottom()) logEl.scrollTop = logEl.scrollHeight; }
 function shouldNotify() { return document.hidden || !document.hasFocus(); }
 
-function showTyping(text) {
-  if (!text) { typingBar.style.display='none'; typingBar.textContent=''; typingBar.setAttribute('aria-hidden','true'); return; }
-  typingBar.style.display='flex'; typingBar.textContent=text; typingBar.setAttribute('aria-hidden','false');
+let _typingBubbleEl = null;
+function showTyping(nick) {
+  // 기존 typingBar 숨김 유지
+  typingBar.style.display='none';
+  if (!nick) {
+    if (_typingBubbleEl) { _typingBubbleEl.remove(); _typingBubbleEl = null; }
+    return;
+  }
+  const wasAtBottom = isNearBottom();
+  if (!_typingBubbleEl) {
+    _typingBubbleEl = document.createElement('div');
+    _typingBubbleEl.className = 'typingBubbleWrap show';
+    _typingBubbleEl.innerHTML = '<div class="typingBubbleNick"></div><div class="typingBubbleRow"><div class="typingBubble"><span class="typingDot"></span><span class="typingDot"></span><span class="typingDot"></span></div></div>';
+    logEl.appendChild(_typingBubbleEl);
+  }
+  _typingBubbleEl.querySelector('.typingBubbleNick').textContent = nick;
+  // 항상 맨 아래에 위치하도록
+  if (_typingBubbleEl.nextSibling) logEl.appendChild(_typingBubbleEl);
+  if (wasAtBottom) scrollToBottom(false);
 }
 
 function extractUrl(t) { try { const m=String(t||'').match(/https?:\/\/[^\s]+/); return m?m[0]:null; } catch(e){return null;} }
@@ -2589,7 +2615,7 @@ function startTyping(rid) {
   _typListenRef.on('value',snap=>{
     const v=snap.val()||{},now=Date.now();let best=null;
     Object.keys(v).forEach(u=>{if(u===myUid)return;const t=v[u]||{},until=Number(t.until||0);if(until>now&&(!best||until>best.until))best={nick:String(t.nick||''),until};});
-    showTyping(best&&best.nick?best.nick+' 님이 입력 중입니다':'');
+    showTyping(best&&best.nick?best.nick:'');
   });
   _typRef=db.ref('typing/'+rid+'/'+myUid);
   _typRef.onDisconnect().remove();
