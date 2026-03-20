@@ -560,38 +560,155 @@ function drawSprite(ctx,sp,ox,oy,scale,color){
   }
 }
 
-// ── P1 원본 아이콘 (8x8 픽셀) ──
-// 순서: 밥(포크나이프), 불(전구), 게임(야구), 약(주사기), 청소(오리), 능력(하트), 훈육(!), 간식(사탕)
-var MENU_PIXEL_ICONS=[
+// ── P1 원본 아이콘 (캔버스 벡터 드로잉) ──
+// 순서: 밥(포크나이프), 불(전구), 게임(야구배트+공), 약(주사기)
+//       청소(오리), 능력(왕관), 훈육(하트비트), 간식(스마일)
+var iconDrawers=[
   // 0: 밥 - 포크 & 나이프
-  [0x44,0x44,0x44,0x4C,0x78,0x30,0x10,0x10],
+  function(ctx,x,y,s){
+    ctx.save();ctx.translate(x,y);ctx.scale(s/16,s/16);
+    ctx.strokeStyle='#222';ctx.fillStyle='#222';ctx.lineWidth=1.2;ctx.lineCap='round';
+    // 포크
+    ctx.beginPath();ctx.moveTo(4,1);ctx.lineTo(4,6);ctx.moveTo(2,1);ctx.lineTo(2,5);
+    ctx.moveTo(6,1);ctx.lineTo(6,5);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(2,5);ctx.quadraticCurveTo(4,7,6,5);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(4,7);ctx.lineTo(4,15);ctx.stroke();
+    // 나이프
+    ctx.beginPath();ctx.moveTo(12,1);ctx.lineTo(12,6);ctx.lineTo(10,8);ctx.lineTo(12,8);
+    ctx.lineTo(12,15);ctx.stroke();
+    ctx.restore();
+  },
   // 1: 불 - 전구
-  [0x38,0x44,0x54,0x44,0x38,0x38,0x10,0x00],
-  // 2: 게임 - 야구공
-  [0x38,0x54,0x92,0xBA,0x92,0x54,0x38,0x00],
-  // 3: 약 - 주사기
-  [0x06,0x0C,0x18,0x38,0x70,0xE0,0xC0,0x80],
-  // 4: 청소 - 오리
-  [0x60,0x90,0x6C,0x12,0x1E,0x0C,0x00,0x00],
-  // 5: 능력 - 하트
-  [0x00,0x66,0xFF,0xFF,0x7E,0x3C,0x18,0x00],
-  // 6: 훈육 - 느낌표
-  [0x18,0x18,0x18,0x18,0x00,0x18,0x18,0x00],
-  // 7: 간식 - 사탕
-  [0x08,0x1C,0x3E,0x3E,0x3E,0x1C,0x08,0x08]
-];
-
-function drawPixelIcon(ctx,iconData,ox,oy,scale){
-  ctx.fillStyle='#222';
-  for(var y=0;y<8;y++){
-    var row=iconData[y];
-    for(var x=0;x<8;x++){
-      if(row&(0x80>>x)){
-        ctx.fillRect(Math.floor(ox+x*scale),Math.floor(oy+y*scale),Math.ceil(scale),Math.ceil(scale));
-      }
+  function(ctx,x,y,s){
+    ctx.save();ctx.translate(x,y);ctx.scale(s/16,s/16);
+    ctx.strokeStyle='#222';ctx.fillStyle='#222';ctx.lineWidth=1;
+    // 전구 몸통
+    ctx.beginPath();ctx.arc(8,6,4.5,Math.PI*1.15,Math.PI*1.85);ctx.stroke();
+    ctx.beginPath();ctx.arc(8,6,4.5,-0.15*Math.PI,0.15*Math.PI+Math.PI,true);ctx.stroke();
+    // 빛 줄기
+    var rays=[[8,0],[3,1.5],[13,1.5],[1,5],[15,5],[3,10],[13,10]];
+    for(var i=0;i<rays.length;i++){
+      ctx.beginPath();
+      var dx=rays[i][0]-8,dy=rays[i][1]-6;
+      var len=Math.sqrt(dx*dx+dy*dy);
+      ctx.moveTo(8+dx/len*5,6+dy/len*5);
+      ctx.lineTo(rays[i][0],rays[i][1]);
+      ctx.stroke();
     }
+    // 소켓
+    ctx.beginPath();ctx.moveTo(6,11);ctx.lineTo(10,11);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(6.5,12.5);ctx.lineTo(9.5,12.5);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(7,14);ctx.lineTo(9,14);ctx.stroke();
+    ctx.restore();
+  },
+  // 2: 게임 - 야구 배트 + 공
+  function(ctx,x,y,s){
+    ctx.save();ctx.translate(x,y);ctx.scale(s/16,s/16);
+    ctx.strokeStyle='#222';ctx.fillStyle='#222';ctx.lineWidth=1.2;ctx.lineCap='round';
+    // 배트 (대각선)
+    ctx.beginPath();ctx.moveTo(5,14);ctx.lineTo(7,12);ctx.lineTo(12,4);
+    ctx.quadraticCurveTo(14,2,13,1);ctx.stroke();
+    ctx.lineWidth=2.5;
+    ctx.beginPath();ctx.moveTo(9,9);ctx.lineTo(12,4);ctx.stroke();
+    ctx.lineWidth=1.2;
+    // 공
+    ctx.beginPath();ctx.arc(5,4,2.8,0,Math.PI*2);ctx.stroke();
+    ctx.beginPath();ctx.arc(5,4,2.8,0.3,1.2);ctx.stroke();
+    ctx.beginPath();ctx.arc(5,4,2.8,3.5,4.4);ctx.stroke();
+    ctx.restore();
+  },
+  // 3: 약 - 주사기
+  function(ctx,x,y,s){
+    ctx.save();ctx.translate(x,y);ctx.scale(s/16,s/16);
+    ctx.strokeStyle='#222';ctx.lineWidth=1.2;ctx.lineCap='round';
+    // 주사기 몸통 (대각선)
+    ctx.beginPath();ctx.moveTo(3,13);ctx.lineTo(11,5);ctx.stroke();
+    // 주사기 통
+    ctx.lineWidth=3;
+    ctx.beginPath();ctx.moveTo(7,9);ctx.lineTo(11,5);ctx.stroke();
+    ctx.lineWidth=1.2;
+    // 바늘
+    ctx.beginPath();ctx.moveTo(12,4);ctx.lineTo(14,2);ctx.stroke();
+    // 플런저
+    ctx.beginPath();ctx.moveTo(2,14);ctx.lineTo(1,15);ctx.stroke();
+    // 날개
+    ctx.beginPath();ctx.moveTo(10.5,7);ctx.lineTo(13,8);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(9,5.5);ctx.lineTo(8,3);ctx.stroke();
+    // 눈금
+    ctx.lineWidth=0.6;
+    ctx.beginPath();ctx.moveTo(8.5,7);ctx.lineTo(9.5,6.5);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(9.5,8);ctx.lineTo(10.5,7.5);ctx.stroke();
+    ctx.restore();
+  },
+  // 4: 청소 - 오리
+  function(ctx,x,y,s){
+    ctx.save();ctx.translate(x,y);ctx.scale(s/16,s/16);
+    ctx.strokeStyle='#222';ctx.fillStyle='#222';ctx.lineWidth=1.2;
+    // 머리
+    ctx.beginPath();ctx.arc(5,4,3,0,Math.PI*2);ctx.stroke();
+    // 눈
+    ctx.beginPath();ctx.arc(4,3.5,0.6,0,Math.PI*2);ctx.fill();
+    // 부리
+    ctx.beginPath();ctx.moveTo(2,5);ctx.lineTo(0.5,4.5);ctx.lineTo(2,4);ctx.stroke();
+    // 몸통
+    ctx.beginPath();ctx.moveTo(7,6);ctx.quadraticCurveTo(13,5,14,9);
+    ctx.quadraticCurveTo(14,13,8,13);ctx.quadraticCurveTo(3,13,3,9);
+    ctx.quadraticCurveTo(3,7,5,6);ctx.stroke();
+    // 날개
+    ctx.beginPath();ctx.moveTo(9,8);ctx.quadraticCurveTo(12,9,11,11);ctx.stroke();
+    ctx.restore();
+  },
+  // 5: 능력 - 왕관/부채
+  function(ctx,x,y,s){
+    ctx.save();ctx.translate(x,y);ctx.scale(s/16,s/16);
+    ctx.strokeStyle='#222';ctx.fillStyle='#222';ctx.lineWidth=1.2;
+    // 부채 형태
+    ctx.beginPath();
+    ctx.moveTo(2,14);ctx.lineTo(2,8);
+    ctx.quadraticCurveTo(2,4,5,2);ctx.lineTo(5,5);
+    ctx.moveTo(5,2);ctx.quadraticCurveTo(8,0,8,0);ctx.lineTo(8,5);
+    ctx.moveTo(8,0);ctx.quadraticCurveTo(11,2,11,2);ctx.lineTo(11,5);
+    ctx.moveTo(11,2);ctx.quadraticCurveTo(14,4,14,8);ctx.lineTo(14,14);
+    ctx.stroke();
+    // 하단 연결
+    ctx.beginPath();ctx.moveTo(2,14);ctx.lineTo(14,14);ctx.stroke();
+    // 빛살
+    ctx.lineWidth=0.8;
+    ctx.beginPath();ctx.moveTo(5,5);ctx.lineTo(5,12);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(8,5);ctx.lineTo(8,12);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(11,5);ctx.lineTo(11,12);ctx.stroke();
+    ctx.restore();
+  },
+  // 6: 훈육 - 하트비트/주의
+  function(ctx,x,y,s){
+    ctx.save();ctx.translate(x,y);ctx.scale(s/16,s/16);
+    ctx.strokeStyle='#222';ctx.lineWidth=1.4;ctx.lineCap='round';
+    // 팩맨/입 모양
+    ctx.beginPath();
+    ctx.arc(5,8,5,0.4,5.9);ctx.stroke();
+    // 하트비트 라인
+    ctx.lineWidth=1.2;
+    ctx.beginPath();
+    ctx.moveTo(8,8);ctx.lineTo(10,8);ctx.lineTo(11,4);ctx.lineTo(12,12);
+    ctx.lineTo(13,6);ctx.lineTo(14,8);ctx.lineTo(16,8);
+    ctx.stroke();
+    ctx.restore();
+  },
+  // 7: 간식/소통 - 스마일
+  function(ctx,x,y,s){
+    ctx.save();ctx.translate(x,y);ctx.scale(s/16,s/16);
+    ctx.strokeStyle='#222';ctx.fillStyle='#222';ctx.lineWidth=1.2;
+    // 원
+    ctx.beginPath();ctx.arc(8,8,6.5,0,Math.PI*2);ctx.stroke();
+    // 눈
+    ctx.beginPath();ctx.arc(5.5,6,1,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(10.5,6,1,0,Math.PI*2);ctx.fill();
+    // 입 (웃는)
+    ctx.lineWidth=1.3;
+    ctx.beginPath();ctx.arc(8,8.5,3.5,0.2,Math.PI-0.2);ctx.stroke();
+    ctx.restore();
   }
-}
+];
 
 // ── 애니메이션 업데이트 (200ms마다) ──
 function animTick(){
@@ -718,24 +835,23 @@ function renderMain(){
 
 // ── 상단 4개 + 하단 4개 아이콘 그리기 (P1 스타일) ──
 function drawIconRows(W,H){
-  var iconScale=1.2;
-  var iconW=Math.ceil(8*iconScale);
-  var gap=Math.floor((W-4*iconW)/5);
+  var iconS=ICON_AREA-2; // 아이콘 그리기 크기
+  var gap=Math.floor((W-4*iconS)/5);
   // 상단 4개 (인덱스 0~3)
   for(var i=0;i<4;i++){
-    var ix=gap+i*(iconW+gap);
+    var ix=gap+i*(iconS+gap);
     var sel=(menuMode==='menu'&&menuIdx===i);
     if(sel){
-      mainCtx.fillStyle='rgba(0,0,0,0.12)';
-      mainCtx.fillRect(ix-2,0,iconW+4,ICON_AREA);
+      mainCtx.fillStyle='rgba(0,0,0,0.1)';
+      mainCtx.fillRect(ix-2,0,iconS+4,ICON_AREA);
     }
-    drawPixelIcon(mainCtx,MENU_PIXEL_ICONS[i],ix,2,iconScale);
+    if(iconDrawers[i])iconDrawers[i](mainCtx,ix,1,iconS);
     if(sel){
       mainCtx.fillStyle='#222';
       mainCtx.beginPath();
-      mainCtx.moveTo(ix+iconW/2-3,ICON_AREA-1);
-      mainCtx.lineTo(ix+iconW/2+3,ICON_AREA-1);
-      mainCtx.lineTo(ix+iconW/2,ICON_AREA+3);
+      mainCtx.moveTo(ix+iconS/2-3,ICON_AREA);
+      mainCtx.lineTo(ix+iconS/2+3,ICON_AREA);
+      mainCtx.lineTo(ix+iconS/2,ICON_AREA+4);
       mainCtx.fill();
     }
   }
@@ -746,19 +862,19 @@ function drawIconRows(W,H){
   var botY=H-ICON_AREA;
   mainCtx.fillRect(2,botY-1,W-4,1);
   for(var j=0;j<4;j++){
-    var jx=gap+j*(iconW+gap);
+    var jx=gap+j*(iconS+gap);
     var sel2=(menuMode==='menu'&&menuIdx===(j+4));
     if(sel2){
-      mainCtx.fillStyle='rgba(0,0,0,0.12)';
-      mainCtx.fillRect(jx-2,botY,iconW+4,ICON_AREA);
+      mainCtx.fillStyle='rgba(0,0,0,0.1)';
+      mainCtx.fillRect(jx-2,botY,iconS+4,ICON_AREA);
     }
-    drawPixelIcon(mainCtx,MENU_PIXEL_ICONS[j+4],jx,botY+2,iconScale);
+    if(iconDrawers[j+4])iconDrawers[j+4](mainCtx,jx,botY+1,iconS);
     if(sel2){
       mainCtx.fillStyle='#222';
       mainCtx.beginPath();
-      mainCtx.moveTo(jx+iconW/2-3,botY);
-      mainCtx.lineTo(jx+iconW/2+3,botY);
-      mainCtx.lineTo(jx+iconW/2,botY-4);
+      mainCtx.moveTo(jx+iconS/2-3,botY);
+      mainCtx.lineTo(jx+iconS/2+3,botY);
+      mainCtx.lineTo(jx+iconS/2,botY-4);
       mainCtx.fill();
     }
   }
