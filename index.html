@@ -1325,26 +1325,38 @@ function clearUnread() {
             ns.forEach(function(n) { n.close(); });
           });
         }
-        reg.getNotifications().then(function(ns) {
-          ns.forEach(function(n) { n.close(); });
-        });
       });
     }
   } catch(e) {}
 }
 
-window.addEventListener('focus', () => { if (roomId) clearUnread(); firebase.database().goOnline(); });
+let _fbOffline = false;
+let _goOfflineTimer = null;
+function fbGoOffline() {
+  if (_fbOffline) return;
+  _fbOffline = true;
+  firebase.database().goOffline();
+}
+function fbGoOnline() {
+  if (_goOfflineTimer) { clearTimeout(_goOfflineTimer); _goOfflineTimer = null; }
+  if (!_fbOffline) return;
+  _fbOffline = false;
+  firebase.database().goOnline();
+}
+window.addEventListener('focus', () => { if (roomId) clearUnread(); fbGoOnline(); });
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && roomId) clearUnread();
   if (document.hidden) {
     // 백그라운드: Firebase 연결 해제 + interval 일시정지 (배터리 절약)
-    firebase.database().goOffline();
+    // 3초 지연하여 진행 중인 push 수집 완료 대기
+    if (_goOfflineTimer) clearTimeout(_goOfflineTimer);
+    _goOfflineTimer = setTimeout(fbGoOffline, 3000);
     if (_presInterval) { clearInterval(_presInterval); _presInterval = null; }
     if (_typInterval) { clearInterval(_typInterval); _typInterval = null; }
     if (_readsInterval) { clearInterval(_readsInterval); _readsInterval = null; }
   } else {
     // 포그라운드 복귀: Firebase 재연결 + interval 복원
-    firebase.database().goOnline();
+    fbGoOnline();
     if (roomId && _presRef && !_presInterval) {
       const write = () => _presRef.set({nick:myNick,lastActive:SV.TIMESTAMP,status:_myStatus||''}).catch(()=>{});
       write();
@@ -2815,6 +2827,8 @@ window.__schedulePushSync=schedulePushSync;
 
 async function collectSubIds(rid) {
   try {
+    const wasFbOffline = _fbOffline;
+    if (wasFbOffline) fbGoOnline();
     const [mSnap, pSnap] = await Promise.all([
       db.ref('roomMembers/'+rid).once('value'),
       db.ref('presence/'+rid).once('value'),
@@ -2829,7 +2843,7 @@ async function collectSubIds(rid) {
     const uids = Object.keys(members).filter(u => {
       if (u === myUid) return false;           // 본인 제외
       const ts = Number((pres[u] || {}).lastActive || 0);
-      return !(ts && (now - ts) <= ACTIVE_MS); // 90초 이내 활동 = 방 보는 중 → 제외
+      return !(ts && (now - ts) <= ACTIVE_MS); // 45초 이내 활동 = 방 보는 중 → 제외
     });
 
     if (!uids.length) return [];
@@ -2847,6 +2861,7 @@ async function collectSubIds(rid) {
       if (best) ids.push(best);
     });
 
+    if (wasFbOffline && document.hidden) fbGoOffline();
     return ids;
   } catch(e) { return []; }
 }
