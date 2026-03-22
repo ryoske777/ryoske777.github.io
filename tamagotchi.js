@@ -691,10 +691,27 @@ var ICON_RAW=[
 var iconSprites=[];
 var menuIconImg=null;
 var menuIconImgLoaded=false;
+var menuIconCanvases=[];
 
 function loadMenuIconImg(){
   menuIconImg=new Image();
-  menuIconImg.onload=function(){menuIconImgLoaded=true;};
+  menuIconImg.onload=function(){
+    menuIconImgLoaded=true;
+    // 각 아이콘을 64×64 오프스크린 캔버스에 사전 렌더링
+    var cols=4,rows=2;
+    var cellW=menuIconImg.naturalWidth/cols;
+    var cellH=menuIconImg.naturalHeight/rows;
+    menuIconCanvases=[];
+    for(var i=0;i<8;i++){
+      var col=i%4;
+      var row=Math.floor(i/4);
+      var off=document.createElement('canvas');
+      off.width=64;off.height=64;
+      var offCtx=off.getContext('2d');
+      offCtx.drawImage(menuIconImg,col*cellW,row*cellH,cellW,cellH,0,0,64,64);
+      menuIconCanvases.push(off);
+    }
+  };
   menuIconImg.src='tamagoch_menu.png';
 }
 
@@ -712,19 +729,12 @@ function parseIconSprites(){
   });
 }
 
-// 아이콘 그리기: PNG 스프라이트시트 (4×2 그리드) 사용, multiply로 흰 배경 제거
+// 아이콘 그리기: 64×64 오프스크린 캔버스 → size×size로 축소 (multiply로 흰 배경 제거)
 function drawMenuIcon(ctx,idx,dx,dy,size){
-  if(menuIconImgLoaded&&menuIconImg){
-    var cols=4,rows=2;
-    var cellW=menuIconImg.naturalWidth/cols;
-    var cellH=menuIconImg.naturalHeight/rows;
-    var col=idx%4;
-    var row=Math.floor(idx/4);
-    var srcX=col*cellW;
-    var srcY=row*cellH;
+  if(menuIconCanvases[idx]){
     var prev=ctx.globalCompositeOperation;
     ctx.globalCompositeOperation='multiply';
-    ctx.drawImage(menuIconImg,srcX,srcY,cellW,cellH,dx,dy,size,size);
+    ctx.drawImage(menuIconCanvases[idx],0,0,64,64,dx,dy,size,size);
     ctx.globalCompositeOperation=prev;
     return;
   }
