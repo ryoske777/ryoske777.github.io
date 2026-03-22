@@ -562,61 +562,106 @@ function drawSprite(ctx,sp,ox,oy,scale,color){
   }
 }
 
-// ── 메뉴 아이콘: tamagoch_menu.png 스프라이트 시트 ──
-// 원본: 1524x688, 2행 4열 (각 아이콘 ~381x344)
-// 처리: 흰 배경 합성 후 흰색 제거 → 아이콘 선화만 #222로 고정
-// (이미지가 흰배경/투명배경 어느 쪽이든 동작)
-var menuIconImg=null;
-var menuIconProcessed=null;
-var menuIconReady=false;
-var ICON_COLS=4,ICON_ROWS=2;
-var ICON_SRC_W=381,ICON_SRC_H=344;
+// ── 메뉴 아이콘 도트 스프라이트 (8×8, X=검정, .=투명) ──
+// 순서: meal, light, game, medicine, clean, stats, discipline, snack
+var ICON_RAW=[
+  // 0: meal (포크 - 3갈래+손잡이)
+  ['X.X.X...',
+   'X.X.X...',
+   'X.X.X...',
+   'XXXXX...',
+   '..X.....',
+   '..X.....',
+   '..X.....',
+   '........'],
+  // 1: light (전구)
+  ['.XXXX...',
+   'X....X..',
+   'X....X..',
+   '.XXXX...',
+   '..XX....',
+   '.XXXX...',
+   '........',
+   '........'],
+  // 2: game (플레이 버튼 삼각형)
+  ['X.......',
+   'XX......',
+   'XXXX....',
+   'XXXXXX..',
+   'XXXX....',
+   'XX......',
+   'X.......',
+   '........'],
+  // 3: medicine (의료 십자)
+  ['..XX....',
+   '..XX....',
+   'XXXXXX..',
+   'XXXXXX..',
+   '..XX....',
+   '..XX....',
+   '........',
+   '........'],
+  // 4: clean (빗자루)
+  ['......X.',
+   '.....XX.',
+   '....XX..',
+   '...XX...',
+   '..XXXX..',
+   '.XX.....',
+   'XX......',
+   '........'],
+  // 5: stats (막대그래프)
+  ['......X.',
+   '....X.X.',
+   '..X.X.X.',
+   '..X.X.X.',
+   '..X.X.X.',
+   'XXXXXXX.',
+   '........',
+   '........'],
+  // 6: discipline (느낌표)
+  ['...XX...',
+   '...XX...',
+   '...XX...',
+   '...XX...',
+   '........',
+   '...XX...',
+   '...XX...',
+   '........'],
+  // 7: snack (스마일)
+  ['.XXXXX..',
+   'X.....X.',
+   'X.X.X.X.',
+   'X.....X.',
+   'X.XXX.X.',
+   'X.....X.',
+   '.XXXXX..',
+   '........']
+];
 
-function loadMenuIcons(){
-  menuIconImg=new Image(); // crossOrigin 없음 (동일 도메인, getImageData 허용)
-  menuIconImg.onload=function(){
-    var iw=menuIconImg.width,ih=menuIconImg.height;
-    var tmp=document.createElement('canvas');
-    tmp.width=iw; tmp.height=ih;
-    var tctx=tmp.getContext('2d');
-    // ① 흰 배경 먼저 → 투명배경 아이콘도 흰색으로 채워짐
-    tctx.fillStyle='#fff';
-    tctx.fillRect(0,0,iw,ih);
-    // ② 원본 이미지 합성
-    tctx.drawImage(menuIconImg,0,0);
-    try{
-      var id=tctx.getImageData(0,0,iw,ih);
-      var d=id.data;
-      for(var i=0;i<d.length;i+=4){
-        var r=d[i],g=d[i+1],b=d[i+2];
-        if(r>190&&g>190&&b>190){
-          // 흰색 계열 = 배경 → 완전 투명
-          d[i+3]=0;
-        }else{
-          // 어두운 계열 = 아이콘 선화 → LCD용 어두운 색으로 고정
-          d[i]=34;d[i+1]=34;d[i+2]=34;d[i+3]=220;
-        }
-      }
-      tctx.putImageData(id,0,0);
-      menuIconProcessed=tmp;
-    }catch(e){
-      // getImageData 실패 시(드물지만) 원본 이미지 직접 사용
-      menuIconProcessed=menuIconImg;
+var iconSprites=[];
+
+function parseIconSprites(){
+  iconSprites=ICON_RAW.map(function(lines){
+    var h=lines.length,w=0,rows=[];
+    for(var y=0;y<h;y++){
+      var line=lines[y];
+      if(line.length>w)w=line.length;
+      var row=[];
+      for(var x=0;x<line.length;x++)row.push(line[x]==='X');
+      rows.push(row);
     }
-    menuIconReady=true;
-  };
-  menuIconImg.onerror=function(){menuIconReady=false;};
-  menuIconImg.src='tamagoch_menu.png';
+    return{w:w,h:h,rows:rows};
+  });
 }
 
-// 스프라이트 시트에서 아이콘 1개 그리기 (idx: 0~7)
+// 아이콘 도트 스프라이트 그리기 (idx: 0~7, size: 표시 크기px)
 function drawMenuIcon(ctx,idx,dx,dy,size){
-  if(!menuIconReady||!menuIconProcessed)return;
-  var col=idx%ICON_COLS;
-  var row=Math.floor(idx/ICON_COLS);
-  var sx=col*ICON_SRC_W;
-  var sy=row*ICON_SRC_H;
-  ctx.drawImage(menuIconProcessed,sx,sy,ICON_SRC_W,ICON_SRC_H,dx,dy,size,size);
+  var sp=iconSprites[idx];
+  if(!sp)return;
+  // 8×8 기준 → size 픽셀 영역에 맞게 scale 계산 (정수)
+  var scale=Math.max(1,Math.floor(size/8));
+  drawSprite(ctx,sp,dx,dy,scale,'#2a3020');
 }
 
 // ── 애니메이션 업데이트 (200ms마다) ──
@@ -1075,7 +1120,7 @@ function declineMate(key){
 // ── 초기화 ──
 function init(){
   parseSprites();
-  loadMenuIcons();
+  parseIconSprites();
 
   // 설정 메뉴 버튼
   var mToggle=document.getElementById('mTamagotchi');
