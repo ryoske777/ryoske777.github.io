@@ -546,210 +546,237 @@ function guessGame(dir){
 
 /* ═══ Part 3: 렌더러 + 워커 ═══ */
 
-// ── 스프라이트 그리기 ──
+// ── 스프라이트 그리기 (도트 단위 정수 렌더) ──
 function drawSprite(ctx,sp,ox,oy,scale,color){
   if(!sp)return;
   color=color||'#222';
   ctx.fillStyle=color;
+  var s=scale|0||1; // 정수로 강제 (도트 깨짐 방지)
+  var bx=ox|0, by=oy|0;
   for(var y=0;y<sp.h;y++){
     for(var x=0;x<sp.rows[y].length;x++){
       if(sp.rows[y][x]){
-        ctx.fillRect(Math.floor(ox+x*scale),Math.floor(oy+y*scale),Math.ceil(scale),Math.ceil(scale));
+        ctx.fillRect(bx+x*s,by+y*s,s,s);
       }
     }
   }
 }
 
-// ── 메뉴 아이콘: tamagoch_menu.png 스프라이트 시트 사용 ──
-// 이미지: 1524x688, 2행 4열 (각 아이콘 ~381x344)
+// ── 메뉴 아이콘: tamagoch_menu.png 스프라이트 시트 (흰색 배경 제거 처리) ──
+// 원본: 1524x688, 2행 4열 (각 아이콘 ~381x344)
 var menuIconImg=null;
+var menuIconProcessed=null; // 흰색 제거된 오프스크린 캔버스
 var menuIconReady=false;
 var ICON_COLS=4,ICON_ROWS=2;
 var ICON_SRC_W=381,ICON_SRC_H=344;
 
 function loadMenuIcons(){
   menuIconImg=new Image();
-  menuIconImg.onload=function(){menuIconReady=true;};
+  menuIconImg.crossOrigin='anonymous';
+  menuIconImg.onload=function(){
+    // 흰색 배경 픽셀 → 투명 처리
+    var tmp=document.createElement('canvas');
+    tmp.width=menuIconImg.width;
+    tmp.height=menuIconImg.height;
+    var tctx=tmp.getContext('2d');
+    tctx.drawImage(menuIconImg,0,0);
+    try{
+      var id=tctx.getImageData(0,0,tmp.width,tmp.height);
+      var d=id.data;
+      for(var i=0;i<d.length;i+=4){
+        // 밝은 색(흰/회색 배경) → 투명
+        if(d[i]>190&&d[i+1]>190&&d[i+2]>190){d[i+3]=0;}
+      }
+      tctx.putImageData(id,0,0);
+    }catch(e){}
+    menuIconProcessed=tmp;
+    menuIconReady=true;
+  };
+  menuIconImg.onerror=function(){menuIconReady=false;};
   menuIconImg.src='tamagoch_menu.png';
 }
 
-// 스프라이트 시트에서 아이콘 1개 그리기
-// idx: 0~7 (왼→오, 위→아래)
+// 스프라이트 시트에서 아이콘 1개 그리기 (idx: 0~7)
 function drawMenuIcon(ctx,idx,dx,dy,size){
-  if(!menuIconReady||!menuIconImg)return;
+  if(!menuIconReady||!menuIconProcessed)return;
   var col=idx%ICON_COLS;
   var row=Math.floor(idx/ICON_COLS);
   var sx=col*ICON_SRC_W;
   var sy=row*ICON_SRC_H;
-  ctx.drawImage(menuIconImg,sx,sy,ICON_SRC_W,ICON_SRC_H,dx,dy,size,size);
+  ctx.drawImage(menuIconProcessed,sx,sy,ICON_SRC_W,ICON_SRC_H,dx,dy,size,size);
 }
 
 // ── 애니메이션 업데이트 (200ms마다) ──
+// idle 이동: 4프레임(800ms)마다 1도트씩, ±5도트 범위
 function animTick(){
   animFrame++;
-  // idle 좌우 이동 (매 5프레임마다 1px 이동, ±8px 범위)
-  if(animFrame%5===0){
+  if(animFrame%4===0){
     idleX+=idleDir;
-    if(idleX>8){idleDir=-1;}
-    if(idleX<-8){idleDir=1;}
+    if(idleX>5){idleDir=-1;}
+    if(idleX<-5){idleDir=1;}
   }
   renderMain();
 }
 
-// ── 메인 캔버스 렌더 (128x128) P1 레이아웃 ──
-// 상단 아이콘 4개 | 캐릭터 영역 | 하단 아이콘 4개
-var ICON_AREA=14; // 아이콘 영역 높이
+// ── 레이아웃 상수 (50×50 도트 기준) ──
+// 상단 아이콘 8도트 | 구분선 1도트 | 캐릭터 32도트 | 구분선 1도트 | 하단 아이콘 8도트 = 50
+var ICON_H=8;   // 아이콘 행 높이
+var SEP=1;      // 구분선
+var CHAR_TOP=ICON_H+SEP;      // 캐릭터 영역 시작 y (=9)
+var CHAR_BOT_H=ICON_H+SEP;   // 하단 여백 (=9)
+// 캐릭터 영역 높이 = 50-9-9 = 32
+var ICON_SZ=8;  // 아이콘 1개 크기 (도트)
+var ICON_GAP=3; // 아이콘 사이 간격
+var ICON_OFF=4; // 좌측 시작 오프셋 → 아이콘 4개: 4,15,26,37
+
+// ── 메인 캔버스 렌더 (50×50 도트) P1 스타일 ──
 function renderMain(){
   if(!mainCtx||!T)return;
   var c=mainCtx.canvas;
-  var W=c.width,H=c.height;
+  var W=c.width,H=c.height; // 50, 50
 
-  // LCD 배경
+  // LCD 배경 (그린 LCD 색)
   mainCtx.fillStyle='#c5d4a8';
   mainCtx.fillRect(0,0,W,H);
 
   // ── 사망 화면 ──
   if(T.dead){
     var sk=sprites.skull;
-    if(sk)drawSprite(mainCtx,sk,Math.floor((W-sk.w*4)/2),30,4,'#444');
+    if(sk)drawSprite(mainCtx,sk,Math.floor((W-sk.w*2)/2),CHAR_TOP+2,2,'#444');
     mainCtx.fillStyle='#444';
-    mainCtx.font='bold 12px monospace';
+    mainCtx.font='bold 5px monospace';
     mainCtx.textAlign='center';
-    mainCtx.fillText('R.I.P.',W/2,95);
-    mainCtx.font='9px monospace';
-    mainCtx.fillText(T.name,W/2,110);
+    mainCtx.fillText('R.I.P.',W/2,H-CHAR_BOT_H-2);
     return;
   }
 
-  // ── 수면 + 불 끔 ──
+  // ── 수면 + 불 끔: 화면 암전 ──
   if(T.sleeping&&T.lightOff){
-    drawIconRows(W,H);
+    mainCtx.fillStyle='#2a3020';
+    mainCtx.fillRect(0,0,W,H);
     var zz=sprites.zzz;
-    if(zz)drawSprite(mainCtx,zz,Math.floor((W-zz.w*4)/2),40,4,'#6a7a5a');
+    if(zz)drawSprite(mainCtx,zz,Math.floor((W-zz.w*2)/2),CHAR_TOP+8,2,'#5a7a4a');
     return;
   }
 
-  // ── 상단/하단 아이콘 항상 표시 (P1 원본처럼) ──
+  // ── 아이콘 행 항상 표시 ──
   drawIconRows(W,H);
 
   // ── 게임 화면 ──
   if(menuMode==='game'){
     mainCtx.fillStyle='#222';
-    mainCtx.font='bold 10px monospace';
+    mainCtx.font='bold 5px monospace';
     mainCtx.textAlign='center';
-    mainCtx.fillText('ROUND '+(gameRound+1)+'/5',W/2,ICON_AREA+16);
-    var sp=sprites[T.species]||sprites.babytchi;
-    if(sp)drawSprite(mainCtx,sp,Math.floor((W-sp.w*3)/2),ICON_AREA+22,3);
-    mainCtx.fillText('◀  ?  ▶',W/2,H-ICON_AREA-16);
-    mainCtx.font='9px monospace';
-    mainCtx.fillText('SCORE: '+gameScore,W/2,H-ICON_AREA-6);
+    mainCtx.fillText('R.'+(gameRound+1)+'/5',W/2,CHAR_TOP+7);
+    var gsp=sprites[T.species]||sprites.babytchi;
+    if(gsp)drawSprite(mainCtx,gsp,Math.floor((W-gsp.w*2)/2),CHAR_TOP+9,2);
+    mainCtx.font='4px monospace';
+    mainCtx.fillText('<  ?  >',W/2,H-CHAR_BOT_H-5);
+    mainCtx.fillText(gameScore+'/5',W/2,H-CHAR_BOT_H-1);
     return;
   }
   if(menuMode==='gameResult'){
     mainCtx.fillStyle='#222';
-    mainCtx.font='bold 13px monospace';
+    mainCtx.font='bold 6px monospace';
     mainCtx.textAlign='center';
-    mainCtx.fillText(gameScore>=3?'WIN!':'LOSE...',W/2,ICON_AREA+30);
-    mainCtx.font='bold 11px monospace';
-    mainCtx.fillText(gameScore+' / 5',W/2,ICON_AREA+50);
+    mainCtx.fillText(gameScore>=3?'WIN!':'LOSE',W/2,CHAR_TOP+14);
+    mainCtx.font='5px monospace';
+    mainCtx.fillText(gameScore+' / 5',W/2,CHAR_TOP+23);
     return;
   }
 
   // ── 스탯 화면 ──
   if(menuMode==='stats'){
     mainCtx.fillStyle='#222';
-    mainCtx.font='bold 10px monospace';
+    mainCtx.font='4px monospace';
     mainCtx.textAlign='left';
-    var sy=ICON_AREA+14;
-    var gap=13;
-    mainCtx.fillText('NAME:'+T.name,8,sy);
-    mainCtx.fillText('AGE: '+T.age,8,sy+gap);
-    mainCtx.fillText('WT:  '+T.weight+'g',8,sy+gap*2);
-    mainCtx.fillText('HUNG:'+hearts(T.hunger),8,sy+gap*3);
-    mainCtx.fillText('HPPY:'+hearts(T.happy),8,sy+gap*4);
-    mainCtx.fillText('DISC:'+T.discipline+'%',8,sy+gap*5);
+    var sy=CHAR_TOP+5;
+    var gap=5;
+    mainCtx.fillText('NM:'+T.name,2,sy);
+    mainCtx.fillText('AG:'+T.age,2,sy+gap);
+    mainCtx.fillText('WT:'+T.weight+'g',2,sy+gap*2);
+    mainCtx.fillText('HG:'+hearts(T.hunger),2,sy+gap*3);
+    mainCtx.fillText('HP:'+hearts(T.happy),2,sy+gap*4);
+    mainCtx.fillText('DC:'+T.discipline+'%',2,sy+gap*5);
     return;
   }
 
-  // ── 캐릭터 영역 ──
+  // ── 캐릭터 영역 (idle / menu) ──
   var sp=sprites[T.species]||sprites.egg;
-  var scale=4;
+  var scale=2;
   var charW=sp.w*scale;
   var charH=sp.h*scale;
-  var areaTop=ICON_AREA+2;
-  var areaBot=H-ICON_AREA-2;
-  var areaH=areaBot-areaTop;
-  // 숨쉬기
-  var breathe=Math.sin(animFrame*0.15)*2;
-  // 좌우 이동
+  var areaH=H-CHAR_TOP-CHAR_BOT_H; // 32
+  // 1도트 바운스: 8프레임 주기, 전반 4프레임은 0, 후반 4프레임은 1
+  var bounce=(animFrame%8<4)?0:1;
   var moveX=(menuMode==='idle'||menuMode==='menu')?idleX:0;
   var cx=Math.floor((W-charW)/2)+moveX;
-  var cy=areaTop+Math.floor((areaH-charH)/2)+Math.floor(breathe);
+  var cy=CHAR_TOP+Math.floor((areaH-charH)/2)+bounce;
 
-  // 수면 zzz
+  // 수면 ZZZ (캐릭터 오른쪽 위)
   if(T.sleeping){
     var zz=sprites.zzz;
-    if(zz)drawSprite(mainCtx,zz,cx+charW+2,cy-6,2,'#6a7a5a');
+    if(zz)drawSprite(mainCtx,zz,Math.min(cx+charW,W-zz.w-1),cy-2,1,'#6a7a5a');
   }
-  // 병
+  // 병 해골 (캐릭터 왼쪽)
   if(T.sick){
     var sksp=sprites.skull;
-    if(sksp)drawSprite(mainCtx,sksp,cx-16,cy,1.5,'#a33');
+    if(sksp)drawSprite(mainCtx,sksp,Math.max(0,cx-sksp.w-1),cy+2,1,'#b33');
   }
+  // 캐릭터
   drawSprite(mainCtx,sp,cx,cy,scale);
 
-  // 똥
+  // 똥 (우하단, 최대 3개, 크기 scale=1)
   if(T.poop>0){
     var pp=sprites.poop;
-    for(var pi=0;pi<T.poop&&pi<3;pi++){
-      if(pp)drawSprite(mainCtx,pp,W-26-pi*14,areaBot-18,1.5,'#654');
+    var pCount=Math.min(T.poop,3);
+    var pyy=CHAR_TOP+areaH-pp.h;
+    for(var pi=0;pi<pCount;pi++){
+      var pxx=W-pp.w-1-pi*(pp.w+1);
+      if(pp)drawSprite(mainCtx,pp,pxx,pyy,1,'#654');
     }
   }
 }
 
-// ── 상단 4개 + 하단 4개 아이콘 그리기 (P1 스타일) ──
+// ── 상단 4개 + 하단 4개 아이콘 그리기 ──
 function drawIconRows(W,H){
-  var iconS=ICON_AREA-2;
-  var gap=Math.floor((W-4*iconS)/5);
-  // 상단 4개 (인덱스 0~3)
+  var iSz=ICON_SZ,iGap=ICON_GAP,iOff=ICON_OFF;
+
+  // 구분선
+  mainCtx.fillStyle='#8a9a6a';
+  mainCtx.fillRect(0,ICON_H,W,SEP);
+  mainCtx.fillRect(0,H-ICON_H-SEP,W,SEP);
+
+  // 상단 4개 (idx 0~3)
   for(var i=0;i<4;i++){
-    var ix=gap+i*(iconS+gap);
+    var ix=iOff+i*(iSz+iGap);
     var sel=(menuMode==='menu'&&menuIdx===i);
     if(sel){
-      mainCtx.fillStyle='rgba(0,0,0,0.12)';
-      mainCtx.fillRect(ix-1,0,iconS+2,ICON_AREA);
+      mainCtx.fillStyle='#8a9a6a';
+      mainCtx.fillRect(ix-1,0,iSz+2,ICON_H);
     }
-    drawMenuIcon(mainCtx,i,ix,1,iconS);
+    drawMenuIcon(mainCtx,i,ix,0,iSz);
+    // 선택 커서: 아이콘 아래 2도트짜리 점
     if(sel){
       mainCtx.fillStyle='#222';
-      mainCtx.beginPath();
-      mainCtx.moveTo(ix+iconS/2-3,ICON_AREA);
-      mainCtx.lineTo(ix+iconS/2+3,ICON_AREA);
-      mainCtx.lineTo(ix+iconS/2,ICON_AREA+4);
-      mainCtx.fill();
+      mainCtx.fillRect(ix+Math.floor(iSz/2)-1,ICON_H-2,3,2);
     }
   }
-  // 구분선 상단
-  mainCtx.fillStyle='#8a9a6a';
-  mainCtx.fillRect(2,ICON_AREA,W-4,1);
-  // 하단 4개 (인덱스 4~7)
-  var botY=H-ICON_AREA;
-  mainCtx.fillRect(2,botY-1,W-4,1);
+
+  // 하단 4개 (idx 4~7)
+  var botY=H-ICON_H;
   for(var j=0;j<4;j++){
-    var jx=gap+j*(iconS+gap);
+    var jx=iOff+j*(iSz+iGap);
     var sel2=(menuMode==='menu'&&menuIdx===(j+4));
     if(sel2){
-      mainCtx.fillStyle='rgba(0,0,0,0.12)';
-      mainCtx.fillRect(jx-1,botY,iconS+2,ICON_AREA);
+      mainCtx.fillStyle='#8a9a6a';
+      mainCtx.fillRect(jx-1,botY+SEP,iSz+2,ICON_H-SEP);
     }
-    drawMenuIcon(mainCtx,j+4,jx,botY+1,iconS);
+    drawMenuIcon(mainCtx,j+4,jx,botY,iSz);
+    // 선택 커서: 아이콘 위 2도트짜리 점
     if(sel2){
       mainCtx.fillStyle='#222';
-      mainCtx.beginPath();
-      mainCtx.moveTo(jx+iconS/2-3,botY);
-      mainCtx.lineTo(jx+iconS/2+3,botY);
-      mainCtx.lineTo(jx+iconS/2,botY-4);
-      mainCtx.fill();
+      mainCtx.fillRect(jx+Math.floor(iSz/2)-1,botY+SEP,3,2);
     }
   }
 }
