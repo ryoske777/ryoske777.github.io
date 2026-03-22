@@ -396,20 +396,20 @@ body.stealth .stealthBar{display:flex !important}
 /* 다마고치 */
 .tamaWalker{position:fixed;z-index:18;pointer-events:none;transition:opacity .3s}
 .tamaWalker canvas{display:block;image-rendering:pixelated}
-.tamaScreen{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;display:none;align-items:center;justify-content:center;padding:16px}
+.tamaScreen{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;display:none;align-items:center;justify-content:center;padding:16px}
 .tamaScreen.open{display:flex}
-/* 케이스 이미지 배경 */
-.tamaDevice{width:300px;max-width:85vw;aspect-ratio:2048/1364;background:url('tamagochi_case.png') center/contain no-repeat;position:relative;display:flex;flex-direction:column;align-items:center;border:none;box-shadow:none;overflow:visible}
-.tamaCloseBtn{position:absolute;top:2px;right:16px;background:none;border:none;font-size:16px;color:rgba(0,0,0,.3);cursor:pointer;padding:4px;z-index:5}
-/* 화면 영역: 케이스 이미지의 투명 영역에 맞춤 */
-.tamaDeviceInner{background:transparent;border:none;border-radius:0;padding:0;position:absolute;top:30.5%;left:26.5%;width:47%;height:37%;display:flex;align-items:center;justify-content:center;box-shadow:none;clip-path:none}
-.tamaCanvasWrap{display:flex;justify-content:center;background:#c5d4a8;border-radius:3px;padding:0;border:none;box-shadow:inset 0 2px 8px rgba(0,0,0,.15);width:100%;height:100%}
-.tamaCanvasWrap canvas{display:block;image-rendering:pixelated;width:100%;height:100%}
+/* 순수 LCD 도트 화면 (케이스 없음) */
+.tamaDevice{display:flex;flex-direction:column;align-items:center;gap:14px;position:relative}
+.tamaCloseBtn{position:absolute;top:-14px;right:-14px;background:rgba(255,255,255,.9);border:none;font-size:14px;color:#555;cursor:pointer;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.tamaDeviceInner{display:flex;flex-direction:column;align-items:center}
+/* LCD 베젤 */
+.tamaCanvasWrap{background:#c5d4a8;border-radius:4px;padding:6px;border:3px solid #6a7a4a;box-shadow:0 0 0 6px #4a5a30,0 16px 40px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.25)}
+.tamaCanvasWrap canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;width:250px;height:250px}
 .tamaInfo{display:none}
 .tamaStats{display:none}
-/* 버튼: 케이스 이미지의 버튼 위에 투명 히트박스 배치 */
-.tamaBtnRow{position:absolute;bottom:16.5%;left:50%;transform:translateX(-50%);display:flex;gap:6%;width:40%;justify-content:center}
-.tamaBtn{width:28px;height:28px;border-radius:50%;border:none;background:transparent;display:flex;align-items:center;justify-content:center;font-size:0;color:transparent;cursor:pointer;transition:transform .1s;-webkit-tap-highlight-color:transparent;user-select:none}
+/* 3버튼 */
+.tamaBtnRow{display:flex;gap:20px}
+.tamaBtn{width:44px;height:44px;border-radius:50%;border:3px solid #3a3a3a;background:linear-gradient(145deg,#555,#2a2a2a);color:rgba(255,255,255,.6);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;cursor:pointer;transition:transform .1s;-webkit-tap-highlight-color:transparent;user-select:none;box-shadow:0 5px 14px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.15)}
 .tamaBtn:active{transform:scale(.85)}
 .tamaBtnRow2{display:none}
 .tamaMateReq{position:fixed;bottom:calc(var(--composerH) + 60px);left:50%;transform:translateX(-50%);background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px 18px;box-shadow:var(--shadow2);z-index:100;display:none;text-align:center;max-width:300px;width:90%}
@@ -737,12 +737,9 @@ OneSignalDeferred.push(async function(OneSignal) {
   <div class="tamaDevice">
     <button class="tamaCloseBtn" id="tamaCloseBtn">✕</button>
     <div class="tamaDeviceInner">
-      <div class="tamaCanvasWrap"><canvas id="tamaMainCanvas" width="128" height="128"></canvas></div>
-      <div class="tamaInfo">
-        <span id="tamaNameLabel">-</span>
-        <span id="tamaAgeLabel">0살</span>
-      </div>
-      <div class="tamaStats" id="tamaStatsEl"></div>
+      <div class="tamaCanvasWrap"><canvas id="tamaMainCanvas" width="50" height="50"></canvas></div>
+      <div class="tamaInfo" style="display:none"><span id="tamaNameLabel">-</span><span id="tamaAgeLabel">0살</span></div>
+      <div class="tamaStats" id="tamaStatsEl" style="display:none"></div>
     </div>
     <div class="tamaBtnRow">
       <button class="tamaBtn" id="tamaBtnA" title="선택">A</button>
