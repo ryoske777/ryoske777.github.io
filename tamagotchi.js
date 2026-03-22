@@ -562,34 +562,47 @@ function drawSprite(ctx,sp,ox,oy,scale,color){
   }
 }
 
-// ── 메뉴 아이콘: tamagoch_menu.png 스프라이트 시트 (흰색 배경 제거 처리) ──
+// ── 메뉴 아이콘: tamagoch_menu.png 스프라이트 시트 ──
 // 원본: 1524x688, 2행 4열 (각 아이콘 ~381x344)
+// 처리: 흰 배경 합성 후 흰색 제거 → 아이콘 선화만 #222로 고정
+// (이미지가 흰배경/투명배경 어느 쪽이든 동작)
 var menuIconImg=null;
-var menuIconProcessed=null; // 흰색 제거된 오프스크린 캔버스
+var menuIconProcessed=null;
 var menuIconReady=false;
 var ICON_COLS=4,ICON_ROWS=2;
 var ICON_SRC_W=381,ICON_SRC_H=344;
 
 function loadMenuIcons(){
-  menuIconImg=new Image();
-  menuIconImg.crossOrigin='anonymous';
+  menuIconImg=new Image(); // crossOrigin 없음 (동일 도메인, getImageData 허용)
   menuIconImg.onload=function(){
-    // 흰색 배경 픽셀 → 투명 처리
+    var iw=menuIconImg.width,ih=menuIconImg.height;
     var tmp=document.createElement('canvas');
-    tmp.width=menuIconImg.width;
-    tmp.height=menuIconImg.height;
+    tmp.width=iw; tmp.height=ih;
     var tctx=tmp.getContext('2d');
+    // ① 흰 배경 먼저 → 투명배경 아이콘도 흰색으로 채워짐
+    tctx.fillStyle='#fff';
+    tctx.fillRect(0,0,iw,ih);
+    // ② 원본 이미지 합성
     tctx.drawImage(menuIconImg,0,0);
     try{
-      var id=tctx.getImageData(0,0,tmp.width,tmp.height);
+      var id=tctx.getImageData(0,0,iw,ih);
       var d=id.data;
       for(var i=0;i<d.length;i+=4){
-        // 밝은 색(흰/회색 배경) → 투명
-        if(d[i]>190&&d[i+1]>190&&d[i+2]>190){d[i+3]=0;}
+        var r=d[i],g=d[i+1],b=d[i+2];
+        if(r>190&&g>190&&b>190){
+          // 흰색 계열 = 배경 → 완전 투명
+          d[i+3]=0;
+        }else{
+          // 어두운 계열 = 아이콘 선화 → LCD용 어두운 색으로 고정
+          d[i]=34;d[i+1]=34;d[i+2]=34;d[i+3]=220;
+        }
       }
       tctx.putImageData(id,0,0);
-    }catch(e){}
-    menuIconProcessed=tmp;
+      menuIconProcessed=tmp;
+    }catch(e){
+      // getImageData 실패 시(드물지만) 원본 이미지 직접 사용
+      menuIconProcessed=menuIconImg;
+    }
     menuIconReady=true;
   };
   menuIconImg.onerror=function(){menuIconReady=false;};
