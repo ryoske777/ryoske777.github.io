@@ -689,6 +689,14 @@ var ICON_RAW=[
 ];
 
 var iconSprites=[];
+var menuIconImg=null;
+var menuIconImgLoaded=false;
+
+function loadMenuIconImg(){
+  menuIconImg=new Image();
+  menuIconImg.onload=function(){menuIconImgLoaded=true;};
+  menuIconImg.src='tamagoch_menu.png';
+}
 
 function parseIconSprites(){
   iconSprites=ICON_RAW.map(function(lines){
@@ -704,8 +712,23 @@ function parseIconSprites(){
   });
 }
 
-// 아이콘 도트 스프라이트 그리기 (14×14 → scale=1 고정)
+// 아이콘 그리기: PNG 스프라이트시트 (4×2 그리드) 사용, multiply로 흰 배경 제거
 function drawMenuIcon(ctx,idx,dx,dy,size){
+  if(menuIconImgLoaded&&menuIconImg){
+    var cols=4,rows=2;
+    var cellW=menuIconImg.naturalWidth/cols;
+    var cellH=menuIconImg.naturalHeight/rows;
+    var col=idx%4;
+    var row=Math.floor(idx/4);
+    var srcX=col*cellW;
+    var srcY=row*cellH;
+    var prev=ctx.globalCompositeOperation;
+    ctx.globalCompositeOperation='multiply';
+    ctx.drawImage(menuIconImg,srcX,srcY,cellW,cellH,dx,dy,size,size);
+    ctx.globalCompositeOperation=prev;
+    return;
+  }
+  // fallback: ASCII 도트 스프라이트
   var sp=iconSprites[idx];
   if(!sp)return;
   drawSprite(ctx,sp,dx,dy,1,'#2a3020');
@@ -1168,6 +1191,7 @@ function declineMate(key){
 function init(){
   parseSprites();
   parseIconSprites();
+  loadMenuIconImg();
 
   // 설정 메뉴 버튼
   var mToggle=document.getElementById('mTamagotchi');
