@@ -689,30 +689,14 @@ var ICON_RAW=[
 ];
 
 var iconSprites=[];
-var menuIconImg=null;
-var menuIconImgLoaded=false;
-var menuIconCanvases=[];
+var tamaIconOverlay=null;
 
-function loadMenuIconImg(){
-  menuIconImg=new Image();
-  menuIconImg.onload=function(){
-    menuIconImgLoaded=true;
-    // 각 아이콘을 64×64 오프스크린 캔버스에 사전 렌더링
-    var cols=4,rows=2;
-    var cellW=menuIconImg.naturalWidth/cols;
-    var cellH=menuIconImg.naturalHeight/rows;
-    menuIconCanvases=[];
-    for(var i=0;i<8;i++){
-      var col=i%4;
-      var row=Math.floor(i/4);
-      var off=document.createElement('canvas');
-      off.width=64;off.height=64;
-      var offCtx=off.getContext('2d');
-      offCtx.drawImage(menuIconImg,col*cellW,row*cellH,cellW,cellH,0,0,64,64);
-      menuIconCanvases.push(off);
-    }
-  };
-  menuIconImg.src='tamagoch_menu.png';
+function initIconOverlay(){
+  tamaIconOverlay=document.getElementById('tamaIconOverlay');
+}
+
+function setIconOverlayVisible(v){
+  if(tamaIconOverlay)tamaIconOverlay.style.display=v?'block':'none';
 }
 
 function parseIconSprites(){
@@ -729,16 +713,9 @@ function parseIconSprites(){
   });
 }
 
-// 아이콘 그리기: 64×64 오프스크린 캔버스 → size×size로 축소 (multiply로 흰 배경 제거)
+// 아이콘 그리기: HTML 오버레이가 있으면 스킵, 없으면 ASCII 폴백
 function drawMenuIcon(ctx,idx,dx,dy,size){
-  if(menuIconCanvases[idx]){
-    var prev=ctx.globalCompositeOperation;
-    ctx.globalCompositeOperation='multiply';
-    ctx.drawImage(menuIconCanvases[idx],0,0,64,64,dx,dy,size,size);
-    ctx.globalCompositeOperation=prev;
-    return;
-  }
-  // fallback: ASCII 도트 스프라이트
+  if(tamaIconOverlay)return;
   var sp=iconSprites[idx];
   if(!sp)return;
   drawSprite(ctx,sp,dx,dy,1,'#2a3020');
@@ -779,6 +756,7 @@ function renderMain(){
 
   // ── 사망 화면 ──
   if(T.dead){
+    setIconOverlayVisible(false);
     var sk=sprites.skull;
     if(sk)drawSprite(mainCtx,sk,Math.floor((W-sk.w*4)/2),CHAR_TOP+4,4,'#444');
     mainCtx.fillStyle='#444';
@@ -790,6 +768,7 @@ function renderMain(){
 
   // ── 수면 + 불 끔: 화면 암전 ──
   if(T.sleeping&&T.lightOff){
+    setIconOverlayVisible(false);
     mainCtx.fillStyle='#2a3020';
     mainCtx.fillRect(0,0,W,H);
     var zz=sprites.zzz;
@@ -838,6 +817,9 @@ function renderMain(){
     mainCtx.fillText('DISC: '+T.discipline+'%',4,sy+gap*5);
     return;
   }
+
+  // HTML 아이콘 오버레이 표시
+  setIconOverlayVisible(true);
 
   // ── 캐릭터 영역 (idle / menu) ──
   var sp=sprites[T.species]||sprites.egg;
@@ -1201,7 +1183,7 @@ function declineMate(key){
 function init(){
   parseSprites();
   parseIconSprites();
-  loadMenuIconImg();
+  initIconOverlay();
 
   // 설정 메뉴 버튼
   var mToggle=document.getElementById('mTamagotchi');
