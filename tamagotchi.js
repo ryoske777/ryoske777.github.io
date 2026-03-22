@@ -562,81 +562,129 @@ function drawSprite(ctx,sp,ox,oy,scale,color){
   }
 }
 
-// ── 메뉴 아이콘 도트 스프라이트 (8×8, X=검정, .=투명) ──
+// ── 메뉴 아이콘 도트 스프라이트 (14×14, X=검정, .=투명) ──
 // 순서: meal, light, game, medicine, clean, stats, discipline, snack
 var ICON_RAW=[
   // 0: meal (포크 - 3갈래+손잡이)
-  ['X.X.X...',
-   'X.X.X...',
-   'X.X.X...',
-   'XXXXX...',
-   '..X.....',
-   '..X.....',
-   '..X.....',
-   '........'],
-  // 1: light (전구)
-  ['.XXXX...',
-   'X....X..',
-   'X....X..',
-   '.XXXX...',
-   '..XX....',
-   '.XXXX...',
-   '........',
-   '........'],
-  // 2: game (플레이 버튼 삼각형)
-  ['X.......',
-   'XX......',
-   'XXXX....',
-   'XXXXXX..',
-   'XXXX....',
-   'XX......',
-   'X.......',
-   '........'],
+  ['..X..X..X.....',
+   '..X..X..X.....',
+   '..X..X..X.....',
+   '..X..X..X.....',
+   '..X..X..X.....',
+   '..XXXXXXX.....',
+   '.....X........',
+   '.....X........',
+   '.....X........',
+   '.....X........',
+   '.....X........',
+   '.....X........',
+   '..............',
+   '..............'],
+  // 1: light (전구 - 원형 몸체+베이스)
+  ['.....XXXX.....',
+   '...XX....XX...',
+   '..X........X..',
+   '.X..........X.',
+   '.X..........X.',
+   '.X..........X.',
+   '..X........X..',
+   '...XX....XX...',
+   '....XXXXXX....',
+   '.....XXXX.....',
+   '......XX......',
+   '..............',
+   '..............',
+   '..............'],
+  // 2: game (우향 삼각형 = 플레이)
+  ['X.............',
+   'XXX...........',
+   'XXXXX.........',
+   'XXXXXXX.......',
+   'XXXXXXXXX.....',
+   'XXXXXXXXXXX...',
+   'XXXXXXXXXXXXX.',
+   'XXXXXXXXXXX...',
+   'XXXXXXXXX.....',
+   'XXXXXXX.......',
+   'XXXXX.........',
+   'XXX...........',
+   'X.............',
+   '..............'],
   // 3: medicine (의료 십자)
-  ['..XX....',
-   '..XX....',
-   'XXXXXX..',
-   'XXXXXX..',
-   '..XX....',
-   '..XX....',
-   '........',
-   '........'],
-  // 4: clean (빗자루)
-  ['......X.',
-   '.....XX.',
-   '....XX..',
-   '...XX...',
-   '..XXXX..',
-   '.XX.....',
-   'XX......',
-   '........'],
-  // 5: stats (막대그래프)
-  ['......X.',
-   '....X.X.',
-   '..X.X.X.',
-   '..X.X.X.',
-   '..X.X.X.',
-   'XXXXXXX.',
-   '........',
-   '........'],
+  ['.....XXXX.....',
+   '.....XXXX.....',
+   '.....XXXX.....',
+   '..XXXXXXXXXX..',
+   '..XXXXXXXXXX..',
+   '..XXXXXXXXXX..',
+   '.....XXXX.....',
+   '.....XXXX.....',
+   '.....XXXX.....',
+   '..............',
+   '..............',
+   '..............',
+   '..............',
+   '..............'],
+  // 4: clean (빗자루 - 대각선 자루+솔)
+  ['..............',
+   '..............',
+   '...........X..',
+   '..........X...',
+   '.........X....',
+   '........X.....',
+   '.......X......',
+   '......X.......',
+   '.....X........',
+   '....XXXXXXXXX.',
+   '...XX.........',
+   '..XX..........',
+   '.XX...........',
+   '..............'],
+  // 5: stats (막대그래프 - 3단계)
+  ['..............',
+   '..........XX..',
+   '..........XX..',
+   '..........XX..',
+   '......XX..XX..',
+   '......XX..XX..',
+   '......XX..XX..',
+   '..XX..XX..XX..',
+   '..XX..XX..XX..',
+   '..XX..XX..XX..',
+   '..XX..XX..XX..',
+   '.XXXXXXXXXXXX.',
+   '..............',
+   '..............'],
   // 6: discipline (느낌표)
-  ['...XX...',
-   '...XX...',
-   '...XX...',
-   '...XX...',
-   '........',
-   '...XX...',
-   '...XX...',
-   '........'],
+  ['.....XXXX.....',
+   '.....XXXX.....',
+   '.....XXXX.....',
+   '.....XXXX.....',
+   '.....XXXX.....',
+   '.....XXXX.....',
+   '.....XXXX.....',
+   '.....XXXX.....',
+   '..............',
+   '..............',
+   '.....XXXX.....',
+   '.....XXXX.....',
+   '..............',
+   '..............'],
   // 7: snack (스마일)
-  ['.XXXXX..',
-   'X.....X.',
-   'X.X.X.X.',
-   'X.....X.',
-   'X.XXX.X.',
-   'X.....X.',
-   '.XXXXX..',
-   '........']
+  ['.....XXXX.....',
+   '...XX....XX...',
+   '..X........X..',
+   '.X..........X.',
+   '.X.XX....XX.X.',
+   '.X..........X.',
+   '.X..........X.',
+   '.X.X......X.X.',
+   '.X..XXXXXX..X.',
+   '..X........X..',
+   '...XX....XX...',
+   '.....XXXX.....',
+   '..............',
+   '..............']
 ];
 
 var iconSprites=[];
@@ -655,56 +703,54 @@ function parseIconSprites(){
   });
 }
 
-// 아이콘 도트 스프라이트 그리기 (idx: 0~7, size: 표시 크기px)
+// 아이콘 도트 스프라이트 그리기 (14×14 → scale=1 고정)
 function drawMenuIcon(ctx,idx,dx,dy,size){
   var sp=iconSprites[idx];
   if(!sp)return;
-  // 8×8 기준 → size 픽셀 영역에 맞게 scale 계산 (정수)
-  var scale=Math.max(1,Math.floor(size/8));
-  drawSprite(ctx,sp,dx,dy,scale,'#2a3020');
+  drawSprite(ctx,sp,dx,dy,1,'#2a3020');
 }
 
 // ── 애니메이션 업데이트 (200ms마다) ──
-// idle 이동: 4프레임(800ms)마다 1도트씩, ±5도트 범위
+// idle 이동: 4프레임(800ms)마다 1도트씩, ±10도트 범위
 function animTick(){
   animFrame++;
   if(animFrame%4===0){
     idleX+=idleDir;
-    if(idleX>5){idleDir=-1;}
-    if(idleX<-5){idleDir=1;}
+    if(idleX>10){idleDir=-1;}
+    if(idleX<-10){idleDir=1;}
   }
   renderMain();
 }
 
-// ── 레이아웃 상수 (50×50 도트 기준) ──
-// 상단 아이콘 8도트 | 구분선 1도트 | 캐릭터 32도트 | 구분선 1도트 | 하단 아이콘 8도트 = 50
-var ICON_H=8;   // 아이콘 행 높이
-var SEP=1;      // 구분선
-var CHAR_TOP=ICON_H+SEP;      // 캐릭터 영역 시작 y (=9)
-var CHAR_BOT_H=ICON_H+SEP;   // 하단 여백 (=9)
-// 캐릭터 영역 높이 = 50-9-9 = 32
-var ICON_SZ=8;  // 아이콘 1개 크기 (도트)
-var ICON_GAP=3; // 아이콘 사이 간격
-var ICON_OFF=4; // 좌측 시작 오프셋 → 아이콘 4개: 4,15,26,37
+// ── 레이아웃 상수 (100×100 도트 기준) ──
+// 상단 아이콘 16도트 | 구분선 2도트 | 캐릭터 64도트 | 구분선 2도트 | 하단 아이콘 16도트 = 100
+var ICON_H=16;  // 아이콘 행 높이
+var SEP=2;      // 구분선 두께
+var CHAR_TOP=ICON_H+SEP;     // 캐릭터 영역 시작 y (=18)
+var CHAR_BOT_H=ICON_H+SEP;  // 하단 여백 (=18)
+// 캐릭터 영역 높이 = 100-18-18 = 64
+var ICON_SZ=14; // 아이콘 1개 크기 (14×14 스프라이트)
+var ICON_GAP=5; // 아이콘 사이 간격
+var ICON_OFF=15;// 좌측 오프셋 → 4개: 15,34,53,72
 
-// ── 메인 캔버스 렌더 (50×50 도트) P1 스타일 ──
+// ── 메인 캔버스 렌더 (100×100 도트) P1 스타일 ──
 function renderMain(){
   if(!mainCtx||!T)return;
   var c=mainCtx.canvas;
-  var W=c.width,H=c.height; // 50, 50
+  var W=c.width,H=c.height; // 100, 100
 
-  // LCD 배경 (그린 LCD 색)
+  // LCD 배경
   mainCtx.fillStyle='#c5d4a8';
   mainCtx.fillRect(0,0,W,H);
 
   // ── 사망 화면 ──
   if(T.dead){
     var sk=sprites.skull;
-    if(sk)drawSprite(mainCtx,sk,Math.floor((W-sk.w*2)/2),CHAR_TOP+2,2,'#444');
+    if(sk)drawSprite(mainCtx,sk,Math.floor((W-sk.w*4)/2),CHAR_TOP+4,4,'#444');
     mainCtx.fillStyle='#444';
-    mainCtx.font='bold 5px monospace';
+    mainCtx.font='bold 10px monospace';
     mainCtx.textAlign='center';
-    mainCtx.fillText('R.I.P.',W/2,H-CHAR_BOT_H-2);
+    mainCtx.fillText('R.I.P.',W/2,H-CHAR_BOT_H-4);
     return;
   }
 
@@ -713,7 +759,7 @@ function renderMain(){
     mainCtx.fillStyle='#2a3020';
     mainCtx.fillRect(0,0,W,H);
     var zz=sprites.zzz;
-    if(zz)drawSprite(mainCtx,zz,Math.floor((W-zz.w*2)/2),CHAR_TOP+8,2,'#5a7a4a');
+    if(zz)drawSprite(mainCtx,zz,Math.floor((W-zz.w*3)/2),CHAR_TOP+16,3,'#5a7a4a');
     return;
   }
 
@@ -723,49 +769,49 @@ function renderMain(){
   // ── 게임 화면 ──
   if(menuMode==='game'){
     mainCtx.fillStyle='#222';
-    mainCtx.font='bold 5px monospace';
+    mainCtx.font='bold 9px monospace';
     mainCtx.textAlign='center';
-    mainCtx.fillText('R.'+(gameRound+1)+'/5',W/2,CHAR_TOP+7);
+    mainCtx.fillText('ROUND '+(gameRound+1)+'/5',W/2,CHAR_TOP+14);
     var gsp=sprites[T.species]||sprites.babytchi;
-    if(gsp)drawSprite(mainCtx,gsp,Math.floor((W-gsp.w*2)/2),CHAR_TOP+9,2);
-    mainCtx.font='4px monospace';
-    mainCtx.fillText('<  ?  >',W/2,H-CHAR_BOT_H-5);
-    mainCtx.fillText(gameScore+'/5',W/2,H-CHAR_BOT_H-1);
+    if(gsp)drawSprite(mainCtx,gsp,Math.floor((W-gsp.w*3)/2),CHAR_TOP+16,3);
+    mainCtx.font='8px monospace';
+    mainCtx.fillText('<  ?  >',W/2,H-CHAR_BOT_H-10);
+    mainCtx.fillText('SCORE: '+gameScore,W/2,H-CHAR_BOT_H-2);
     return;
   }
   if(menuMode==='gameResult'){
     mainCtx.fillStyle='#222';
-    mainCtx.font='bold 6px monospace';
+    mainCtx.font='bold 12px monospace';
     mainCtx.textAlign='center';
-    mainCtx.fillText(gameScore>=3?'WIN!':'LOSE',W/2,CHAR_TOP+14);
-    mainCtx.font='5px monospace';
-    mainCtx.fillText(gameScore+' / 5',W/2,CHAR_TOP+23);
+    mainCtx.fillText(gameScore>=3?'WIN!':'LOSE',W/2,CHAR_TOP+28);
+    mainCtx.font='10px monospace';
+    mainCtx.fillText(gameScore+' / 5',W/2,CHAR_TOP+46);
     return;
   }
 
   // ── 스탯 화면 ──
   if(menuMode==='stats'){
     mainCtx.fillStyle='#222';
-    mainCtx.font='4px monospace';
+    mainCtx.font='8px monospace';
     mainCtx.textAlign='left';
-    var sy=CHAR_TOP+5;
-    var gap=5;
-    mainCtx.fillText('NM:'+T.name,2,sy);
-    mainCtx.fillText('AG:'+T.age,2,sy+gap);
-    mainCtx.fillText('WT:'+T.weight+'g',2,sy+gap*2);
-    mainCtx.fillText('HG:'+hearts(T.hunger),2,sy+gap*3);
-    mainCtx.fillText('HP:'+hearts(T.happy),2,sy+gap*4);
-    mainCtx.fillText('DC:'+T.discipline+'%',2,sy+gap*5);
+    var sy=CHAR_TOP+10;
+    var gap=10;
+    mainCtx.fillText('NAME: '+T.name,4,sy);
+    mainCtx.fillText('AGE:  '+T.age,4,sy+gap);
+    mainCtx.fillText('WT:   '+T.weight+'g',4,sy+gap*2);
+    mainCtx.fillText('HUNGR:'+hearts(T.hunger),4,sy+gap*3);
+    mainCtx.fillText('HAPPY:'+hearts(T.happy),4,sy+gap*4);
+    mainCtx.fillText('DISC: '+T.discipline+'%',4,sy+gap*5);
     return;
   }
 
   // ── 캐릭터 영역 (idle / menu) ──
   var sp=sprites[T.species]||sprites.egg;
-  var scale=2;
-  var charW=sp.w*scale;
-  var charH=sp.h*scale;
-  var areaH=H-CHAR_TOP-CHAR_BOT_H; // 32
-  // 1도트 바운스: 8프레임 주기, 전반 4프레임은 0, 후반 4프레임은 1
+  var scale=5;
+  var charW=sp.w*scale; // 12*5=60
+  var charH=sp.h*scale; // 12*5=60
+  var areaH=H-CHAR_TOP-CHAR_BOT_H; // 64
+  // 1도트 바운스: 8프레임 주기
   var bounce=(animFrame%8<4)?0:1;
   var moveX=(menuMode==='idle'||menuMode==='menu')?idleX:0;
   var cx=Math.floor((W-charW)/2)+moveX;
@@ -774,24 +820,24 @@ function renderMain(){
   // 수면 ZZZ (캐릭터 오른쪽 위)
   if(T.sleeping){
     var zz=sprites.zzz;
-    if(zz)drawSprite(mainCtx,zz,Math.min(cx+charW,W-zz.w-1),cy-2,1,'#6a7a5a');
+    if(zz)drawSprite(mainCtx,zz,Math.min(cx+charW+2,W-zz.w*2-1),cy-4,2,'#6a7a5a');
   }
   // 병 해골 (캐릭터 왼쪽)
   if(T.sick){
     var sksp=sprites.skull;
-    if(sksp)drawSprite(mainCtx,sksp,Math.max(0,cx-sksp.w-1),cy+2,1,'#b33');
+    if(sksp)drawSprite(mainCtx,sksp,Math.max(0,cx-sksp.w*2-2),cy+4,2,'#b33');
   }
   // 캐릭터
   drawSprite(mainCtx,sp,cx,cy,scale);
 
-  // 똥 (우하단, 최대 3개, 크기 scale=1)
+  // 똥 (우하단, 최대 3개, scale=2)
   if(T.poop>0){
     var pp=sprites.poop;
     var pCount=Math.min(T.poop,3);
-    var pyy=CHAR_TOP+areaH-pp.h;
+    var pyy=CHAR_TOP+areaH-pp.h*2;
     for(var pi=0;pi<pCount;pi++){
-      var pxx=W-pp.w-1-pi*(pp.w+1);
-      if(pp)drawSprite(mainCtx,pp,pxx,pyy,1,'#654');
+      var pxx=W-pp.w*2-2-pi*(pp.w*2+2);
+      if(pp)drawSprite(mainCtx,pp,pxx,pyy,2,'#654');
     }
   }
 }
@@ -800,7 +846,7 @@ function renderMain(){
 function drawIconRows(W,H){
   var iSz=ICON_SZ,iGap=ICON_GAP,iOff=ICON_OFF;
 
-  // 구분선
+  // 구분선 (2px)
   mainCtx.fillStyle='#8a9a6a';
   mainCtx.fillRect(0,ICON_H,W,SEP);
   mainCtx.fillRect(0,H-ICON_H-SEP,W,SEP);
@@ -813,10 +859,10 @@ function drawIconRows(W,H){
       mainCtx.fillStyle='#8a9a6a';
       mainCtx.fillRect(ix-1,0,iSz+2,ICON_H);
     }
-    drawMenuIcon(mainCtx,i,ix,0,iSz);
-    // 선택 커서: 아이콘 아래 2도트짜리 점
+    drawMenuIcon(mainCtx,i,ix,1,iSz);
+    // 선택 커서: 구분선 바로 위 3×2 점
     if(sel){
-      mainCtx.fillStyle='#222';
+      mainCtx.fillStyle='#2a3020';
       mainCtx.fillRect(ix+Math.floor(iSz/2)-1,ICON_H-2,3,2);
     }
   }
@@ -830,10 +876,10 @@ function drawIconRows(W,H){
       mainCtx.fillStyle='#8a9a6a';
       mainCtx.fillRect(jx-1,botY+SEP,iSz+2,ICON_H-SEP);
     }
-    drawMenuIcon(mainCtx,j+4,jx,botY,iSz);
-    // 선택 커서: 아이콘 위 2도트짜리 점
+    drawMenuIcon(mainCtx,j+4,jx,botY+1,iSz);
+    // 선택 커서: 구분선 바로 아래 3×2 점
     if(sel2){
-      mainCtx.fillStyle='#222';
+      mainCtx.fillStyle='#2a3020';
       mainCtx.fillRect(jx+Math.floor(iSz/2)-1,botY+SEP,3,2);
     }
   }
