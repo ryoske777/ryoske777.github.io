@@ -529,6 +529,7 @@ OneSignalDeferred.push(async function(OneSignal) {
           </div>
                     <div class="menuSection">
             <div class="menuSectionTitle">기타</div>
+            <button id="mTabTitle"><span>작업표시줄 이름</span><span id="mTabTitleVal"></span></button>
             <button id="mStealth"><span>시크릿모드</span><span>›</span></button>
             <button id="mLeave"><span>나가기</span><span>›</span></button>
           </div>
@@ -845,6 +846,7 @@ const LS_ENTER_NL = 'chat_enter_newline_v1';
 const LS_FONT_FAMILY = 'chat_font_family_v1';
 const LS_CHAT_BG_COLOR = 'chat_bg_color_v1';
 const LS_CHAT_BG_IMAGE = 'chat_bg_image_v1';
+const LS_TAB_TITLE = 'chat_tab_title_v1';
 
 const appEl = document.getElementById('app');
 const loginScreen = document.getElementById('loginScreen');
@@ -879,6 +881,8 @@ const mLeave = document.getElementById('mLeave');
 const mLeaveForever = document.getElementById('mLeaveForever');
 const mDeleteRoom = document.getElementById('mDeleteRoom');
 const mStealth = document.getElementById('mStealth');
+const mTabTitle = document.getElementById('mTabTitle');
+const mTabTitleVal = document.getElementById('mTabTitleVal');
 const stealthBarEl = document.getElementById('stealthBar');
 const stealthExit = document.getElementById('stealthExit');
 const searchBtnEl = document.getElementById('searchBtn');
@@ -991,6 +995,7 @@ let otherBubbleColor = lsGet(LS_OTHER_BUBBLE_COLOR) || '';
 let chatFontSize  = Math.min(24, Math.max(6, parseInt(lsGet(LS_FONT_SIZE)||'16',10)));
 let enterNewline  = (lsGet(LS_ENTER_NL) === '1');
 let chatFontFamily = lsGet(LS_FONT_FAMILY) || 'system';
+let customTabTitle = lsGet(LS_TAB_TITLE) || '';
 let chatBgColor = lsGet(LS_CHAT_BG_COLOR) || '';
 let chatBgImage = lsGet(LS_CHAT_BG_IMAGE) || '';
 const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || ('ontouchstart' in window && window.innerWidth < 768);
@@ -1441,6 +1446,12 @@ function applyFontFamily() {
 }
 applyFontFamily();
 
+function applyTabTitle() {
+  if (customTabTitle && !_stealthMode) document.title = customTabTitle;
+  if (mTabTitleVal) mTabTitleVal.textContent = customTabTitle || 'Chat';
+}
+applyTabTitle();
+
 function applyChatBg() {
   if (chatBgImage) {
     logEl.style.backgroundImage = 'url(' + chatBgImage + ')';
@@ -1468,6 +1479,7 @@ function updateMenuStates() {
   mEnableNotiState.textContent = notiTxt;
   mSoundState.textContent = soundEnabled ? '켜짐':'꺼짐';
   if (mEnterNewlineState) mEnterNewlineState.textContent = enterNewline ? '켜짐':'꺼짐';
+  if (mTabTitleVal) mTabTitleVal.textContent = customTabTitle || 'Chat';
   menuHint.textContent = `도메인: ${location.hostname}${nosup?'\niPhone Safari: PWA(홈 화면 추가) 필요':''}${myUid?'\nUID: '+myUid:''}`;
 }
 
@@ -1522,6 +1534,15 @@ if (mOtherBubbleColor) mOtherBubbleColor.addEventListener('input', (e) => {
 if (mEnterNewline) mEnterNewline.addEventListener('click', () => {
   closeMenu(); enterNewline=!enterNewline; localStorage.setItem(LS_ENTER_NL,enterNewline?'1':'0');
   updateMenuStates();
+});
+if (mTabTitle) mTabTitle.addEventListener('click', () => {
+  closeMenu();
+  const cur = customTabTitle || 'Chat';
+  const v = prompt('작업표시줄(탭)에 표시될 이름을 입력하세요:', cur);
+  if (v === null) return;
+  customTabTitle = v.trim();
+  localStorage.setItem(LS_TAB_TITLE, customTabTitle);
+  applyTabTitle();
 });
 mFontDec.addEventListener('click', e => {
   e.stopPropagation();
@@ -1639,7 +1660,7 @@ function enterStealthMode() {
 
 function exitStealthMode() {
   _stealthMode = false;
-  document.title = _origTitle || 'Chat';
+  document.title = customTabTitle || _origTitle || 'Chat';
   document.body.classList.remove('stealth');
   document.documentElement.style.setProperty('--composerH', '64px');
 
