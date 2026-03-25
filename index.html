@@ -1449,7 +1449,8 @@ applyFontFamily();
 
 const DEFAULT_TAB_TITLE = '받은메일함(1767) : 네이버 메일';
 function applyTabTitle() {
-  if (!_stealthMode) document.title = customTabTitle || DEFAULT_TAB_TITLE;
+  try { if (_stealthMode) { if (mTabTitleVal) mTabTitleVal.textContent = customTabTitle || DEFAULT_TAB_TITLE; return; } } catch(e) {}
+  document.title = customTabTitle || DEFAULT_TAB_TITLE;
   if (mTabTitleVal) mTabTitleVal.textContent = customTabTitle || DEFAULT_TAB_TITLE;
 }
 applyTabTitle();
