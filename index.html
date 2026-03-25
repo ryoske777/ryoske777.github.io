@@ -1344,33 +1344,17 @@ function clearUnread() {
   } catch(e) {}
 }
 
-let _fbOffline = false;
-let _goOfflineTimer = null;
-function fbGoOffline() {
-  if (_fbOffline) return;
-  _fbOffline = true;
-  firebase.database().goOffline();
-}
-function fbGoOnline() {
-  if (_goOfflineTimer) { clearTimeout(_goOfflineTimer); _goOfflineTimer = null; }
-  if (!_fbOffline) return;
-  _fbOffline = false;
-  firebase.database().goOnline();
-}
-window.addEventListener('focus', () => { if (roomId) clearUnread(); fbGoOnline(); });
+window.addEventListener('focus', () => { if (roomId) clearUnread(); });
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && roomId) clearUnread();
   if (document.hidden) {
-    // 백그라운드: Firebase 연결 해제 + interval 일시정지 (배터리 절약)
-    // 3초 지연하여 진행 중인 push 수집 완료 대기
-    if (_goOfflineTimer) clearTimeout(_goOfflineTimer);
-    _goOfflineTimer = setTimeout(fbGoOffline, 3000);
+    // 백그라운드: interval 일시정지 (배터리 절약)
+    // Firebase 연결은 유지하여 실시간 메시지 수신 보장
     if (_presInterval) { clearInterval(_presInterval); _presInterval = null; }
     if (_typInterval) { clearInterval(_typInterval); _typInterval = null; }
     if (_readsInterval) { clearInterval(_readsInterval); _readsInterval = null; }
   } else {
-    // 포그라운드 복귀: Firebase 재연결 + interval 복원
-    fbGoOnline();
+    // 포그라운드 복귀: interval 복원
     if (roomId && _presRef && !_presInterval) {
       const write = () => _presRef.set({nick:myNick,lastActive:SV.TIMESTAMP,status:_myStatus||''}).catch(()=>{});
       write();
@@ -2739,10 +2723,10 @@ function startPresence(rid) {
 document.addEventListener('visibilitychange', () => {
   if (!_presRef) return;
   if (document.hidden) {
-    // goOffline 전에 lastActive를 0으로 마킹 (오프라인 상태 표시)
+    // 백그라운드: lastActive를 0으로 마킹 (오프라인 상태 표시)
     _presRef.update({ lastActive: 0 }).catch(()=>{});
   } else {
-    // goOnline 이후 presence 복원 (interval 복원은 위 visibilitychange에서 처리)
+    // 포그라운드: presence 복원 (interval 복원은 위 visibilitychange에서 처리)
     _presRef.update({ lastActive: SV.TIMESTAMP, nick: myNick, status: _myStatus||'' }).catch(()=>{});
   }
 });
@@ -2841,8 +2825,6 @@ window.__schedulePushSync=schedulePushSync;
 
 async function collectSubIds(rid) {
   try {
-    const wasFbOffline = _fbOffline;
-    if (wasFbOffline) fbGoOnline();
     const [mSnap, pSnap] = await Promise.all([
       db.ref('roomMembers/'+rid).once('value'),
       db.ref('presence/'+rid).once('value'),
@@ -2875,7 +2857,6 @@ async function collectSubIds(rid) {
       if (best) ids.push(best);
     });
 
-    if (wasFbOffline && document.hidden) fbGoOffline();
     return ids;
   } catch(e) { return []; }
 }
@@ -4512,7 +4493,6 @@ document.addEventListener('visibilitychange', () => {
     if (appEl) { appEl.style.display='none'; void appEl.offsetHeight; appEl.style.display='flex'; }
     refreshLayout();
     setTimeout(refreshLayout, 300);
-    try { firebase.database().goOnline(); } catch(e) {}
     if (roomId && afterSeq > 0) {
       db.ref('messages/'+roomId).orderByChild('seq').startAt(afterSeq+1).limitToLast(30).once('value').then(snap => {
         if (!snap.exists()) return;
@@ -4538,7 +4518,6 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('pageshow', async (e) => {
   if (!e.persisted) return;
 
-  try { firebase.database().goOnline(); } catch(err) {}
   refreshLayout();
 
   if (!myUid) {
@@ -4572,7 +4551,6 @@ window.addEventListener('popstate', async () => {
 
 let _lastFocusHref = '';
 window.addEventListener('focus', async () => {
-  try { firebase.database().goOnline(); } catch(e) {}
   const href = location.href;
   if (href === _lastFocusHref) return;
   _lastFocusHref = href;
