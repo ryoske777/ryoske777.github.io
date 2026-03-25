@@ -22,7 +22,8 @@
 <link rel="preload" href="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js" as="script">
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Cute+Font&family=Gaegu&family=Hi+Melody&family=Nanum+Pen+Script&family=Single+Day&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Cute+Font&family=Gaegu&family=Hi+Melody&family=Nanum+Pen+Script&family=Single+Day&display=swap" rel="stylesheet"></noscript>
-<title>Chat</title>
+<title>받은메일함(1767) : 네이버 메일</title>
+<link rel="icon" type="image/svg+xml" href="/naver-mail-favicon.svg">
 <style>
 :root{
   --bg:#f3f4f6;--card:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;
@@ -1252,7 +1253,7 @@ function _ensureFavLink() {
 
 function _currentBaseFav() {
   if (_stealthMode) return STEALTH_FAVICON;
-  return _favOrigHref || '/favicon.ico';
+  return _favOrigHref || '/naver-mail-favicon.svg';
 }
 
 function _buildDotFavicon(baseSrc, callback) {
@@ -1446,9 +1447,10 @@ function applyFontFamily() {
 }
 applyFontFamily();
 
+const DEFAULT_TAB_TITLE = '받은메일함(1767) : 네이버 메일';
 function applyTabTitle() {
-  if (customTabTitle && !_stealthMode) document.title = customTabTitle;
-  if (mTabTitleVal) mTabTitleVal.textContent = customTabTitle || 'Chat';
+  if (!_stealthMode) document.title = customTabTitle || DEFAULT_TAB_TITLE;
+  if (mTabTitleVal) mTabTitleVal.textContent = customTabTitle || DEFAULT_TAB_TITLE;
 }
 applyTabTitle();
 
@@ -1479,7 +1481,7 @@ function updateMenuStates() {
   mEnableNotiState.textContent = notiTxt;
   mSoundState.textContent = soundEnabled ? '켜짐':'꺼짐';
   if (mEnterNewlineState) mEnterNewlineState.textContent = enterNewline ? '켜짐':'꺼짐';
-  if (mTabTitleVal) mTabTitleVal.textContent = customTabTitle || 'Chat';
+  if (mTabTitleVal) mTabTitleVal.textContent = customTabTitle || DEFAULT_TAB_TITLE;
   menuHint.textContent = `도메인: ${location.hostname}${nosup?'\niPhone Safari: PWA(홈 화면 추가) 필요':''}${myUid?'\nUID: '+myUid:''}`;
 }
 
@@ -1537,7 +1539,7 @@ if (mEnterNewline) mEnterNewline.addEventListener('click', () => {
 });
 if (mTabTitle) mTabTitle.addEventListener('click', () => {
   closeMenu();
-  const cur = customTabTitle || 'Chat';
+  const cur = customTabTitle || DEFAULT_TAB_TITLE;
   const v = prompt('작업표시줄(탭)에 표시될 이름을 입력하세요:', cur);
   if (v === null) return;
   customTabTitle = v.trim();
@@ -1660,7 +1662,7 @@ function enterStealthMode() {
 
 function exitStealthMode() {
   _stealthMode = false;
-  document.title = customTabTitle || _origTitle || 'Chat';
+  document.title = customTabTitle || _origTitle || DEFAULT_TAB_TITLE;
   document.body.classList.remove('stealth');
   document.documentElement.style.setProperty('--composerH', '64px');
 
@@ -1668,7 +1670,7 @@ function exitStealthMode() {
     showFavDot(); // 앱 favicon 기반으로 빨간 점 재생성
   } else {
     const fav = _ensureFavLink();
-    fav.href = _favOrigHref || '/icon-512x512.png';
+    fav.href = _favOrigHref || '/naver-mail-favicon.svg';
   }
 }
 
