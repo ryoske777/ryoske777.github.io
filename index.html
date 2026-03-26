@@ -5106,9 +5106,19 @@ firebase.auth().onAuthStateChanged(user => {
     return pc;
   }
 
+  var _cachedMicStream = null;
   async function getAudioStream() {
     try {
-      return await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      // 이전 캐시된 스트림이 활성 상태면 재사용
+      if (_cachedMicStream) {
+        var tracks = _cachedMicStream.getAudioTracks();
+        if (tracks.length > 0 && tracks[0].readyState === 'live') {
+          return _cachedMicStream;
+        }
+        _cachedMicStream = null;
+      }
+      _cachedMicStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      return _cachedMicStream;
     } catch(e) {
       showToast('마이크 접근이 거부되었습니다');
       return null;
@@ -5250,7 +5260,7 @@ firebase.auth().onAuthStateChanged(user => {
     }
     if (_pc) { try { _pc.close(); } catch(e) {} _pc = null; }
     if (_localStream) {
-      _localStream.getTracks().forEach(function(t) { t.stop(); });
+      _localStream.getTracks().forEach(function(t) { t.enabled = false; });
       _localStream = null;
     }
     if (_callAudio) {
@@ -5340,6 +5350,23 @@ firebase.auth().onAuthStateChanged(user => {
     if (e.target === pickerOverlay) closeContactPicker();
   });
 
+  // 방 입장 시 마이크 권한 미리 확보 (한 번만 요청)
+  function prewarmMic() {
+    if (_cachedMicStream) return;
+    try {
+      if (navigator.permissions) {
+        navigator.permissions.query({ name: 'microphone' }).then(function(r) {
+          if (r.state === 'granted') {
+            navigator.mediaDevices.getUserMedia({ audio: true, video: false }).then(function(s) {
+              _cachedMicStream = s;
+              s.getAudioTracks().forEach(function(t) { t.enabled = false; });
+            }).catch(function(){});
+          }
+        }).catch(function(){});
+      }
+    } catch(e) {}
+  }
+
   // enterRoom / showHome 패치
   var _origEnterRoom = enterRoom;
   window.enterRoom = async function(rid, infoOpt) {
@@ -5347,7 +5374,7 @@ firebase.auth().onAuthStateChanged(user => {
     stopWatchingCalls();
     closeContactPicker();
     await _origEnterRoom(rid, infoOpt);
-    if (roomId) watchIncomingCalls(roomId);
+    if (roomId) { watchIncomingCalls(roomId); prewarmMic(); }
   };
 
   var _origShowHome = showHome;
