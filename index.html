@@ -2811,8 +2811,8 @@ function startPresence(rid) {
 document.addEventListener('visibilitychange', () => {
   if (!_presRef) return;
   if (document.hidden) {
-    // 백그라운드: lastActive를 0으로 마킹 (오프라인 상태 표시)
-    _presRef.update({ lastActive: 0 }).catch(()=>{});
+    // 통화 중이면 오프라인으로 마킹하지 않음 (화면 잠금 시에도 통화 유지)
+    if (!window._voiceCallActive) _presRef.update({ lastActive: 0 }).catch(()=>{});
   } else {
     // 포그라운드: presence 복원 (interval 복원은 위 visibilitychange에서 처리)
     _presRef.update({ lastActive: SV.TIMESTAMP, nick: myNick, status: _myStatus||'' }).catch(()=>{});
@@ -4732,6 +4732,26 @@ firebase.auth().onAuthStateChanged(user => {
   let _ringtoneCtx = null;
   let _ringtoneOsc = null;
   let _callAudio = null;
+  let _wakeLock = null;
+
+  // 전역 플래그: 통화 중 여부 (presence 등 다른 모듈에서 참조)
+  window._voiceCallActive = false;
+
+  async function acquireWakeLock() {
+    try {
+      if ('wakeLock' in navigator) {
+        _wakeLock = await navigator.wakeLock.request('screen');
+        _wakeLock.addEventListener('release', function() { _wakeLock = null; });
+      }
+    } catch(e) {}
+  }
+  function releaseWakeLock() {
+    if (_wakeLock) { try { _wakeLock.release(); } catch(e) {} _wakeLock = null; }
+  }
+  // 화면 잠금 후 복귀 시 Wake Lock 재취득
+  document.addEventListener('visibilitychange', function() {
+    if (!document.hidden && window._voiceCallActive) acquireWakeLock();
+  });
 
   function getOnlineOthers() {
     // _onlineUidNickCache: { uid: nick } — 자신 제외 온라인 유저 목록 반환
@@ -4853,16 +4873,35 @@ firebase.auth().onAuthStateChanged(user => {
       _callAudio.srcObject = e.streams[0];
     };
 
+    let _iceDisconnectTimer = null;
     pc.oniceconnectionstatechange = function() {
-      if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+      const state = pc.iceConnectionState;
+      if (state === 'connected' || state === 'completed') {
+        if (_iceDisconnectTimer) { clearTimeout(_iceDisconnectTimer); _iceDisconnectTimer = null; }
         if (_callState !== 'connected') {
           _callState = 'connected';
+          window._voiceCallActive = true;
           callStatusEl.textContent = '통화 중';
           stopRingtone();
           startCallTimer();
+          acquireWakeLock();
+        } else {
+          // 재연결 성공
+          callStatusEl.textContent = '통화 중';
         }
       }
-      if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'closed') {
+      if (state === 'disconnected') {
+        // 화면 잠금 등으로 일시 끊김 → 8초 대기 후 재연결 안 되면 종료
+        callStatusEl.textContent = '재연결 중...';
+        if (_iceDisconnectTimer) clearTimeout(_iceDisconnectTimer);
+        _iceDisconnectTimer = setTimeout(function() {
+          if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed') {
+            endCall(true);
+          }
+        }, 8000);
+      }
+      if (state === 'failed' || state === 'closed') {
+        if (_iceDisconnectTimer) { clearTimeout(_iceDisconnectTimer); _iceDisconnectTimer = null; }
         endCall(true);
       }
     };
@@ -5016,6 +5055,8 @@ firebase.auth().onAuthStateChanged(user => {
     _remoteUid = '';
     _remoteNick = '';
     _callRef = null;
+    window._voiceCallActive = false;
+    releaseWakeLock();
     hideCallUI();
   }
 
