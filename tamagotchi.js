@@ -229,6 +229,36 @@ zzz:[
 '....XXX.....',
 '............',
 '............'
+],
+// 밥 (rice bowl)
+meal_food:[
+'............',
+'............',
+'..X.X.X.X...',
+'...X.X.X....',
+'..XXXXXXXX..',
+'.X........X.',
+'.X........X.',
+'..XXXXXXXX..',
+'...X....X...',
+'...XXXXXX...',
+'............',
+'............'
+],
+// 간식 (candy/snack)
+snack_food:[
+'............',
+'............',
+'.....XX.....',
+'....XXXX....',
+'...XXXXXX...',
+'..XXXXXXXX..',
+'..XXXXXXXX..',
+'..XXXXXXXX..',
+'...XXXXXX...',
+'....XXXX....',
+'............',
+'............'
 ]
 };
 
@@ -293,6 +323,8 @@ var walkerX=0,walkerDir=1,walkerFrame=0;
 var menuIdx=0,menuMode='idle',gameRound=0,gameScore=0,gameAnswer=0;
 var animFrame=0; // 애니메이션 프레임 카운터
 var idleX=0,idleDir=1; // idle 좌우 이동
+var foodMenuIdx=0; // 0=meal, 1=snack
+var eatAnimTimer=null,eatAnimStep=0,eatAnimType='';
 
 // ── 새 다마고치 생성 ──
 function createTama(name){
@@ -475,19 +507,48 @@ function catchUpTicks(){
 }
 
 // ── 케어 액션들 ──
-function doFeed(type){
+function openFoodMenu(){
   if(!T||T.dead||T.sleeping)return;
+  menuMode='foodMenu';
+  foodMenuIdx=0;
+  renderAll();
+}
+
+function doFeed(type,returnTo){
+  if(!T||T.dead||T.sleeping)return;
+  var retMode=returnTo||'foodMenu';
   if(type==='meal'){
-    if(T.hunger>=MAX_HEARTS)return;
-    T.hunger=Math.min(MAX_HEARTS,T.hunger+1);
-    T.weight++;
+    if(T.hunger>=MAX_HEARTS){menuMode=retMode;renderAll();return;}
   }else{
-    if(T.happy>=MAX_HEARTS)return;
-    T.happy=Math.min(MAX_HEARTS,T.happy+1);
-    T.weight++;
+    if(T.happy>=MAX_HEARTS){menuMode=retMode;renderAll();return;}
   }
-  T.totalFed++;
-  saveTamaLocal();renderAll();
+  // 먹기 애니메이션 시작
+  eatAnimType=type;
+  eatAnimStep=0;
+  menuMode='eating';
+  renderAll();
+  if(eatAnimTimer)clearInterval(eatAnimTimer);
+  eatAnimTimer=setInterval(function(){
+    eatAnimStep++;
+    if(eatAnimStep>=8){
+      // 애니메이션 끝 → 스탯 적용
+      clearInterval(eatAnimTimer);
+      eatAnimTimer=null;
+      if(eatAnimType==='meal'){
+        T.hunger=Math.min(MAX_HEARTS,T.hunger+1);
+        T.weight++;
+      }else{
+        T.happy=Math.min(MAX_HEARTS,T.happy+1);
+        T.weight++;
+      }
+      T.totalFed++;
+      saveTamaLocal();
+      menuMode=retMode;
+      renderAll();
+    }else{
+      renderAll();
+    }
+  },250);
 }
 
 function doMedicine(){
@@ -818,6 +879,62 @@ function renderMain(){
     return;
   }
 
+  // ── 음식 메뉴 (MEAL / SNACK 선택) ──
+  if(menuMode==='foodMenu'){
+    mainCtx.fillStyle='#222';
+    mainCtx.font='bold 9px monospace';
+    mainCtx.textAlign='left';
+    var fy=CHAR_TOP+20;
+    // MEAL 옵션
+    var mealSel=(foodMenuIdx===0);
+    if(mealSel){
+      mainCtx.fillStyle='#8a9a6a';
+      mainCtx.fillRect(4,fy-8,92,14);
+    }
+    mainCtx.fillStyle='#222';
+    mainCtx.fillText((mealSel?'> ':'  ')+'MEAL',8,fy);
+    // SNACK 옵션
+    var snackSel=(foodMenuIdx===1);
+    fy+=22;
+    if(snackSel){
+      mainCtx.fillStyle='#8a9a6a';
+      mainCtx.fillRect(4,fy-8,92,14);
+    }
+    mainCtx.fillStyle='#222';
+    mainCtx.fillText((snackSel?'> ':'  ')+'SNACK',8,fy);
+    return;
+  }
+
+  // ── 먹기 애니메이션 ──
+  if(menuMode==='eating'){
+    var sp=sprites[T.species]||sprites.egg;
+    var foodSp=sprites[eatAnimType==='meal'?'meal_food':'snack_food'];
+    var scale=4;
+    var areaH=H-CHAR_TOP-CHAR_BOT_H;
+    var cy=CHAR_TOP+Math.floor((areaH-sp.h*scale)/2);
+    // 캐릭터는 왼쪽, 음식은 오른쪽
+    var charX=10;
+    var foodX=W-10-((foodSp?foodSp.w:12)*3);
+    // 먹기 단계: 음식이 점점 가까워지다가 사라짐
+    if(eatAnimStep<4){
+      // 음식이 가까워짐
+      var progress=eatAnimStep/3;
+      var fx=Math.floor(foodX-(foodX-charX-sp.w*scale)*progress);
+      drawSprite(mainCtx,sp,charX,cy,scale);
+      if(foodSp)drawSprite(mainCtx,foodSp,fx,cy+2,3,'#222');
+    }else if(eatAnimStep<6){
+      // 먹는 중 (캐릭터만, 바운스)
+      var bounce2=(eatAnimStep%2===0)?0:2;
+      drawSprite(mainCtx,sp,charX,cy+bounce2,scale);
+    }else{
+      // 만족 (캐릭터 + 하트)
+      drawSprite(mainCtx,sp,charX,cy,scale);
+      var hrt=sprites.heart;
+      if(hrt)drawSprite(mainCtx,hrt,charX+sp.w*scale+4,cy,2,'#222');
+    }
+    return;
+  }
+
   // HTML 아이콘 오버레이 표시
   setIconOverlayVisible(true);
 
@@ -1002,8 +1119,10 @@ function stopWalker(){
 function onBtnA(){
   if(!T)return;
   if(T.dead){resetTama();return;}
+  if(menuMode==='eating')return; // 애니메이션 중 무시
   if(menuMode==='idle'){menuMode='menu';menuIdx=0;renderAll();return;}
   if(menuMode==='menu'){menuIdx=(menuIdx+MENU_ITEMS.length-1)%MENU_ITEMS.length;renderAll();return;}
+  if(menuMode==='foodMenu'){foodMenuIdx=(foodMenuIdx+1)%2;renderAll();return;}
   if(menuMode==='game'){guessGame(0);return;}
   if(menuMode==='gameResult'||menuMode==='stats'){menuMode='idle';renderAll();return;}
 }
@@ -1011,15 +1130,20 @@ function onBtnA(){
 function onBtnB(){
   if(!T)return;
   if(T.dead){resetTama();return;}
+  if(menuMode==='eating')return; // 애니메이션 중 무시
   if(menuMode==='idle'){menuMode='menu';menuIdx=0;renderAll();return;}
   if(menuMode==='game')return;
   if(menuMode==='gameResult'||menuMode==='stats'){menuMode='idle';renderAll();return;}
+  if(menuMode==='foodMenu'){
+    doFeed(foodMenuIdx===0?'meal':'snack');
+    return;
+  }
   if(menuMode==='menu'){
     var action=MENU_ITEMS[menuIdx];
     menuMode='idle'; // 메뉴 닫기 먼저
     switch(action){
-      case 'meal':doFeed('meal');break;
-      case 'snack':doFeed('snack');break;
+      case 'meal':openFoodMenu();return;
+      case 'snack':doFeed('snack','idle');break;
       case 'game':startGame();return; // game은 자체 모드
       case 'medicine':doMedicine();break;
       case 'clean':doClean();break;
@@ -1035,8 +1159,10 @@ function onBtnB(){
 function onBtnC(){
   if(!T)return;
   if(T.dead){resetTama();return;}
+  if(menuMode==='eating')return; // 애니메이션 중 무시
   // C 버튼 = 취소 (idle로 복귀) 또는 메뉴 오른쪽 이동
   if(menuMode==='idle')return;
+  if(menuMode==='foodMenu'){menuMode='idle';renderAll();return;}
   if(menuMode==='menu'){menuIdx=(menuIdx+1)%MENU_ITEMS.length;renderAll();return;}
   if(menuMode==='game'){guessGame(1);return;}
   if(menuMode==='gameResult'||menuMode==='stats'){menuMode='idle';renderAll();return;}
