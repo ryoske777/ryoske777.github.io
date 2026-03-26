@@ -4822,81 +4822,26 @@ firebase.auth().onAuthStateChanged(user => {
     } catch(e) {}
   }
 
-  // ── 카카오톡 스타일 따뜻한 벨소리 ──
+  // ── 커스텀 MP3 벨소리 ──
+  var _ringtoneAudio = null;
   function playRingtone(isIncoming) {
     try {
-      _ringtoneCtx = new (window.AudioContext || window.webkitAudioContext)();
-      var ctx = _ringtoneCtx;
-
-      if (isIncoming) {
-        // 수신: 밝고 경쾌한 트릴 (카카오톡 스타일)
-        var noteIdx = 0;
-        var melody = [
-          {f:784,d:0.12}, {f:880,d:0.12}, {f:1047,d:0.18}, {f:880,d:0.12}, {f:784,d:0.25},
-          {f:0,d:0.15},
-          {f:784,d:0.12}, {f:880,d:0.12}, {f:1047,d:0.18}, {f:880,d:0.12}, {f:784,d:0.25}
-        ];
-
-        function playMelody() {
-          if (!_ringtoneCtx || _callState === 'connected' || _callState === 'idle') return;
-          var t = ctx.currentTime;
-          melody.forEach(function(note) {
-            if (note.f > 0) {
-              var osc = ctx.createOscillator();
-              var gain = ctx.createGain();
-              osc.type = 'sine';
-              osc.frequency.setValueAtTime(note.f, t);
-              gain.gain.setValueAtTime(0, t);
-              gain.gain.linearRampToValueAtTime(0.12, t + 0.02);
-              gain.gain.setValueAtTime(0.12, t + note.d * 0.6);
-              gain.gain.exponentialRampToValueAtTime(0.001, t + note.d);
-              osc.connect(gain).connect(ctx.destination);
-              osc.start(t);
-              osc.stop(t + note.d + 0.05);
-              // 부드러운 하모닉 추가
-              var osc2 = ctx.createOscillator();
-              var gain2 = ctx.createGain();
-              osc2.type = 'sine';
-              osc2.frequency.setValueAtTime(note.f * 2, t);
-              gain2.gain.setValueAtTime(0, t);
-              gain2.gain.linearRampToValueAtTime(0.03, t + 0.02);
-              gain2.gain.exponentialRampToValueAtTime(0.001, t + note.d);
-              osc2.connect(gain2).connect(ctx.destination);
-              osc2.start(t);
-              osc2.stop(t + note.d + 0.05);
-            }
-            t += note.d;
-          });
-          _ringtoneTimer = setTimeout(playMelody, 3000);
-        }
-        playMelody();
-      } else {
-        // 발신: 부드러운 "뚜르르... 뚜르르..." 콜백톤
-        function ringback() {
-          if (!_ringtoneCtx || _callState === 'connected' || _callState === 'idle') return;
-          var t = ctx.currentTime;
-          // 따뜻한 이중 톤 (425Hz + 480Hz 블렌드, 한국 콜백톤 느낌)
-          [425, 480].forEach(function(freq) {
-            var osc = ctx.createOscillator();
-            var gain = ctx.createGain();
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(freq, t);
-            gain.gain.setValueAtTime(0, t);
-            gain.gain.linearRampToValueAtTime(0.06, t + 0.08);
-            gain.gain.setValueAtTime(0.06, t + 1.0);
-            gain.gain.linearRampToValueAtTime(0, t + 1.15);
-            osc.connect(gain).connect(ctx.destination);
-            osc.start(t);
-            osc.stop(t + 1.2);
-          });
-          _ringtoneTimer = setTimeout(ringback, 3000);
-        }
-        ringback();
-      }
+      stopRingtone();
+      var src = isIncoming
+        ? '(수신자 소리)Sugar_on_the_Lens.mp3'
+        : '(발신자 소리)Morning_Calibration.mp3';
+      _ringtoneAudio = new Audio(encodeURI(src));
+      _ringtoneAudio.loop = true;
+      _ringtoneAudio.playsInline = true;
+      _ringtoneAudio.play().catch(function(){});
     } catch(e) {}
   }
   function stopRingtone() {
     if (_ringtoneTimer) { clearTimeout(_ringtoneTimer); _ringtoneTimer = null; }
+    if (_ringtoneAudio) {
+      try { _ringtoneAudio.pause(); _ringtoneAudio.currentTime = 0; _ringtoneAudio.srcObject = null; } catch(e) {}
+      _ringtoneAudio = null;
+    }
     try { if (_ringtoneCtx) _ringtoneCtx.close(); } catch(e) {}
     _ringtoneCtx = null;
   }
