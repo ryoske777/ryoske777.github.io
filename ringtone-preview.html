@@ -3,12 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>벨소리 미리듣기</title>
+<title>발신음 미리듣기 v2</title>
 <style>
 *{box-sizing:border-box;margin:0}
-body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#1a1a2e;color:#fff;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:40px 20px;gap:32px}
+body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#1a1a2e;color:#fff;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:40px 20px;gap:24px}
 h1{font-size:22px;font-weight:800;letter-spacing:-.3px}
-.card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:24px;width:100%;max-width:400px;backdrop-filter:blur(10px)}
+h1 span{font-size:13px;font-weight:400;color:rgba(255,255,255,.4);display:block;margin-top:4px}
+.card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:24px;width:100%;max-width:420px;backdrop-filter:blur(10px)}
 .card h2{font-size:16px;font-weight:700;margin-bottom:6px}
 .card p{font-size:13px;color:rgba(255,255,255,.5);margin-bottom:16px;line-height:1.5}
 .btnRow{display:flex;gap:10px;flex-wrap:wrap}
@@ -16,59 +17,70 @@ h1{font-size:22px;font-weight:800;letter-spacing:-.3px}
 .btn:active{transform:scale(.95)}
 .play{background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;box-shadow:0 4px 16px rgba(34,197,94,.4)}
 .stop{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.15)}
-.current{border-left:3px solid #3b82f6}
 .new{border-left:3px solid #f59e0b}
+.hot{border-left:3px solid #ef4444}
 .badge{display:inline-block;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;margin-bottom:10px}
-.badge.blue{background:rgba(59,130,246,.2);color:#60a5fa}
 .badge.orange{background:rgba(245,158,11,.2);color:#fbbf24}
+.badge.red{background:rgba(239,68,68,.2);color:#f87171}
+.badge.purple{background:rgba(168,85,247,.2);color:#c084fc}
 .playing{animation:pulse 1s ease-in-out infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
 </style>
 </head>
 <body>
-<h1>발신음 미리듣기</h1>
+<h1>발신음 미리듣기 v2<span>더 풍부하고 새로운 소리들</span></h1>
 
-<div class="card current">
-  <span class="badge blue">현재 적용된 소리</span>
-  <h2>A. 한국식 콜백톤</h2>
-  <p>425Hz + 480Hz 이중 사인파. 깔끔하고 무난한 "뚜르르..."</p>
+<div class="card hot">
+  <span class="badge red">E. 추천</span>
+  <h2>카톡 감성 피아노벨</h2>
+  <p>피아노 + 글로켄슈필 레이어. 따뜻하면서도 맑은 "띠링~ 띠리링~" 소리에 코드 하모니 추가.</p>
   <div class="btnRow">
-    <button class="btn play" onclick="playA(this)">재생</button>
+    <button class="btn play" onclick="playE(this)">재생</button>
     <button class="btn stop" onclick="stopAll()">정지</button>
   </div>
 </div>
 
 <div class="card new">
-  <span class="badge orange">새 후보 1</span>
-  <h2>B. 따뜻한 트라이톤 멜로디</h2>
-  <p>세 음이 부드럽게 올라갔다 내려오는 장난끼 있는 벨소리. 카카오톡 보이스톡 느낌.</p>
+  <span class="badge orange">F</span>
+  <h2>오르골 자장가</h2>
+  <p>오르골처럼 반짝이는 고음 멜로디 + 부드러운 패드 깔림. 동화적이고 포근한 느낌.</p>
   <div class="btnRow">
-    <button class="btn play" onclick="playB(this)">재생</button>
+    <button class="btn play" onclick="playF(this)">재생</button>
     <button class="btn stop" onclick="stopAll()">정지</button>
   </div>
 </div>
 
 <div class="card new">
-  <span class="badge orange">새 후보 2</span>
-  <h2>C. 두근두근 하트비트</h2>
-  <p>"뚜둥~ 뚜뚜둥~" 심장 뛰는 것처럼 리듬감 있고 귀여운 소리.</p>
+  <span class="badge orange">G</span>
+  <h2>버블팝</h2>
+  <p>통통 튀는 버블 + 짧은 화음 멜로디. 장난끼 넘치고 귀여운 느낌.</p>
   <div class="btnRow">
-    <button class="btn play" onclick="playC(this)">재생</button>
+    <button class="btn play" onclick="playG(this)">재생</button>
     <button class="btn stop" onclick="stopAll()">정지</button>
   </div>
 </div>
 
 <div class="card new">
-  <span class="badge orange">새 후보 3</span>
-  <h2>D. 물방울 마림바</h2>
-  <p>마림바 같은 통통 튀는 물방울 소리. 밝고 장난스러운 느낌.</p>
+  <span class="badge purple">H</span>
+  <h2>따뜻한 기타 코드</h2>
+  <p>어쿠스틱 기타 아르페지오 느낌. 코드 전체가 풍성하게 울리는 따뜻한 소리.</p>
   <div class="btnRow">
-    <button class="btn play" onclick="playD(this)">재생</button>
+    <button class="btn play" onclick="playH(this)">재생</button>
     <button class="btn stop" onclick="stopAll()">정지</button>
   </div>
 </div>
 
-<p style="font-size:12px;color:rgba(255,255,255,.3);margin-top:16px">마음에 드는 걸 알려주세요! (A / B / C / D)</p>
+<div class="card new">
+  <span class="badge orange">I</span>
+  <h2>숲속 차임</h2>
+  <p>윈드차임처럼 겹겹이 울리는 맑은 종소리 + 깊은 리버브 꼬리.</p>
+  <div class="btnRow">
+    <button class="btn play" onclick="playI(this)">재생</button>
+    <button class="btn stop" onclick="stopAll()">정지</button>
+  </div>
+</div>
+
+<p style="font-size:12px;color:rgba(255,255,255,.3);margin-top:16px">마음에 드는 걸 알려주세요! 조합/수정도 가능해요</p>
 
 <script>
 var ctx = null;
@@ -79,95 +91,150 @@ function getCtx() {
   ctx = new (window.AudioContext || window.webkitAudioContext)();
   return ctx;
 }
-
 function stopAll() {
   if (timer) { clearTimeout(timer); timer = null; }
   if (ctx) { try { ctx.close(); } catch(e) {} ctx = null; }
   document.querySelectorAll('.btn.play').forEach(function(b) { b.classList.remove('playing'); b.textContent = '재생'; });
 }
-
 function markPlaying(btn) {
   document.querySelectorAll('.btn.play').forEach(function(b) { b.classList.remove('playing'); b.textContent = '재생'; });
-  btn.classList.add('playing');
-  btn.textContent = '재생 중...';
+  btn.classList.add('playing'); btn.textContent = '재생 중...';
 }
 
-// A: 현재 적용된 한국식 콜백톤
-function playA(btn) {
-  stopAll();
-  markPlaying(btn);
+// 유틸: 리버브 시뮬레이션 (간단한 딜레이 기반)
+function addReverb(c, source, wetGain) {
+  var dry = c.createGain(); dry.gain.value = 1;
+  source.connect(dry).connect(c.destination);
+  [0.03, 0.07, 0.12, 0.18].forEach(function(delay) {
+    var d = c.createDelay(); d.delayTime.value = delay;
+    var g = c.createGain(); g.gain.value = wetGain * (1 - delay * 3);
+    source.connect(d).connect(g).connect(c.destination);
+  });
+}
+
+// 유틸: 풍부한 톤 (기본+하모닉 여러겹)
+function richTone(c, freq, t, dur, vol) {
+  var master = c.createGain();
+  master.gain.setValueAtTime(0, t);
+  master.gain.linearRampToValueAtTime(vol, t + 0.01);
+  master.gain.setValueAtTime(vol, t + dur * 0.4);
+  master.gain.exponentialRampToValueAtTime(0.001, t + dur);
+
+  // 기본음 (사인)
+  var o1 = c.createOscillator(); o1.type = 'sine'; o1.frequency.value = freq;
+  var g1 = c.createGain(); g1.gain.value = 1.0;
+  o1.connect(g1).connect(master);
+  o1.start(t); o1.stop(t + dur + 0.05);
+
+  // 2배음 (부드러운 밝기)
+  var o2 = c.createOscillator(); o2.type = 'sine'; o2.frequency.value = freq * 2;
+  var g2 = c.createGain(); g2.gain.value = 0.3;
+  o2.connect(g2).connect(master);
+  o2.start(t); o2.stop(t + dur + 0.05);
+
+  // 3배음 (살짝 금속 느낌)
+  var o3 = c.createOscillator(); o3.type = 'sine'; o3.frequency.value = freq * 3;
+  var g3 = c.createGain(); g3.gain.value = 0.08;
+  o3.connect(g3).connect(master);
+  o3.start(t); o3.stop(t + dur + 0.05);
+
+  // 4배음 (반짝임)
+  var o4 = c.createOscillator(); o4.type = 'sine'; o4.frequency.value = freq * 4;
+  var g4 = c.createGain(); g4.gain.value = 0.04;
+  o4.connect(g4).connect(master);
+  o4.start(t); o4.stop(t + dur + 0.05);
+
+  return master;
+}
+
+// E: 카톡 감성 피아노벨 (추천)
+function playE(btn) {
+  stopAll(); markPlaying(btn);
   var c = getCtx();
+  // C5-E5-G5 코드 아르페지오 → A4로 해결
+  var phrase = [
+    {f:523,d:0.15}, {f:659,d:0.15}, {f:784,d:0.22},
+    {f:0,d:0.06},
+    {f:659,d:0.13}, {f:523,d:0.13}, {f:440,d:0.35}
+  ];
   function ring() {
     if (!ctx) return;
     var t = c.currentTime;
-    [425, 480].forEach(function(freq) {
-      var osc = c.createOscillator();
-      var gain = c.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, t);
-      gain.gain.setValueAtTime(0, t);
-      gain.gain.linearRampToValueAtTime(0.06, t + 0.08);
-      gain.gain.setValueAtTime(0.06, t + 1.0);
-      gain.gain.linearRampToValueAtTime(0, t + 1.15);
-      osc.connect(gain).connect(c.destination);
-      osc.start(t);
-      osc.stop(t + 1.2);
+    // 배경 패드 (C 코드)
+    [261.6, 329.6, 392].forEach(function(f) {
+      var osc = c.createOscillator(); osc.type = 'sine'; osc.frequency.value = f;
+      var g = c.createGain();
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.025, t + 0.1);
+      g.gain.setValueAtTime(0.025, t + 1.0);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 1.6);
+      osc.connect(g).connect(c.destination);
+      osc.start(t); osc.stop(t + 1.7);
+    });
+    // 멜로디
+    phrase.forEach(function(note) {
+      if (note.f > 0) {
+        var master = richTone(c, note.f, t, note.d, 0.12);
+        addReverb(c, master, 0.15);
+      }
+      t += note.d;
     });
     timer = setTimeout(ring, 3000);
   }
   ring();
 }
 
-// B: 따뜻한 트라이톤 멜로디
-function playB(btn) {
-  stopAll();
-  markPlaying(btn);
+// F: 오르골 자장가
+function playF(btn) {
+  stopAll(); markPlaying(btn);
   var c = getCtx();
-  // 도-미-솔 올라갔다 미-도 내려오는 따뜻한 멜로디
+  // 반짝반짝 작은별 느낌 오르골 (C-C-G-G-A-A-G)
   var melody = [
-    {f:523,d:0.18}, {f:659,d:0.18}, {f:784,d:0.28},
-    {f:0,d:0.08},
-    {f:659,d:0.18}, {f:523,d:0.3}
+    {f:1047,d:0.14}, {f:1047,d:0.14}, {f:1568,d:0.14}, {f:1568,d:0.14},
+    {f:1760,d:0.14}, {f:1760,d:0.14}, {f:1568,d:0.3}
   ];
   function ring() {
     if (!ctx) return;
     var t = c.currentTime;
+    // 부드러운 패드 깔림
+    [261.6, 392, 523].forEach(function(f) {
+      var osc = c.createOscillator(); osc.type = 'sine'; osc.frequency.value = f;
+      var g = c.createGain();
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.02, t + 0.2);
+      g.gain.setValueAtTime(0.02, t + 1.2);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 1.8);
+      osc.connect(g).connect(c.destination);
+      osc.start(t); osc.stop(t + 1.9);
+    });
     melody.forEach(function(note) {
       if (note.f > 0) {
-        // 기본음
-        var osc = c.createOscillator();
-        var gain = c.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(note.f, t);
-        gain.gain.setValueAtTime(0, t);
-        gain.gain.linearRampToValueAtTime(0.13, t + 0.03);
-        gain.gain.setValueAtTime(0.13, t + note.d * 0.5);
-        gain.gain.exponentialRampToValueAtTime(0.001, t + note.d);
-        osc.connect(gain).connect(c.destination);
-        osc.start(t);
-        osc.stop(t + note.d + 0.05);
-        // 옥타브 위 하모닉 (부드러운 윤기)
-        var osc2 = c.createOscillator();
+        // 오르골 특유의 높은 금속음
+        var osc = c.createOscillator(); osc.type = 'sine'; osc.frequency.value = note.f;
+        var g = c.createGain();
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.11, t + 0.003);
+        g.gain.exponentialRampToValueAtTime(0.02, t + 0.08);
+        g.gain.exponentialRampToValueAtTime(0.001, t + note.d + 0.1);
+        osc.connect(g).connect(c.destination);
+        osc.start(t); osc.stop(t + note.d + 0.15);
+        // 3배음 (벨 같은 반짝임)
+        var o2 = c.createOscillator(); o2.type = 'sine'; o2.frequency.value = note.f * 2.756;
         var g2 = c.createGain();
-        osc2.type = 'sine';
-        osc2.frequency.setValueAtTime(note.f * 2, t);
         g2.gain.setValueAtTime(0, t);
-        g2.gain.linearRampToValueAtTime(0.035, t + 0.03);
-        g2.gain.exponentialRampToValueAtTime(0.001, t + note.d);
-        osc2.connect(g2).connect(c.destination);
-        osc2.start(t);
-        osc2.stop(t + note.d + 0.05);
-        // 5도 아래 하모닉 (따뜻함)
-        var osc3 = c.createOscillator();
+        g2.gain.linearRampToValueAtTime(0.05, t + 0.003);
+        g2.gain.exponentialRampToValueAtTime(0.001, t + note.d * 0.6);
+        o2.connect(g2).connect(c.destination);
+        o2.start(t); o2.stop(t + note.d + 0.15);
+        // 딜레이 에코
+        var o3 = c.createOscillator(); o3.type = 'sine'; o3.frequency.value = note.f;
         var g3 = c.createGain();
-        osc3.type = 'sine';
-        osc3.frequency.setValueAtTime(note.f * 0.667, t);
-        g3.gain.setValueAtTime(0, t);
-        g3.gain.linearRampToValueAtTime(0.02, t + 0.03);
-        g3.gain.exponentialRampToValueAtTime(0.001, t + note.d * 0.7);
-        osc3.connect(g3).connect(c.destination);
-        osc3.start(t);
-        osc3.stop(t + note.d + 0.05);
+        var dt = t + 0.06;
+        g3.gain.setValueAtTime(0, dt);
+        g3.gain.linearRampToValueAtTime(0.03, dt + 0.003);
+        g3.gain.exponentialRampToValueAtTime(0.001, dt + note.d);
+        o3.connect(g3).connect(c.destination);
+        o3.start(dt); o3.stop(dt + note.d + 0.1);
       }
       t += note.d;
     });
@@ -176,94 +243,192 @@ function playB(btn) {
   ring();
 }
 
-// C: 두근두근 하트비트
-function playC(btn) {
-  stopAll();
-  markPlaying(btn);
+// G: 버블팝
+function playG(btn) {
+  stopAll(); markPlaying(btn);
   var c = getCtx();
-  // "뚜둥~ ... 뚜뚜둥~" 리듬
-  var beats = [
-    {f:587,d:0.12}, {f:440,d:0.22},
-    {f:0,d:0.35},
-    {f:587,d:0.1}, {f:659,d:0.1}, {f:440,d:0.28}
+  var pops = [
+    {f:880,d:0.08}, {f:1175,d:0.08}, {f:1397,d:0.12},
+    {f:0,d:0.05},
+    {f:1175,d:0.08}, {f:1397,d:0.08}, {f:1760,d:0.15},
+    {f:0,d:0.05},
+    {f:1397,d:0.1}, {f:1175,d:0.1}, {f:880,d:0.18}
   ];
   function ring() {
     if (!ctx) return;
     var t = c.currentTime;
-    beats.forEach(function(note) {
+    pops.forEach(function(note) {
       if (note.f > 0) {
-        var osc = c.createOscillator();
-        var gain = c.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(note.f, t);
-        gain.gain.setValueAtTime(0, t);
-        gain.gain.linearRampToValueAtTime(0.14, t + 0.015);
-        gain.gain.setValueAtTime(0.14, t + note.d * 0.3);
-        gain.gain.exponentialRampToValueAtTime(0.001, t + note.d);
-        osc.connect(gain).connect(c.destination);
-        osc.start(t);
-        osc.stop(t + note.d + 0.05);
-        // 부드러운 서브베이스 느낌
-        var osc2 = c.createOscillator();
+        // 버블 메인 톤
+        var osc = c.createOscillator(); osc.type = 'sine';
+        osc.frequency.setValueAtTime(note.f * 1.08, t);
+        osc.frequency.exponentialRampToValueAtTime(note.f, t + 0.025);
+        var g = c.createGain();
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.14, t + 0.005);
+        g.gain.setValueAtTime(0.14, t + note.d * 0.25);
+        g.gain.exponentialRampToValueAtTime(0.001, t + note.d);
+        osc.connect(g).connect(c.destination);
+        osc.start(t); osc.stop(t + note.d + 0.05);
+        // "팝" 느낌의 짧은 노이즈 어택
+        var o2 = c.createOscillator(); o2.type = 'triangle';
+        o2.frequency.setValueAtTime(note.f * 2.5, t);
+        o2.frequency.exponentialRampToValueAtTime(note.f * 1.5, t + 0.015);
         var g2 = c.createGain();
-        osc2.type = 'sine';
-        osc2.frequency.setValueAtTime(note.f * 0.5, t);
-        g2.gain.setValueAtTime(0, t);
-        g2.gain.linearRampToValueAtTime(0.05, t + 0.015);
-        g2.gain.exponentialRampToValueAtTime(0.001, t + note.d * 0.8);
-        osc2.connect(g2).connect(c.destination);
-        osc2.start(t);
-        osc2.stop(t + note.d + 0.05);
+        g2.gain.setValueAtTime(0.08, t);
+        g2.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
+        o2.connect(g2).connect(c.destination);
+        o2.start(t); o2.stop(t + 0.04);
+        // 서브 하모닉 (풍성함)
+        var o3 = c.createOscillator(); o3.type = 'sine';
+        o3.frequency.value = note.f * 0.5;
+        var g3 = c.createGain();
+        g3.gain.setValueAtTime(0, t);
+        g3.gain.linearRampToValueAtTime(0.06, t + 0.008);
+        g3.gain.exponentialRampToValueAtTime(0.001, t + note.d * 0.7);
+        o3.connect(g3).connect(c.destination);
+        o3.start(t); o3.stop(t + note.d + 0.05);
+        // 옥타브 위 (반짝임)
+        var o4 = c.createOscillator(); o4.type = 'sine';
+        o4.frequency.value = note.f * 2;
+        var g4 = c.createGain();
+        g4.gain.setValueAtTime(0, t);
+        g4.gain.linearRampToValueAtTime(0.03, t + 0.005);
+        g4.gain.exponentialRampToValueAtTime(0.001, t + note.d * 0.5);
+        o4.connect(g4).connect(c.destination);
+        o4.start(t); o4.stop(t + note.d + 0.05);
       }
       t += note.d;
+    });
+    timer = setTimeout(ring, 2600);
+  }
+  ring();
+}
+
+// H: 따뜻한 기타 코드
+function playH(btn) {
+  stopAll(); markPlaying(btn);
+  var c = getCtx();
+  // C → Am → F → G 코드 아르페지오
+  var chords = [
+    [261.6, 329.6, 392, 523],   // C
+    [220, 261.6, 329.6, 440],   // Am
+  ];
+  var chordIdx = 0;
+  function ring() {
+    if (!ctx) return;
+    var t = c.currentTime;
+    var chord = chords[chordIdx % chords.length];
+    chordIdx++;
+    // 아르페지오 (시간차 연주)
+    chord.forEach(function(f, i) {
+      var startT = t + i * 0.07;
+      // 기타 바디 (삼각파 + 사인파 블렌드)
+      var osc = c.createOscillator(); osc.type = 'triangle'; osc.frequency.value = f;
+      var g = c.createGain();
+      g.gain.setValueAtTime(0, startT);
+      g.gain.linearRampToValueAtTime(0.1, startT + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.04, startT + 0.12);
+      g.gain.exponentialRampToValueAtTime(0.001, startT + 0.8);
+      osc.connect(g).connect(c.destination);
+      osc.start(startT); osc.stop(startT + 0.85);
+      // 사인파 기본음 (따뜻함)
+      var o2 = c.createOscillator(); o2.type = 'sine'; o2.frequency.value = f;
+      var g2 = c.createGain();
+      g2.gain.setValueAtTime(0, startT);
+      g2.gain.linearRampToValueAtTime(0.07, startT + 0.008);
+      g2.gain.exponentialRampToValueAtTime(0.02, startT + 0.15);
+      g2.gain.exponentialRampToValueAtTime(0.001, startT + 0.9);
+      o2.connect(g2).connect(c.destination);
+      o2.start(startT); o2.stop(startT + 0.95);
+      // 2배음 (현의 울림)
+      var o3 = c.createOscillator(); o3.type = 'sine'; o3.frequency.value = f * 2;
+      var g3 = c.createGain();
+      g3.gain.setValueAtTime(0, startT);
+      g3.gain.linearRampToValueAtTime(0.025, startT + 0.005);
+      g3.gain.exponentialRampToValueAtTime(0.001, startT + 0.4);
+      o3.connect(g3).connect(c.destination);
+      o3.start(startT); o3.stop(startT + 0.45);
+      // 5배음 (기타 특유의 밝은 울림)
+      var o4 = c.createOscillator(); o4.type = 'sine'; o4.frequency.value = f * 5;
+      var g4 = c.createGain();
+      g4.gain.setValueAtTime(0, startT);
+      g4.gain.linearRampToValueAtTime(0.008, startT + 0.003);
+      g4.gain.exponentialRampToValueAtTime(0.001, startT + 0.15);
+      o4.connect(g4).connect(c.destination);
+      o4.start(startT); o4.stop(startT + 0.2);
     });
     timer = setTimeout(ring, 2800);
   }
   ring();
 }
 
-// D: 물방울 마림바
-function playD(btn) {
-  stopAll();
-  markPlaying(btn);
+// I: 숲속 차임
+function playI(btn) {
+  stopAll(); markPlaying(btn);
   var c = getCtx();
-  var notes = [
-    {f:1047,d:0.1}, {f:784,d:0.1}, {f:1047,d:0.1}, {f:1319,d:0.15},
-    {f:0,d:0.1},
-    {f:1175,d:0.1}, {f:1047,d:0.1}, {f:784,d:0.2}
+  var chimes = [
+    {f:1319,d:0.5}, {f:1568,d:0.45}, {f:1760,d:0.5},
+    {f:0,d:0.15},
+    {f:1397,d:0.45}, {f:1175,d:0.55}
   ];
   function ring() {
     if (!ctx) return;
     var t = c.currentTime;
-    notes.forEach(function(note) {
+    // 바람 소리 느낌의 배경 노이즈
+    var bufSize = c.sampleRate * 2;
+    var buf = c.createBuffer(1, bufSize, c.sampleRate);
+    var data = buf.getChannelData(0);
+    for (var i = 0; i < bufSize; i++) data[i] = (Math.random() * 2 - 1) * 0.008;
+    var noise = c.createBufferSource(); noise.buffer = buf;
+    var nGain = c.createGain();
+    nGain.gain.setValueAtTime(0, t);
+    nGain.gain.linearRampToValueAtTime(1, t + 0.3);
+    nGain.gain.setValueAtTime(1, t + 1.5);
+    nGain.gain.linearRampToValueAtTime(0, t + 2.2);
+    var lpf = c.createBiquadFilter(); lpf.type = 'lowpass'; lpf.frequency.value = 800;
+    noise.connect(lpf).connect(nGain).connect(c.destination);
+    noise.start(t); noise.stop(t + 2.5);
+
+    chimes.forEach(function(note) {
       if (note.f > 0) {
-        // 마림바 느낌: 빠른 어택 + 빠른 디케이
-        var osc = c.createOscillator();
-        var gain = c.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(note.f, t);
-        osc.frequency.exponentialRampToValueAtTime(note.f * 0.98, t + note.d);
-        gain.gain.setValueAtTime(0, t);
-        gain.gain.linearRampToValueAtTime(0.15, t + 0.005);
-        gain.gain.exponentialRampToValueAtTime(0.001, t + note.d + 0.08);
-        osc.connect(gain).connect(c.destination);
-        osc.start(t);
-        osc.stop(t + note.d + 0.1);
-        // 높은 하모닉으로 "통통" 느낌
-        var osc2 = c.createOscillator();
-        var g2 = c.createGain();
-        osc2.type = 'sine';
-        osc2.frequency.setValueAtTime(note.f * 3, t);
-        g2.gain.setValueAtTime(0, t);
-        g2.gain.linearRampToValueAtTime(0.04, t + 0.003);
-        g2.gain.exponentialRampToValueAtTime(0.001, t + note.d * 0.4);
-        osc2.connect(g2).connect(c.destination);
-        osc2.start(t);
-        osc2.stop(t + note.d + 0.1);
+        // 메인 차임
+        var osc = c.createOscillator(); osc.type = 'sine'; osc.frequency.value = note.f;
+        var g = c.createGain();
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.1, t + 0.003);
+        g.gain.exponentialRampToValueAtTime(0.03, t + 0.1);
+        g.gain.exponentialRampToValueAtTime(0.001, t + note.d);
+        osc.connect(g).connect(c.destination);
+        osc.start(t); osc.stop(t + note.d + 0.1);
+        // 비정수배 하모닉 (종 소리 특성)
+        [2.76, 5.4, 8.93].forEach(function(ratio, idx) {
+          var o = c.createOscillator(); o.type = 'sine'; o.frequency.value = note.f * ratio;
+          var gg = c.createGain();
+          var v = [0.04, 0.015, 0.006][idx];
+          gg.gain.setValueAtTime(0, t);
+          gg.gain.linearRampToValueAtTime(v, t + 0.002);
+          gg.gain.exponentialRampToValueAtTime(0.001, t + note.d * [0.5, 0.3, 0.2][idx]);
+          o.connect(gg).connect(c.destination);
+          o.start(t); o.stop(t + note.d + 0.1);
+        });
+        // 리버브 꼬리 (다중 딜레이)
+        [0.05, 0.11, 0.18, 0.27].forEach(function(dl) {
+          var o = c.createOscillator(); o.type = 'sine'; o.frequency.value = note.f;
+          var gg = c.createGain();
+          var dt = t + dl;
+          var rv = 0.03 * (1 - dl * 2);
+          if (rv < 0.003) rv = 0.003;
+          gg.gain.setValueAtTime(0, dt);
+          gg.gain.linearRampToValueAtTime(rv, dt + 0.002);
+          gg.gain.exponentialRampToValueAtTime(0.001, dt + note.d * 0.6);
+          o.connect(gg).connect(c.destination);
+          o.start(dt); o.stop(dt + note.d + 0.1);
+        });
       }
       t += note.d;
     });
-    timer = setTimeout(ring, 2600);
+    timer = setTimeout(ring, 3500);
   }
   ring();
 }
