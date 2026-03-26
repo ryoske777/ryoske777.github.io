@@ -5128,14 +5128,14 @@ firebase.auth().onAuthStateChanged(user => {
     showCallUI(_remoteNick, '전화 거는 중...', false);
     playRingtone(false);
 
+    // roomMembers 갱신 (fire-and-forget, calls 쓰기 권한 보장)
+    db.ref('roomMembers/' + roomId + '/' + myUid).set({ nick: myNick, joinedAt: SV.TIMESTAMP }).catch(function(){});
+
+    var callId = myUid + '_' + targetUid;
+    _callRef = db.ref('calls/' + roomId + '/' + callId);
+    await _callRef.remove().catch(function(){});
+
     try {
-      // roomMembers 확인/갱신 (calls 쓰기 권한 보장)
-      await db.ref('roomMembers/' + roomId + '/' + myUid).set({ nick: myNick, joinedAt: SV.TIMESTAMP });
-
-      var callId = myUid + '_' + targetUid;
-      _callRef = db.ref('calls/' + roomId + '/' + callId);
-      await _callRef.remove().catch(function(){});
-
       _pc = createPeerConnection();
       _localStream.getTracks().forEach(function(track) { _pc.addTrack(track, _localStream); });
 
@@ -5154,7 +5154,7 @@ firebase.auth().onAuthStateChanged(user => {
       _callRef.onDisconnect().update({ status: 'ended' });
     } catch(e) {
       console.error('startCall error:', e);
-      showToast('통화 연결에 실패했습니다');
+      showToast('통화 연결에 실패했습니다: ' + (e.message || e));
       endCall(true);
       return;
     }
