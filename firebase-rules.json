@@ -81,8 +81,11 @@
 
     "calls": {
       "$roomId": {
-        ".read": "auth != null && root.child('roomMembers').child($roomId).child(auth.uid).exists()",
-        ".write": "auth != null && root.child('roomMembers').child($roomId).child(auth.uid).exists()"
+        ".read": "auth != null",
+        ".write": "auth != null",
+        "$callId": {
+          ".write": "auth != null"
+        }
       }
     },
 
