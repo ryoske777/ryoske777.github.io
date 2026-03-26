@@ -419,23 +419,30 @@ body.stealth .stealthBar{display:flex !important}
 .tamaMateReq .btns button{padding:8px 18px;border-radius:10px;border:1px solid var(--line);font-size:13px;font-weight:700;cursor:pointer}
 .tamaMateReq .btns .accept{background:var(--accent);color:#fff;border-color:var(--accent)}
 /* 보이스콜 */
-.callOverlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:500;display:none;flex-direction:column;align-items:center;justify-content:center;gap:24px;color:#fff}
+.callOverlay{position:fixed;inset:0;background:linear-gradient(160deg,#1a1a2e 0%,#16213e 30%,#0f3460 70%,#1a1a2e 100%);z-index:500;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;color:#fff;overflow:hidden}
+.callOverlay::before{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(circle at 30% 40%,rgba(34,197,94,.08) 0%,transparent 50%),radial-gradient(circle at 70% 60%,rgba(59,130,246,.06) 0%,transparent 50%);animation:callBgShift 8s ease-in-out infinite alternate;pointer-events:none}
+@keyframes callBgShift{0%{transform:translate(0,0)}100%{transform:translate(3%,2%)}}
 .callOverlay.open{display:flex}
-.callStatus{font-size:14px;color:rgba(255,255,255,.7);font-weight:600}
-.callNick{font-size:28px;font-weight:900;margin-top:8px}
-.callTimer{font-size:16px;color:rgba(255,255,255,.6);font-variant-numeric:tabular-nums;min-height:24px}
-.callAvatar{width:88px;height:88px;border-radius:50%;background:linear-gradient(135deg,#22c55e,#16a34a);display:flex;align-items:center;justify-content:center;font-size:36px;box-shadow:0 8px 30px rgba(34,197,94,.3)}
-.callBtnRow{display:flex;gap:24px;margin-top:32px}
-.callActionBtn{width:64px;height:64px;border-radius:50%;border:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;font-size:24px;transition:transform .1s,opacity .15s}
-.callActionBtn:active{transform:scale(.9)}
-.callActionBtn.hangup{background:#ef4444;color:#fff;box-shadow:0 6px 20px rgba(239,68,68,.4)}
-.callActionBtn.accept{background:#22c55e;color:#fff;box-shadow:0 6px 20px rgba(34,197,94,.4)}
-.callActionBtn.mute{background:rgba(255,255,255,.15);color:#fff}
-.callActionBtn.mute.on{background:#f59e0b;color:#fff}
-.callActionLabel{font-size:10px;color:rgba(255,255,255,.7);font-weight:600;margin-top:4px}
-.callIncoming{animation:callIncomingPulse 1s ease-in-out infinite}
-@keyframes callIncomingPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
-.callSecBadge{display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:999px;background:rgba(34,197,94,.15);font-size:11px;color:#86efac;margin-top:12px}
+.callStatus{font-size:15px;color:rgba(255,255,255,.6);font-weight:500;letter-spacing:.3px;z-index:1}
+.callNick{font-size:26px;font-weight:800;margin-top:4px;z-index:1;letter-spacing:-.3px}
+.callTimer{font-size:18px;color:rgba(255,255,255,.5);font-variant-numeric:tabular-nums;min-height:24px;z-index:1;font-weight:500}
+.callAvatar{width:100px;height:100px;border-radius:50%;background:linear-gradient(135deg,#22c55e 0%,#059669 100%);display:flex;align-items:center;justify-content:center;font-size:40px;box-shadow:0 0 0 0 rgba(34,197,94,.4);z-index:1;position:relative}
+.callOverlay:not(.callConnected) .callAvatar{animation:callAvatarPulse 2s ease-in-out infinite}
+@keyframes callAvatarPulse{0%{box-shadow:0 0 0 0 rgba(34,197,94,.4)}50%{box-shadow:0 0 0 20px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,.4)}}
+.callAvatarText{font-size:36px;line-height:1}
+.callBtnRow{display:flex;gap:28px;margin-top:24px;z-index:1}
+.callActionBtn{width:62px;height:62px;border-radius:50%;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:24px;transition:transform .15s,box-shadow .2s;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.callActionBtn:active{transform:scale(.88)}
+.callActionBtn.hangup{background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;box-shadow:0 4px 24px rgba(239,68,68,.5)}
+.callActionBtn.accept{background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;box-shadow:0 4px 24px rgba(34,197,94,.5)}
+.callActionBtn.mute{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.15)}
+.callActionBtn.mute.on{background:rgba(245,158,11,.85);color:#fff;border-color:transparent}
+.callActionBtn.reject{background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;box-shadow:0 4px 24px rgba(239,68,68,.5)}
+.callActionLabel{font-size:11px;color:rgba(255,255,255,.55);font-weight:500;margin-top:6px}
+.callIncoming .callAvatar{animation:callIncomingBounce 1.2s ease-in-out infinite}
+@keyframes callIncomingBounce{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(34,197,94,.4)}30%{transform:scale(1.06);box-shadow:0 0 0 15px rgba(34,197,94,.15)}60%{transform:scale(.98);box-shadow:0 0 0 0 rgba(34,197,94,0)}}
+.callSecBadge{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;background:rgba(255,255,255,.08);font-size:11px;color:rgba(255,255,255,.4);margin-top:8px;z-index:1;backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.06)}
+.callConnected .callAvatar{animation:none;box-shadow:0 0 30px rgba(34,197,94,.2)}
 .callPickerOverlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:490;display:none;align-items:center;justify-content:center;padding:16px}
 .callPickerOverlay.open{display:flex}
 .callPickerCard{width:100%;max-width:340px;background:#fff;border-radius:18px;padding:20px;box-shadow:var(--shadow2)}
@@ -810,23 +817,27 @@ OneSignalDeferred.push(async function(OneSignal) {
 </div>
 
 <div class="callOverlay" id="callOverlay">
-  <div class="callAvatar" id="callAvatar">📞</div>
+  <div class="callAvatar" id="callAvatar"><span class="callAvatarText">📞</span></div>
   <div class="callNick" id="callNick"></div>
   <div class="callStatus" id="callStatusText">연결 중...</div>
   <div class="callTimer" id="callTimer"></div>
-  <div class="callSecBadge">🔒 종단간 암호화</div>
+  <div class="callSecBadge"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg> 종단간 암호화</div>
   <div class="callBtnRow" id="callBtnRow">
     <div style="display:flex;flex-direction:column;align-items:center">
-      <button class="callActionBtn mute" id="callMuteBtn">🎤</button>
+      <button class="callActionBtn mute" id="callMuteBtn"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg></button>
       <span class="callActionLabel">음소거</span>
     </div>
     <div style="display:flex;flex-direction:column;align-items:center">
-      <button class="callActionBtn hangup" id="callHangupBtn">📕</button>
+      <button class="callActionBtn hangup" id="callHangupBtn"><svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08a.956.956 0 01-.29-.7c0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.1-.7-.28-.79-.73-1.68-1.36-2.66-1.85a.991.991 0 01-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"/></svg></button>
       <span class="callActionLabel">종료</span>
     </div>
     <div id="callAcceptWrap" style="display:none;flex-direction:column;align-items:center">
-      <button class="callActionBtn accept" id="callAcceptBtn">📗</button>
+      <button class="callActionBtn accept" id="callAcceptBtn"><svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.977.977 0 00-1.01.24l-1.57 1.97c-2.83-1.35-5.48-3.9-6.89-6.83l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.73 21 20.01 21c.71 0 .99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z"/></svg></button>
       <span class="callActionLabel">수락</span>
+    </div>
+    <div id="callRejectWrap" style="display:none;flex-direction:column;align-items:center">
+      <button class="callActionBtn reject" id="callRejectBtn"><svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08a.956.956 0 01-.29-.7c0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.1-.7-.28-.79-.73-1.68-1.36-2.66-1.85a.991.991 0 01-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"/></svg></button>
+      <span class="callActionLabel">거절</span>
     </div>
   </div>
 </div>
@@ -4707,11 +4718,16 @@ firebase.auth().onAuthStateChanged(user => {
   const callHangupBtn = document.getElementById('callHangupBtn');
   const callAcceptBtn = document.getElementById('callAcceptBtn');
   const callAcceptWrap = document.getElementById('callAcceptWrap');
+  const callRejectBtn = document.getElementById('callRejectBtn');
+  const callRejectWrap = document.getElementById('callRejectWrap');
   const callMuteBtn = document.getElementById('callMuteBtn');
   const plusCallBtn = document.getElementById('plusCall');
   const pickerOverlay = document.getElementById('callPickerOverlay');
   const pickerList = document.getElementById('callPickerList');
   const pickerClose = document.getElementById('callPickerClose');
+
+  const MUTE_SVG = '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>';
+  const MUTED_SVG = '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.33 3 2.99 3 .22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5.3-2.1-5.3-5.1H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c.91-.13 1.77-.45 2.54-.9L19.73 21 21 19.73 4.27 3z"/></svg>';
 
   const ICE_SERVERS = [
     { urls: 'stun:stun.l.google.com:19302' },
@@ -4730,7 +4746,7 @@ firebase.auth().onAuthStateChanged(user => {
   let _remoteUid = '';
   let _remoteNick = '';
   let _ringtoneCtx = null;
-  let _ringtoneOsc = null;
+  let _ringtoneTimer = null;
   let _callAudio = null;
   let _wakeLock = null;
 
@@ -4748,13 +4764,35 @@ firebase.auth().onAuthStateChanged(user => {
   function releaseWakeLock() {
     if (_wakeLock) { try { _wakeLock.release(); } catch(e) {} _wakeLock = null; }
   }
-  // 화면 잠금 후 복귀 시 Wake Lock 재취득
   document.addEventListener('visibilitychange', function() {
     if (!document.hidden && window._voiceCallActive) acquireWakeLock();
   });
 
+  // ── 방 멤버 목록 (온라인+오프라인 모두) ──
+  async function getRoomMembers() {
+    const others = [];
+    if (!roomId) return others;
+    try {
+      const [mSnap, pSnap] = await Promise.all([
+        db.ref('roomMembers/' + roomId).once('value'),
+        db.ref('presence/' + roomId).once('value')
+      ]);
+      const members = mSnap.val() || {};
+      const pres = pSnap.val() || {};
+      const now = Date.now();
+      Object.keys(members).forEach(function(uid) {
+        if (uid === myUid) return;
+        const p = pres[uid] || {};
+        const ts = Number(p.lastActive || 0);
+        const isOnline = ts && (now - ts) <= 75000;
+        const nick = (p.nick || (members[uid] && members[uid].nick) || '???');
+        others.push({ uid: uid, nick: nick, online: isOnline });
+      });
+    } catch(e) {}
+    return others;
+  }
+
   function getOnlineOthers() {
-    // _onlineUidNickCache: { uid: nick } — 자신 제외 온라인 유저 목록 반환
     const others = [];
     if (!_onlineUidNickCache) return others;
     Object.keys(_onlineUidNickCache).forEach(function(uid) {
@@ -4763,40 +4801,115 @@ firebase.auth().onAuthStateChanged(user => {
     return others;
   }
 
-  function playRingtone() {
+  // ── 수신자에게 푸시 알림 보내기 ──
+  async function sendCallPush(targetUid) {
+    try {
+      const snap = await db.ref('pushSubs/' + targetUid).once('value');
+      const subs = snap.val() || {};
+      const now = Date.now();
+      const STALE_MS = 30 * 86400000;
+      let best = null, bestTs = 0;
+      Object.entries(subs).forEach(function(entry) {
+        var subId = entry[0], data = entry[1];
+        if (!subId) return;
+        var updated = Number((data && data.updatedAt) || 0);
+        if (updated && (now - updated) > STALE_MS) return;
+        if (updated >= bestTs) { best = subId; bestTs = updated; }
+      });
+      if (best) {
+        pushToSubs([best], '📞 ' + (myNick || 'Chat'), '음성 통화가 왔습니다', roomId, 1);
+      }
+    } catch(e) {}
+  }
+
+  // ── 카카오톡 스타일 따뜻한 벨소리 ──
+  function playRingtone(isIncoming) {
     try {
       _ringtoneCtx = new (window.AudioContext || window.webkitAudioContext)();
-      function ring() {
-        if (!_ringtoneCtx || _callState === 'connected' || _callState === 'idle') return;
-        _ringtoneOsc = _ringtoneCtx.createOscillator();
-        const gain = _ringtoneCtx.createGain();
-        _ringtoneOsc.type = 'sine';
-        _ringtoneOsc.frequency.setValueAtTime(440, _ringtoneCtx.currentTime);
-        gain.gain.setValueAtTime(0.15, _ringtoneCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, _ringtoneCtx.currentTime + 0.8);
-        _ringtoneOsc.connect(gain).connect(_ringtoneCtx.destination);
-        _ringtoneOsc.start(_ringtoneCtx.currentTime);
-        _ringtoneOsc.stop(_ringtoneCtx.currentTime + 0.8);
-        setTimeout(ring, 2500);
+      var ctx = _ringtoneCtx;
+
+      if (isIncoming) {
+        // 수신: 밝고 경쾌한 트릴 (카카오톡 스타일)
+        var noteIdx = 0;
+        var melody = [
+          {f:784,d:0.12}, {f:880,d:0.12}, {f:1047,d:0.18}, {f:880,d:0.12}, {f:784,d:0.25},
+          {f:0,d:0.15},
+          {f:784,d:0.12}, {f:880,d:0.12}, {f:1047,d:0.18}, {f:880,d:0.12}, {f:784,d:0.25}
+        ];
+
+        function playMelody() {
+          if (!_ringtoneCtx || _callState === 'connected' || _callState === 'idle') return;
+          var t = ctx.currentTime;
+          melody.forEach(function(note) {
+            if (note.f > 0) {
+              var osc = ctx.createOscillator();
+              var gain = ctx.createGain();
+              osc.type = 'sine';
+              osc.frequency.setValueAtTime(note.f, t);
+              gain.gain.setValueAtTime(0, t);
+              gain.gain.linearRampToValueAtTime(0.12, t + 0.02);
+              gain.gain.setValueAtTime(0.12, t + note.d * 0.6);
+              gain.gain.exponentialRampToValueAtTime(0.001, t + note.d);
+              osc.connect(gain).connect(ctx.destination);
+              osc.start(t);
+              osc.stop(t + note.d + 0.05);
+              // 부드러운 하모닉 추가
+              var osc2 = ctx.createOscillator();
+              var gain2 = ctx.createGain();
+              osc2.type = 'sine';
+              osc2.frequency.setValueAtTime(note.f * 2, t);
+              gain2.gain.setValueAtTime(0, t);
+              gain2.gain.linearRampToValueAtTime(0.03, t + 0.02);
+              gain2.gain.exponentialRampToValueAtTime(0.001, t + note.d);
+              osc2.connect(gain2).connect(ctx.destination);
+              osc2.start(t);
+              osc2.stop(t + note.d + 0.05);
+            }
+            t += note.d;
+          });
+          _ringtoneTimer = setTimeout(playMelody, 3000);
+        }
+        playMelody();
+      } else {
+        // 발신: 부드러운 "뚜르르... 뚜르르..." 콜백톤
+        function ringback() {
+          if (!_ringtoneCtx || _callState === 'connected' || _callState === 'idle') return;
+          var t = ctx.currentTime;
+          // 따뜻한 이중 톤 (425Hz + 480Hz 블렌드, 한국 콜백톤 느낌)
+          [425, 480].forEach(function(freq) {
+            var osc = ctx.createOscillator();
+            var gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, t);
+            gain.gain.setValueAtTime(0, t);
+            gain.gain.linearRampToValueAtTime(0.06, t + 0.08);
+            gain.gain.setValueAtTime(0.06, t + 1.0);
+            gain.gain.linearRampToValueAtTime(0, t + 1.15);
+            osc.connect(gain).connect(ctx.destination);
+            osc.start(t);
+            osc.stop(t + 1.2);
+          });
+          _ringtoneTimer = setTimeout(ringback, 3000);
+        }
+        ringback();
       }
-      ring();
     } catch(e) {}
   }
   function stopRingtone() {
-    try { if (_ringtoneOsc) _ringtoneOsc.stop(); } catch(e) {}
+    if (_ringtoneTimer) { clearTimeout(_ringtoneTimer); _ringtoneTimer = null; }
     try { if (_ringtoneCtx) _ringtoneCtx.close(); } catch(e) {}
-    _ringtoneOsc = null; _ringtoneCtx = null;
+    _ringtoneCtx = null;
   }
 
   function formatCallTime(sec) {
-    const m = Math.floor(sec / 60);
-    const s = sec % 60;
+    var m = Math.floor(sec / 60);
+    var s = sec % 60;
     return String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
   }
   function startCallTimer() {
     _callStartTime = Date.now();
     _callTimerInterval = setInterval(function() {
-      const elapsed = Math.floor((Date.now() - _callStartTime) / 1000);
+      var elapsed = Math.floor((Date.now() - _callStartTime) / 1000);
       callTimerEl.textContent = formatCallTime(elapsed);
     }, 1000);
   }
@@ -4810,38 +4923,47 @@ firebase.auth().onAuthStateChanged(user => {
     callNickEl.textContent = nick || '상대방';
     callStatusEl.textContent = status;
     callAcceptWrap.style.display = showAccept ? 'flex' : 'none';
-    if (showAccept) callOverlayEl.classList.add('callIncoming');
-    else callOverlayEl.classList.remove('callIncoming');
+    callRejectWrap.style.display = showAccept ? 'flex' : 'none';
+    if (showAccept) {
+      callOverlayEl.classList.add('callIncoming');
+      callOverlayEl.classList.remove('callConnected');
+    } else {
+      callOverlayEl.classList.remove('callIncoming');
+      callOverlayEl.classList.remove('callConnected');
+    }
     callOverlayEl.classList.add('open');
     _isMuted = false;
     callMuteBtn.classList.remove('on');
-    callMuteBtn.textContent = '🎤';
+    callMuteBtn.innerHTML = MUTE_SVG;
   }
   function hideCallUI() {
-    callOverlayEl.classList.remove('open','callIncoming');
+    callOverlayEl.classList.remove('open','callIncoming','callConnected');
     stopCallTimer();
     stopRingtone();
   }
 
-  // 통화 상대 선택 피커
-  function showContactPicker() {
-    const others = getOnlineOthers();
-    if (others.length === 0) {
-      showToast('접속 중인 상대가 없습니다');
+  // 통화 상대 선택 피커 (온라인+오프라인 멤버 모두 표시)
+  async function showContactPicker() {
+    var members = await getRoomMembers();
+    if (members.length === 0) {
+      showToast('방에 다른 멤버가 없습니다');
       return;
     }
-    // 2명(나+상대1)이면 바로 전화
-    if (others.length === 1) {
-      startCall(others[0].uid, others[0].nick);
+    // 온라인 우선 정렬
+    members.sort(function(a, b) { return (b.online ? 1 : 0) - (a.online ? 1 : 0); });
+    // 1명이면 바로 전화
+    if (members.length === 1) {
+      startCall(members[0].uid, members[0].nick);
       return;
     }
-    // 3명 이상이면 선택 피커 표시
     pickerList.innerHTML = '';
-    others.forEach(function(u) {
-      const item = document.createElement('div');
+    members.forEach(function(u) {
+      var item = document.createElement('div');
       item.className = 'callPickerItem';
-      item.innerHTML = '<span class="callPickerDot"></span>'
-        + '<span class="callPickerNick">' + (u.nick||'???').replace(/</g,'&lt;') + '</span>'
+      var dotColor = u.online ? '#22c55e' : '#9ca3af';
+      item.innerHTML = '<span class="callPickerDot" style="background:' + dotColor + '"></span>'
+        + '<span class="callPickerNick">' + (u.nick||'???').replace(/</g,'&lt;')
+        + (u.online ? '' : ' <span style="font-size:11px;color:#9ca3af;font-weight:400">(오프라인)</span>') + '</span>'
         + '<span class="callPickerCallIcon">📞</span>';
       item.addEventListener('click', function() {
         closeContactPicker();
@@ -4856,11 +4978,11 @@ firebase.auth().onAuthStateChanged(user => {
   }
 
   function createPeerConnection() {
-    const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+    var pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
 
     pc.onicecandidate = function(e) {
       if (e.candidate && _callRef) {
-        const path = _callState === 'calling' ? 'callerCandidates' : 'calleeCandidates';
+        var path = _callState === 'calling' ? 'callerCandidates' : 'calleeCandidates';
         _callRef.child(path).push(e.candidate.toJSON());
       }
     };
@@ -4873,25 +4995,25 @@ firebase.auth().onAuthStateChanged(user => {
       _callAudio.srcObject = e.streams[0];
     };
 
-    let _iceDisconnectTimer = null;
+    var _iceDisconnectTimer = null;
     pc.oniceconnectionstatechange = function() {
-      const state = pc.iceConnectionState;
+      var state = pc.iceConnectionState;
       if (state === 'connected' || state === 'completed') {
         if (_iceDisconnectTimer) { clearTimeout(_iceDisconnectTimer); _iceDisconnectTimer = null; }
         if (_callState !== 'connected') {
           _callState = 'connected';
           window._voiceCallActive = true;
           callStatusEl.textContent = '통화 중';
+          callOverlayEl.classList.add('callConnected');
+          callOverlayEl.classList.remove('callIncoming');
           stopRingtone();
           startCallTimer();
           acquireWakeLock();
         } else {
-          // 재연결 성공
           callStatusEl.textContent = '통화 중';
         }
       }
       if (state === 'disconnected') {
-        // 화면 잠금 등으로 일시 끊김 → 8초 대기 후 재연결 안 되면 종료
         callStatusEl.textContent = '재연결 중...';
         if (_iceDisconnectTimer) clearTimeout(_iceDisconnectTimer);
         _iceDisconnectTimer = setTimeout(function() {
@@ -4929,17 +5051,16 @@ firebase.auth().onAuthStateChanged(user => {
     _remoteUid = targetUid;
     _remoteNick = targetNick || '상대방';
     showCallUI(_remoteNick, '전화 거는 중...', false);
-    playRingtone();
+    playRingtone(false);
 
-    // 콜 경로: calls/{roomId}/{callerUid}_{calleeUid} (1:1 고유 식별)
-    const callId = myUid + '_' + targetUid;
+    var callId = myUid + '_' + targetUid;
     _callRef = db.ref('calls/' + roomId + '/' + callId);
     await _callRef.remove();
 
     _pc = createPeerConnection();
     _localStream.getTracks().forEach(function(track) { _pc.addTrack(track, _localStream); });
 
-    const offer = await _pc.createOffer();
+    var offer = await _pc.createOffer();
     await _pc.setLocalDescription(offer);
 
     await _callRef.set({
@@ -4953,9 +5074,12 @@ firebase.auth().onAuthStateChanged(user => {
     });
     _callRef.onDisconnect().update({ status: 'ended' });
 
+    // 수신자에게 푸시 알림 전송 (오프라인이거나 백그라운드여도 알림 받도록)
+    sendCallPush(targetUid);
+
     // answer 감시
     _callRef.child('answer').on('value', async function(snap) {
-      const ans = snap.val();
+      var ans = snap.val();
       if (ans && _pc && !_pc.currentRemoteDescription) {
         await _pc.setRemoteDescription(new RTCSessionDescription(ans));
       }
@@ -4963,26 +5087,26 @@ firebase.auth().onAuthStateChanged(user => {
 
     // calleeCandidates 감시
     _callRef.child('calleeCandidates').on('child_added', function(snap) {
-      const c = snap.val();
+      var c = snap.val();
       if (c && _pc) _pc.addIceCandidate(new RTCIceCandidate(c)).catch(function(){});
     });
 
     // 상태 감시 (상대방이 거절/종료)
     _callRef.child('status').on('value', function(snap) {
-      const st = snap.val();
+      var st = snap.val();
       if (st === 'ended' || st === 'rejected') {
         if (st === 'rejected') showToast('상대방이 통화를 거절했습니다');
         endCall(true);
       }
     });
 
-    // 30초 후 자동 종료 (응답 없으면)
+    // 60초 후 자동 종료 (응답 없으면) — 오프라인 유저도 알림 받을 시간
     setTimeout(function() {
       if (_callState === 'calling') {
         showToast('응답이 없습니다');
         endCall();
       }
-    }, 30000);
+    }, 60000);
   }
 
   // 수신: 전화 받기
@@ -4995,24 +5119,25 @@ firebase.auth().onAuthStateChanged(user => {
     stopRingtone();
     callStatusEl.textContent = '연결 중...';
     callAcceptWrap.style.display = 'none';
+    callRejectWrap.style.display = 'none';
     callOverlayEl.classList.remove('callIncoming');
 
     _pc = createPeerConnection();
     _localStream.getTracks().forEach(function(track) { _pc.addTrack(track, _localStream); });
 
-    const snap = await _callRef.child('offer').once('value');
-    const offer = snap.val();
+    var snap = await _callRef.child('offer').once('value');
+    var offer = snap.val();
     if (!offer) { endCall(); return; }
 
     await _pc.setRemoteDescription(new RTCSessionDescription(offer));
-    const answer = await _pc.createAnswer();
+    var answer = await _pc.createAnswer();
     await _pc.setLocalDescription(answer);
 
     await _callRef.child('answer').set({ type: answer.type, sdp: answer.sdp });
     await _callRef.child('status').set('connected');
 
     _callRef.child('callerCandidates').on('child_added', function(snap) {
-      const c = snap.val();
+      var c = snap.val();
       if (c && _pc) _pc.addIceCandidate(new RTCIceCandidate(c)).catch(function(){});
     });
   }
@@ -5068,24 +5193,25 @@ firebase.auth().onAuthStateChanged(user => {
     _callListenerRef.on('child_changed', handleIncoming);
   }
   function handleIncoming(snap) {
-    const data = snap.val();
+    var data = snap.val();
     if (!data || !data.callerUid || !data.offer) return;
     if (data.callerUid === myUid) return;
     if (_callState !== 'idle') return;
     if (data.status !== 'ringing') return;
-    // 특정 상대에게 건 전화인 경우, 나에게 온 것만 수신
     if (data.calleeUid && data.calleeUid !== myUid) return;
+    // 너무 오래된 전화는 무시 (60초 이상)
+    if (data.ts && typeof data.ts === 'number' && (Date.now() - data.ts) > 60000) return;
 
     _callState = 'ringing';
     _remoteUid = data.callerUid;
     _remoteNick = data.callerNick || '상대방';
     _callRef = db.ref('calls/' + roomId + '/' + snap.key);
 
-    showCallUI(_remoteNick, '📞 수신 전화', true);
-    playRingtone();
+    showCallUI(_remoteNick, '수신 전화', true);
+    playRingtone(true);
 
     _callRef.child('status').on('value', function(snap) {
-      const st = snap.val();
+      var st = snap.val();
       if (st === 'ended') {
         showToast('상대방이 전화를 취소했습니다');
         endCall(true);
@@ -5105,12 +5231,10 @@ firebase.auth().onAuthStateChanged(user => {
     _isMuted = !_isMuted;
     _localStream.getAudioTracks().forEach(function(t) { t.enabled = !_isMuted; });
     callMuteBtn.classList.toggle('on', _isMuted);
-    callMuteBtn.textContent = _isMuted ? '🔇' : '🎤';
+    callMuteBtn.innerHTML = _isMuted ? MUTED_SVG : MUTE_SVG;
   });
 
-  // 플러스 패널의 통화 버튼
   plusCallBtn.addEventListener('click', function() {
-    // 플러스 패널 닫기
     var pp = document.getElementById('plusPanel');
     if (pp) pp.classList.remove('open');
     if (_callState !== 'idle') {
@@ -5122,13 +5246,14 @@ firebase.auth().onAuthStateChanged(user => {
 
   callHangupBtn.addEventListener('click', function() { endCall(); });
   callAcceptBtn.addEventListener('click', function() { acceptCall(); });
+  callRejectBtn.addEventListener('click', function() { rejectCall(); });
   pickerClose.addEventListener('click', closeContactPicker);
   pickerOverlay.addEventListener('click', function(e) {
     if (e.target === pickerOverlay) closeContactPicker();
   });
 
   // enterRoom / showHome 패치
-  const _origEnterRoom = enterRoom;
+  var _origEnterRoom = enterRoom;
   window.enterRoom = async function(rid, infoOpt) {
     if (_callState !== 'idle') endCall();
     stopWatchingCalls();
@@ -5137,7 +5262,7 @@ firebase.auth().onAuthStateChanged(user => {
     if (roomId) watchIncomingCalls(roomId);
   };
 
-  const _origShowHome = showHome;
+  var _origShowHome = showHome;
   window.showHome = function() {
     if (_callState !== 'idle') endCall();
     stopWatchingCalls();
