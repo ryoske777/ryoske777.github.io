@@ -741,8 +741,8 @@ var CHAR_TOP=ICON_H+SEP;     // 캐릭터 영역 시작 y (=18)
 var CHAR_BOT_H=ICON_H+SEP;  // 하단 여백 (=18)
 // 캐릭터 영역 높이 = 100-18-18 = 64
 var ICON_SZ=14; // 아이콘 1개 크기 (14×14 스프라이트)
-var ICON_GAP=5; // 아이콘 사이 간격
-var ICON_OFF=15;// 좌측 오프셋 → 4개: 15,34,53,72
+var ICON_GAP=14; // 아이콘 사이 간격 (HTML 오버레이 아이콘 위치에 맞춤)
+var ICON_OFF=1;  // 좌측 오프셋 → 4개: 1,29,57,85 (HTML 아이콘 센터와 정렬)
 
 // ── 메인 캔버스 렌더 (100×100 도트) P1 스타일 ──
 function renderMain(){
