@@ -419,11 +419,6 @@ body.stealth .stealthBar{display:flex !important}
 .tamaMateReq .btns button{padding:8px 18px;border-radius:10px;border:1px solid var(--line);font-size:13px;font-weight:700;cursor:pointer}
 .tamaMateReq .btns .accept{background:var(--accent);color:#fff;border-color:var(--accent)}
 /* 보이스콜 */
-.callBtn{width:32px;height:32px;border-radius:10px;border:1px solid var(--line);background:#fff;display:none;align-items:center;justify-content:center;font-size:16px;line-height:1;user-select:none;box-shadow:0 4px 12px rgba(0,0,0,.05);cursor:pointer;flex-shrink:0}
-.callBtn.show{display:flex}
-.callBtn:hover{background:#f0fdf4;border-color:var(--accent)}
-.callBtn.active{background:#ef4444;border-color:#ef4444;color:#fff;animation:callPulse 1.5s ease-in-out infinite}
-@keyframes callPulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.4)}50%{box-shadow:0 0 0 8px rgba(239,68,68,0)}}
 .callOverlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:500;display:none;flex-direction:column;align-items:center;justify-content:center;gap:24px;color:#fff}
 .callOverlay.open{display:flex}
 .callStatus{font-size:14px;color:rgba(255,255,255,.7);font-weight:600}
@@ -441,7 +436,19 @@ body.stealth .stealthBar{display:flex !important}
 .callIncoming{animation:callIncomingPulse 1s ease-in-out infinite}
 @keyframes callIncomingPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
 .callSecBadge{display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:999px;background:rgba(34,197,94,.15);font-size:11px;color:#86efac;margin-top:12px}
-body.stealth .callBtn{display:none!important}
+.callPickerOverlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:490;display:none;align-items:center;justify-content:center;padding:16px}
+.callPickerOverlay.open{display:flex}
+.callPickerCard{width:100%;max-width:340px;background:#fff;border-radius:18px;padding:20px;box-shadow:var(--shadow2)}
+.callPickerTitle{font-size:16px;font-weight:900;margin-bottom:14px;text-align:center}
+.callPickerList{display:flex;flex-direction:column;gap:8px;max-height:50vh;overflow-y:auto}
+.callPickerItem{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:14px;cursor:pointer;transition:background .15s}
+.callPickerItem:hover{background:#f0fdf4;border-color:var(--accent)}
+.callPickerDot{width:10px;height:10px;border-radius:50%;background:#22c55e;flex-shrink:0}
+.callPickerNick{font-size:14px;font-weight:700;flex:1}
+.callPickerCallIcon{font-size:18px;flex-shrink:0;opacity:.5}
+.callPickerItem:hover .callPickerCallIcon{opacity:1}
+.callPickerClose{width:100%;margin-top:12px;padding:10px;border:1px solid var(--line);border-radius:12px;background:#fff;font-size:14px;font-weight:700;cursor:pointer}
+.callPickerClose:hover{background:#f8fafc}
 </style>
 <script>
 window.OneSignalDeferred = window.OneSignalDeferred || [];
@@ -472,7 +479,6 @@ OneSignalDeferred.push(async function(OneSignal) {
         <div class="sub" id="roomSub"></div>
       </div>
       <div class="menuWrap">
-        <div class="callBtn" id="callBtn" title="보이스콜">📞</div>
         <div class="searchBtn clickable" id="searchBtn">🔍</div>
         <div class="menuBtn clickable" id="menuBtn">…</div>
         <div class="menu" id="menu">
@@ -673,6 +679,10 @@ OneSignalDeferred.push(async function(OneSignal) {
         <div class="plusIcon">📷</div>
         <div class="plusLabel">사진</div>
       </label>
+      <div class="plusItem clickable" id="plusCall">
+        <div class="plusIcon">📞</div>
+        <div class="plusLabel">통화</div>
+      </div>
       <div class="plusItem clickable" id="plusDraw">
         <div class="plusIcon">✏️</div>
         <div class="plusLabel">손글씨</div>
@@ -818,6 +828,14 @@ OneSignalDeferred.push(async function(OneSignal) {
       <button class="callActionBtn accept" id="callAcceptBtn">📗</button>
       <span class="callActionLabel">수락</span>
     </div>
+  </div>
+</div>
+
+<div class="callPickerOverlay" id="callPickerOverlay">
+  <div class="callPickerCard" id="callPickerCard">
+    <div class="callPickerTitle">통화할 상대 선택</div>
+    <div class="callPickerList" id="callPickerList"></div>
+    <button class="callPickerClose" id="callPickerClose">닫기</button>
   </div>
 </div>
 
@@ -2771,6 +2789,7 @@ function stopPresence() {
   }
 }
 let _onlineStatusCache = {};
+let _onlineUidNickCache = {};
 function startPresence(rid) {
   stopPresence();
   _presRef = db.ref('presence/'+rid+'/'+myUid);
@@ -2782,7 +2801,8 @@ function startPresence(rid) {
   _presListenRef.on('value', snap => {
     const v=snap.val()||{}, now=Date.now(), online=[];
     _onlineStatusCache = {};
-    Object.keys(v).forEach(u=>{ const p=v[u]||{},ts=Number(p.lastActive||0); if(ts&&(now-ts)<=75000&&p.nick){ online.push(p.nick); if(p.status) _onlineStatusCache[p.nick]=p.status; } });
+    _onlineUidNickCache = {};
+    Object.keys(v).forEach(u=>{ const p=v[u]||{},ts=Number(p.lastActive||0); if(ts&&(now-ts)<=75000&&p.nick){ online.push(p.nick); _onlineUidNickCache[u]=p.nick; if(p.status) _onlineStatusCache[p.nick]=p.status; } });
     const uniq=[],s=new Set(); for(const n of online){const t=(n||'').trim();if(!t||s.has(t))continue;s.add(t);uniq.push(t);}
     const nicks=uniq.slice(0,12);
     (typeof requestIdleCallback==='function'?requestIdleCallback:function(cb){setTimeout(cb,60);})(()=>setHeader(nicks));
@@ -4680,7 +4700,6 @@ firebase.auth().onAuthStateChanged(user => {
 
 /* ─── 1:1 보이스콜 (WebRTC + Firebase Signaling) ─── */
 (function(){
-  const callBtnEl = document.getElementById('callBtn');
   const callOverlayEl = document.getElementById('callOverlay');
   const callNickEl = document.getElementById('callNick');
   const callStatusEl = document.getElementById('callStatusText');
@@ -4689,6 +4708,10 @@ firebase.auth().onAuthStateChanged(user => {
   const callAcceptBtn = document.getElementById('callAcceptBtn');
   const callAcceptWrap = document.getElementById('callAcceptWrap');
   const callMuteBtn = document.getElementById('callMuteBtn');
+  const plusCallBtn = document.getElementById('plusCall');
+  const pickerOverlay = document.getElementById('callPickerOverlay');
+  const pickerList = document.getElementById('callPickerList');
+  const pickerClose = document.getElementById('callPickerClose');
 
   const ICE_SERVERS = [
     { urls: 'stun:stun.l.google.com:19302' },
@@ -4710,28 +4733,19 @@ firebase.auth().onAuthStateChanged(user => {
   let _ringtoneOsc = null;
   let _callAudio = null;
 
-  function getOnlineCount() { return onlineNicksCache ? onlineNicksCache.length : 0; }
-  function is1to1() { return getOnlineCount() === 2; }
-
-  function updateCallBtnVisibility() {
-    if (roomId && is1to1() && _callState === 'idle') {
-      callBtnEl.classList.add('show');
-      callBtnEl.classList.remove('active');
-    } else if (_callState !== 'idle') {
-      callBtnEl.classList.add('show','active');
-    } else {
-      callBtnEl.classList.remove('show','active');
-    }
+  function getOnlineOthers() {
+    // _onlineUidNickCache: { uid: nick } — 자신 제외 온라인 유저 목록 반환
+    const others = [];
+    if (!_onlineUidNickCache) return others;
+    Object.keys(_onlineUidNickCache).forEach(function(uid) {
+      if (uid !== myUid) others.push({ uid: uid, nick: _onlineUidNickCache[uid] });
+    });
+    return others;
   }
-
-  // presence 리스너가 setHeader를 호출할 때마다 callBtn 갱신을 위해 MutationObserver 사용
-  const _subObs = new MutationObserver(function() { updateCallBtnVisibility(); });
-  _subObs.observe(roomSub, { childList: true, subtree: true, characterData: true });
 
   function playRingtone() {
     try {
       _ringtoneCtx = new (window.AudioContext || window.webkitAudioContext)();
-      let t = _ringtoneCtx.currentTime;
       function ring() {
         if (!_ringtoneCtx || _callState === 'connected' || _callState === 'idle') return;
         _ringtoneOsc = _ringtoneCtx.createOscillator();
@@ -4759,7 +4773,6 @@ firebase.auth().onAuthStateChanged(user => {
     const s = sec % 60;
     return String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
   }
-
   function startCallTimer() {
     _callStartTime = Date.now();
     _callTimerInterval = setInterval(function() {
@@ -4790,13 +4803,44 @@ firebase.auth().onAuthStateChanged(user => {
     stopRingtone();
   }
 
+  // 통화 상대 선택 피커
+  function showContactPicker() {
+    const others = getOnlineOthers();
+    if (others.length === 0) {
+      showToast('접속 중인 상대가 없습니다');
+      return;
+    }
+    // 2명(나+상대1)이면 바로 전화
+    if (others.length === 1) {
+      startCall(others[0].uid, others[0].nick);
+      return;
+    }
+    // 3명 이상이면 선택 피커 표시
+    pickerList.innerHTML = '';
+    others.forEach(function(u) {
+      const item = document.createElement('div');
+      item.className = 'callPickerItem';
+      item.innerHTML = '<span class="callPickerDot"></span>'
+        + '<span class="callPickerNick">' + (u.nick||'???').replace(/</g,'&lt;') + '</span>'
+        + '<span class="callPickerCallIcon">📞</span>';
+      item.addEventListener('click', function() {
+        closeContactPicker();
+        startCall(u.uid, u.nick);
+      });
+      pickerList.appendChild(item);
+    });
+    pickerOverlay.classList.add('open');
+  }
+  function closeContactPicker() {
+    pickerOverlay.classList.remove('open');
+  }
+
   function createPeerConnection() {
     const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
 
     pc.onicecandidate = function(e) {
       if (e.candidate && _callRef) {
-        const path = _callState === 'calling' || _remoteUid > myUid
-          ? 'callerCandidates' : 'calleeCandidates';
+        const path = _callState === 'calling' ? 'callerCandidates' : 'calleeCandidates';
         _callRef.child(path).push(e.candidate.toJSON());
       }
     };
@@ -4816,7 +4860,6 @@ firebase.auth().onAuthStateChanged(user => {
           callStatusEl.textContent = '통화 중';
           stopRingtone();
           startCallTimer();
-          updateCallBtnVisibility();
         }
       }
       if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'closed') {
@@ -4836,23 +4879,22 @@ firebase.auth().onAuthStateChanged(user => {
     }
   }
 
-  // 발신: 내가 전화 걸기
-  async function startCall() {
-    if (_callState !== 'idle' || !roomId || !is1to1()) return;
-
-    // 상대방 닉네임 찾기
-    const otherNick = onlineNicksCache.find(function(n) { return n !== myNick; }) || '상대방';
+  // 발신: 특정 상대에게 전화 걸기
+  async function startCall(targetUid, targetNick) {
+    if (_callState !== 'idle' || !roomId) return;
 
     _localStream = await getAudioStream();
     if (!_localStream) return;
 
     _callState = 'calling';
-    _remoteNick = otherNick;
-    showCallUI(otherNick, '전화 거는 중...', false);
+    _remoteUid = targetUid;
+    _remoteNick = targetNick || '상대방';
+    showCallUI(_remoteNick, '전화 거는 중...', false);
     playRingtone();
 
-    _callRef = db.ref('calls/' + roomId);
-    // 기존 콜 데이터 정리
+    // 콜 경로: calls/{roomId}/{callerUid}_{calleeUid} (1:1 고유 식별)
+    const callId = myUid + '_' + targetUid;
+    _callRef = db.ref('calls/' + roomId + '/' + callId);
     await _callRef.remove();
 
     _pc = createPeerConnection();
@@ -4864,10 +4906,13 @@ firebase.auth().onAuthStateChanged(user => {
     await _callRef.set({
       callerUid: myUid,
       callerNick: myNick,
+      calleeUid: targetUid,
+      calleeNick: targetNick,
       offer: { type: offer.type, sdp: offer.sdp },
       status: 'ringing',
       ts: SV.TIMESTAMP
     });
+    _callRef.onDisconnect().update({ status: 'ended' });
 
     // answer 감시
     _callRef.child('answer').on('value', async function(snap) {
@@ -4899,8 +4944,6 @@ firebase.auth().onAuthStateChanged(user => {
         endCall();
       }
     }, 30000);
-
-    updateCallBtnVisibility();
   }
 
   // 수신: 전화 받기
@@ -4918,7 +4961,6 @@ firebase.auth().onAuthStateChanged(user => {
     _pc = createPeerConnection();
     _localStream.getTracks().forEach(function(track) { _pc.addTrack(track, _localStream); });
 
-    // offer 가져오기
     const snap = await _callRef.child('offer').once('value');
     const offer = snap.val();
     if (!offer) { endCall(); return; }
@@ -4930,13 +4972,10 @@ firebase.auth().onAuthStateChanged(user => {
     await _callRef.child('answer').set({ type: answer.type, sdp: answer.sdp });
     await _callRef.child('status').set('connected');
 
-    // callerCandidates 감시
     _callRef.child('callerCandidates').on('child_added', function(snap) {
       const c = snap.val();
       if (c && _pc) _pc.addIceCandidate(new RTCIceCandidate(c)).catch(function(){});
     });
-
-    updateCallBtnVisibility();
   }
 
   function rejectCall() {
@@ -4949,12 +4988,12 @@ firebase.auth().onAuthStateChanged(user => {
     if (!skipDbUpdate && _callRef) {
       _callRef.child('status').set('ended').catch(function(){});
     }
-    // 리스너 정리
     if (_callRef) {
       try { _callRef.child('answer').off(); } catch(e) {}
       try { _callRef.child('callerCandidates').off(); } catch(e) {}
       try { _callRef.child('calleeCandidates').off(); } catch(e) {}
       try { _callRef.child('status').off(); } catch(e) {}
+      try { _callRef.onDisconnect().cancel(); } catch(e) {}
     }
     if (_callListenerRef) {
       try { _callListenerRef.off(); } catch(e) {}
@@ -4969,52 +5008,47 @@ firebase.auth().onAuthStateChanged(user => {
       try { _callAudio.srcObject = null; } catch(e) {}
       _callAudio = null;
     }
-    // 통화 끝난 후 DB 정리 (발신자만)
     if (!skipDbUpdate && _callRef) {
-      setTimeout(function() {
-        if (_callRef) _callRef.remove().catch(function(){});
-      }, 1000);
+      var ref = _callRef;
+      setTimeout(function() { ref.remove().catch(function(){}); }, 1500);
     }
     _callState = 'idle';
     _remoteUid = '';
     _remoteNick = '';
     _callRef = null;
     hideCallUI();
-    updateCallBtnVisibility();
   }
 
-  // 수신 통화 감시
+  // 수신 통화 감시: calls/{roomId} 하위에서 나에게 온 전화 감지
   function watchIncomingCalls(rid) {
     stopWatchingCalls();
     _callListenerRef = db.ref('calls/' + rid);
-    _callListenerRef.on('value', function(snap) {
-      const data = snap.val();
-      if (!data || !data.callerUid || !data.offer) return;
-      // 내가 건 전화면 무시
-      if (data.callerUid === myUid) return;
-      // 이미 통화 중이면 무시
-      if (_callState !== 'idle') return;
-      // ringing 상태만 수신
-      if (data.status !== 'ringing') return;
+    _callListenerRef.on('child_added', handleIncoming);
+    _callListenerRef.on('child_changed', handleIncoming);
+  }
+  function handleIncoming(snap) {
+    const data = snap.val();
+    if (!data || !data.callerUid || !data.offer) return;
+    if (data.callerUid === myUid) return;
+    if (_callState !== 'idle') return;
+    if (data.status !== 'ringing') return;
+    // 특정 상대에게 건 전화인 경우, 나에게 온 것만 수신
+    if (data.calleeUid && data.calleeUid !== myUid) return;
 
-      _callState = 'ringing';
-      _remoteUid = data.callerUid;
-      _remoteNick = data.callerNick || '상대방';
-      _callRef = db.ref('calls/' + rid);
+    _callState = 'ringing';
+    _remoteUid = data.callerUid;
+    _remoteNick = data.callerNick || '상대방';
+    _callRef = db.ref('calls/' + roomId + '/' + snap.key);
 
-      showCallUI(_remoteNick, '수신 전화', true);
-      playRingtone();
+    showCallUI(_remoteNick, '📞 수신 전화', true);
+    playRingtone();
 
-      // 상태 감시 (발신자가 취소)
-      _callRef.child('status').on('value', function(snap) {
-        const st = snap.val();
-        if (st === 'ended') {
-          showToast('상대방이 전화를 취소했습니다');
-          endCall(true);
-        }
-      });
-
-      updateCallBtnVisibility();
+    _callRef.child('status').on('value', function(snap) {
+      const st = snap.val();
+      if (st === 'ended') {
+        showToast('상대방이 전화를 취소했습니다');
+        endCall(true);
+      }
     });
   }
   function stopWatchingCalls() {
@@ -5024,7 +5058,7 @@ firebase.auth().onAuthStateChanged(user => {
     }
   }
 
-  // 음소거 토글
+  // 이벤트 바인딩
   callMuteBtn.addEventListener('click', function() {
     if (!_localStream) return;
     _isMuted = !_isMuted;
@@ -5033,35 +5067,43 @@ firebase.auth().onAuthStateChanged(user => {
     callMuteBtn.textContent = _isMuted ? '🔇' : '🎤';
   });
 
-  callBtnEl.addEventListener('click', function() {
-    if (_callState === 'idle') startCall();
-    else if (_callState !== 'idle') {
+  // 플러스 패널의 통화 버튼
+  plusCallBtn.addEventListener('click', function() {
+    // 플러스 패널 닫기
+    var pp = document.getElementById('plusPanel');
+    if (pp) pp.classList.remove('open');
+    if (_callState !== 'idle') {
       callOverlayEl.classList.add('open');
+      return;
     }
+    showContactPicker();
   });
+
   callHangupBtn.addEventListener('click', function() { endCall(); });
   callAcceptBtn.addEventListener('click', function() { acceptCall(); });
+  pickerClose.addEventListener('click', closeContactPicker);
+  pickerOverlay.addEventListener('click', function(e) {
+    if (e.target === pickerOverlay) closeContactPicker();
+  });
 
-  // enterRoom / showHome 패치: 방 입장/퇴장 시 통화 감시 시작/정리
+  // enterRoom / showHome 패치
   const _origEnterRoom = enterRoom;
   window.enterRoom = async function(rid, infoOpt) {
-    // 기존 통화 정리
     if (_callState !== 'idle') endCall();
     stopWatchingCalls();
+    closeContactPicker();
     await _origEnterRoom(rid, infoOpt);
     if (roomId) watchIncomingCalls(roomId);
-    updateCallBtnVisibility();
   };
 
   const _origShowHome = showHome;
   window.showHome = function() {
     if (_callState !== 'idle') endCall();
     stopWatchingCalls();
+    closeContactPicker();
     _origShowHome();
-    callBtnEl.classList.remove('show','active');
   };
 
-  // 페이지 종료 시 통화 정리
   window.addEventListener('beforeunload', function() {
     if (_callState !== 'idle') endCall();
   });
