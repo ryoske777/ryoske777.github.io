@@ -5117,7 +5117,7 @@ firebase.auth().onAuthStateChanged(user => {
 
   // 발신: 특정 상대에게 전화 걸기
   async function startCall(targetUid, targetNick) {
-    if (_callState !== 'idle' || !roomId) return;
+    if (_callState !== 'idle' || !roomId || !myUid) return;
 
     _localStream = await getAudioStream();
     if (!_localStream) return;
@@ -5128,26 +5128,36 @@ firebase.auth().onAuthStateChanged(user => {
     showCallUI(_remoteNick, '전화 거는 중...', false);
     playRingtone(false);
 
-    var callId = myUid + '_' + targetUid;
-    _callRef = db.ref('calls/' + roomId + '/' + callId);
-    await _callRef.remove();
+    try {
+      // roomMembers 확인/갱신 (calls 쓰기 권한 보장)
+      await db.ref('roomMembers/' + roomId + '/' + myUid).set({ nick: myNick, joinedAt: SV.TIMESTAMP });
 
-    _pc = createPeerConnection();
-    _localStream.getTracks().forEach(function(track) { _pc.addTrack(track, _localStream); });
+      var callId = myUid + '_' + targetUid;
+      _callRef = db.ref('calls/' + roomId + '/' + callId);
+      await _callRef.remove().catch(function(){});
 
-    var offer = await _pc.createOffer();
-    await _pc.setLocalDescription(offer);
+      _pc = createPeerConnection();
+      _localStream.getTracks().forEach(function(track) { _pc.addTrack(track, _localStream); });
 
-    await _callRef.set({
-      callerUid: myUid,
-      callerNick: myNick,
-      calleeUid: targetUid,
-      calleeNick: targetNick,
-      offer: { type: offer.type, sdp: offer.sdp },
-      status: 'ringing',
-      ts: SV.TIMESTAMP
-    });
-    _callRef.onDisconnect().update({ status: 'ended' });
+      var offer = await _pc.createOffer();
+      await _pc.setLocalDescription(offer);
+
+      await _callRef.set({
+        callerUid: myUid,
+        callerNick: myNick,
+        calleeUid: targetUid,
+        calleeNick: targetNick,
+        offer: { type: offer.type, sdp: offer.sdp },
+        status: 'ringing',
+        ts: SV.TIMESTAMP
+      });
+      _callRef.onDisconnect().update({ status: 'ended' });
+    } catch(e) {
+      console.error('startCall error:', e);
+      showToast('통화 연결에 실패했습니다');
+      endCall(true);
+      return;
+    }
 
     // 수신자에게 푸시 알림 전송 (오프라인이거나 백그라운드여도 알림 받도록)
     sendCallPush(targetUid);
@@ -5263,34 +5273,37 @@ firebase.auth().onAuthStateChanged(user => {
   // 수신 통화 감시: calls/{roomId} 하위에서 나에게 온 전화 감지
   function watchIncomingCalls(rid) {
     stopWatchingCalls();
+    if (!rid || !myUid) return;
     _callListenerRef = db.ref('calls/' + rid);
-    _callListenerRef.on('child_added', handleIncoming);
-    _callListenerRef.on('child_changed', handleIncoming);
-  }
-  function handleIncoming(snap) {
-    var data = snap.val();
-    if (!data || !data.callerUid || !data.offer) return;
-    if (data.callerUid === myUid) return;
-    if (_callState !== 'idle') return;
-    if (data.status !== 'ringing') return;
-    if (data.calleeUid && data.calleeUid !== myUid) return;
-    // 너무 오래된 전화는 무시 (60초 이상)
-    if (data.ts && typeof data.ts === 'number' && (Date.now() - data.ts) > 60000) return;
+    _callListenerRef.on('value', function(snap) {
+      var allCalls = snap.val();
+      if (!allCalls || _callState !== 'idle') return;
+      var now = Date.now();
+      Object.keys(allCalls).forEach(function(key) {
+        if (_callState !== 'idle') return;
+        var data = allCalls[key];
+        if (!data || !data.callerUid || !data.offer) return;
+        if (data.callerUid === myUid) return;
+        if (data.status !== 'ringing') return;
+        if (data.calleeUid && data.calleeUid !== myUid) return;
+        if (data.ts && typeof data.ts === 'number' && (now - data.ts) > 60000) return;
 
-    _callState = 'ringing';
-    _remoteUid = data.callerUid;
-    _remoteNick = data.callerNick || '상대방';
-    _callRef = db.ref('calls/' + roomId + '/' + snap.key);
+        _callState = 'ringing';
+        _remoteUid = data.callerUid;
+        _remoteNick = data.callerNick || '상대방';
+        _callRef = db.ref('calls/' + roomId + '/' + key);
 
-    showCallUI(_remoteNick, '수신 전화', true);
-    playRingtone(true);
+        showCallUI(_remoteNick, '수신 전화', true);
+        playRingtone(true);
 
-    _callRef.child('status').on('value', function(snap) {
-      var st = snap.val();
-      if (st === 'ended') {
-        showToast('상대방이 전화를 취소했습니다');
-        endCall(true);
-      }
+        _callRef.child('status').on('value', function(sSnap) {
+          var st = sSnap.val();
+          if (st === 'ended') {
+            showToast('상대방이 전화를 취소했습니다');
+            endCall(true);
+          }
+        });
+      });
     });
   }
   function stopWatchingCalls() {
@@ -5347,6 +5360,18 @@ firebase.auth().onAuthStateChanged(user => {
 
   window.addEventListener('beforeunload', function() {
     if (_callState !== 'idle') endCall();
+  });
+
+  // 페이지 복원(bfcache) 또는 탭 활성화 시 리스너 재확인
+  document.addEventListener('visibilitychange', function() {
+    if (!document.hidden && roomId && myUid && _callState === 'idle' && !_callListenerRef) {
+      watchIncomingCalls(roomId);
+    }
+  });
+  window.addEventListener('pageshow', function(e) {
+    if (e.persisted && roomId && myUid && _callState === 'idle') {
+      watchIncomingCalls(roomId);
+    }
   });
 })();
 
