@@ -426,6 +426,8 @@ body.stealth .stealthBar{display:flex !important}
 .callStatus{font-size:15px;color:rgba(255,255,255,.6);font-weight:500;letter-spacing:.3px;z-index:1}
 .callNick{font-size:26px;font-weight:800;margin-top:4px;z-index:1;letter-spacing:-.3px}
 .callTimer{font-size:18px;color:rgba(255,255,255,.5);font-variant-numeric:tabular-nums;min-height:24px;z-index:1;font-weight:500}
+.callAvatarWrap{position:relative;z-index:1;display:flex;align-items:center;justify-content:center}
+.callVisualizerCanvas{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;z-index:0}
 .callAvatar{width:100px;height:100px;border-radius:50%;background:linear-gradient(135deg,#22c55e 0%,#059669 100%);display:flex;align-items:center;justify-content:center;font-size:40px;box-shadow:0 0 0 0 rgba(34,197,94,.4);z-index:1;position:relative}
 .callOverlay:not(.callConnected) .callAvatar{animation:callAvatarPulse 2s ease-in-out infinite}
 @keyframes callAvatarPulse{0%{box-shadow:0 0 0 0 rgba(34,197,94,.4)}50%{box-shadow:0 0 0 20px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,.4)}}
@@ -817,7 +819,10 @@ OneSignalDeferred.push(async function(OneSignal) {
 </div>
 
 <div class="callOverlay" id="callOverlay">
-  <div class="callAvatar" id="callAvatar"><span class="callAvatarText">📞</span></div>
+  <div class="callAvatarWrap">
+    <canvas class="callVisualizerCanvas" id="callVisualizer" width="280" height="280"></canvas>
+    <div class="callAvatar" id="callAvatar"><span class="callAvatarText">📞</span></div>
+  </div>
   <div class="callNick" id="callNick"></div>
   <div class="callStatus" id="callStatusText">연결 중...</div>
   <div class="callTimer" id="callTimer"></div>
@@ -4822,8 +4827,13 @@ firebase.auth().onAuthStateChanged(user => {
     } catch(e) {}
   }
 
-  // ── 커스텀 MP3 벨소리 ──
+  // ── 커스텀 MP3 벨소리 + 원형 오디오 비주얼라이저 ──
   var _ringtoneAudio = null;
+  var _vizAnimId = null;
+  var _vizAnalyser = null;
+  var _vizAudioCtx = null;
+  var _vizSource = null;
+
   function playRingtone(isIncoming) {
     try {
       stopRingtone();
@@ -4831,15 +4841,131 @@ firebase.auth().onAuthStateChanged(user => {
         ? '(수신자 소리)Sugar_on_the_Lens.mp3'
         : '(발신자 소리)Morning_Calibration.mp3';
       _ringtoneAudio = new Audio(encodeURI(src));
+      _ringtoneAudio.crossOrigin = 'anonymous';
       _ringtoneAudio.loop = true;
       _ringtoneAudio.playsInline = true;
-      _ringtoneAudio.play().catch(function(){});
+      _ringtoneAudio.play().then(function() {
+        startVisualizer();
+      }).catch(function(){});
     } catch(e) {}
   }
+
+  function startVisualizer() {
+    try {
+      if (!_ringtoneAudio) return;
+      _vizAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      _vizAnalyser = _vizAudioCtx.createAnalyser();
+      _vizAnalyser.fftSize = 256;
+      _vizSource = _vizAudioCtx.createMediaElementSource(_ringtoneAudio);
+      _vizSource.connect(_vizAnalyser);
+      _vizAnalyser.connect(_vizAudioCtx.destination);
+      drawVisualizer();
+    } catch(e) {}
+  }
+
+  function drawVisualizer() {
+    var canvas = document.getElementById('callVisualizer');
+    if (!canvas || !_vizAnalyser) return;
+    var ctx = canvas.getContext('2d');
+    var W = canvas.width, H = canvas.height;
+    var cx = W / 2, cy = H / 2;
+    var innerR = 56;
+    var bufLen = _vizAnalyser.frequencyBinCount;
+    var dataArr = new Uint8Array(bufLen);
+    var barCount = 64;
+    var smoothed = new Float32Array(barCount);
+
+    function render() {
+      _vizAnimId = requestAnimationFrame(render);
+      _vizAnalyser.getByteFrequencyData(dataArr);
+      ctx.clearRect(0, 0, W, H);
+
+      for (var i = 0; i < barCount; i++) {
+        var idx = Math.floor(i * bufLen / barCount);
+        var val = dataArr[idx] / 255;
+        smoothed[i] += (val - smoothed[i]) * 0.35;
+        var v = smoothed[i];
+
+        var angle = (i / barCount) * Math.PI * 2 - Math.PI / 2;
+        var barMaxH = 52;
+        var barH = Math.max(3, v * barMaxH);
+        var barW = 2.5;
+
+        var x1 = cx + Math.cos(angle) * innerR;
+        var y1 = cy + Math.sin(angle) * innerR;
+        var x2 = cx + Math.cos(angle) * (innerR + barH);
+        var y2 = cy + Math.sin(angle) * (innerR + barH);
+
+        // 시안~블루 그라데이션, 강도에 따라 밝기 변화
+        var alpha = 0.4 + v * 0.6;
+        var hue = 195 + v * 20;
+        ctx.strokeStyle = 'hsla(' + hue + ',100%,' + (55 + v * 25) + '%,' + alpha + ')';
+        ctx.lineWidth = barW;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+
+        // 글로우 레이어
+        if (v > 0.3) {
+          ctx.strokeStyle = 'hsla(' + hue + ',100%,70%,' + (v * 0.25) + ')';
+          ctx.lineWidth = barW + 3;
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2, y2);
+          ctx.stroke();
+        }
+      }
+
+      // 원형 베이스 글로우 링
+      var avgBass = 0;
+      for (var b = 0; b < 8; b++) avgBass += dataArr[b];
+      avgBass = avgBass / (8 * 255);
+      if (avgBass > 0.15) {
+        ctx.beginPath();
+        ctx.arc(cx, cy, innerR - 1, 0, Math.PI * 2);
+        ctx.strokeStyle = 'hsla(200,100%,65%,' + (avgBass * 0.35) + ')';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        // 외곽 소프트 글로우
+        ctx.beginPath();
+        ctx.arc(cx, cy, innerR + avgBass * 50, 0, Math.PI * 2);
+        ctx.strokeStyle = 'hsla(200,100%,60%,' + (avgBass * 0.12) + ')';
+        ctx.lineWidth = 8;
+        ctx.stroke();
+      }
+    }
+    render();
+  }
+
+  function stopVisualizer() {
+    if (_vizAnimId) { cancelAnimationFrame(_vizAnimId); _vizAnimId = null; }
+    if (_vizSource) { try { _vizSource.disconnect(); } catch(e) {} _vizSource = null; }
+    if (_vizAnalyser) { try { _vizAnalyser.disconnect(); } catch(e) {} _vizAnalyser = null; }
+    if (_vizAudioCtx) { try { _vizAudioCtx.close(); } catch(e) {} _vizAudioCtx = null; }
+    var canvas = document.getElementById('callVisualizer');
+    if (canvas) { var c = canvas.getContext('2d'); if (c) c.clearRect(0, 0, canvas.width, canvas.height); }
+  }
+
+  // 통화 중 상대방 음성 스트림으로 비주얼라이저 전환
+  function startStreamVisualizer(stream) {
+    stopVisualizer();
+    try {
+      _vizAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      _vizAnalyser = _vizAudioCtx.createAnalyser();
+      _vizAnalyser.fftSize = 256;
+      _vizSource = _vizAudioCtx.createMediaStreamSource(stream);
+      _vizSource.connect(_vizAnalyser);
+      drawVisualizer();
+    } catch(e) {}
+  }
+
   function stopRingtone() {
     if (_ringtoneTimer) { clearTimeout(_ringtoneTimer); _ringtoneTimer = null; }
+    stopVisualizer();
     if (_ringtoneAudio) {
-      try { _ringtoneAudio.pause(); _ringtoneAudio.currentTime = 0; _ringtoneAudio.srcObject = null; } catch(e) {}
+      try { _ringtoneAudio.pause(); _ringtoneAudio.currentTime = 0; } catch(e) {}
       _ringtoneAudio = null;
     }
     try { if (_ringtoneCtx) _ringtoneCtx.close(); } catch(e) {}
@@ -4938,6 +5064,10 @@ firebase.auth().onAuthStateChanged(user => {
         _callAudio.autoplay = true;
       }
       _callAudio.srcObject = e.streams[0];
+      // 상대방 음성으로 비주얼라이저 연결
+      try {
+        startStreamVisualizer(e.streams[0]);
+      } catch(ex) {}
     };
 
     var _iceDisconnectTimer = null;
