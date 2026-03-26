@@ -419,40 +419,40 @@ body.stealth .stealthBar{display:flex !important}
 .tamaMateReq .btns button{padding:8px 18px;border-radius:10px;border:1px solid var(--line);font-size:13px;font-weight:700;cursor:pointer}
 .tamaMateReq .btns .accept{background:var(--accent);color:#fff;border-color:var(--accent)}
 /* 보이스콜 */
-.callOverlay{position:fixed;inset:0;background:linear-gradient(160deg,#1a1a2e 0%,#16213e 30%,#0f3460 70%,#1a1a2e 100%);z-index:500;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;color:#fff;overflow:hidden}
-.callOverlay::before{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(circle at 30% 40%,rgba(34,197,94,.08) 0%,transparent 50%),radial-gradient(circle at 70% 60%,rgba(59,130,246,.06) 0%,transparent 50%);animation:callBgShift 8s ease-in-out infinite alternate;pointer-events:none}
-@keyframes callBgShift{0%{transform:translate(0,0)}100%{transform:translate(3%,2%)}}
+.callOverlay{position:fixed;inset:0;background:linear-gradient(160deg,#c5d8ec 0%,#a8c4e0 25%,#8fb1d4 50%,#7ba3cc 75%,#6b95c4 100%);z-index:500;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:#2c3e50;overflow:hidden}
+.callOverlay::before{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(circle at 30% 30%,rgba(255,255,255,.25) 0%,transparent 50%),radial-gradient(circle at 70% 70%,rgba(107,149,196,.15) 0%,transparent 50%);animation:callBgShift 10s ease-in-out infinite alternate;pointer-events:none}
+@keyframes callBgShift{0%{transform:translate(0,0) scale(1)}100%{transform:translate(2%,1%) scale(1.02)}}
 .callOverlay.open{display:flex}
-.callStatus{font-size:15px;color:rgba(255,255,255,.6);font-weight:500;letter-spacing:.3px;z-index:1}
-.callNick{font-size:26px;font-weight:800;margin-top:4px;z-index:1;letter-spacing:-.3px}
-.callTimer{font-size:18px;color:rgba(255,255,255,.5);font-variant-numeric:tabular-nums;min-height:24px;z-index:1;font-weight:500}
-.callAvatarWrap{position:relative;z-index:1;display:flex;align-items:center;justify-content:center}
+.callStatus{font-size:14px;color:rgba(44,62,80,.55);font-weight:600;letter-spacing:.2px;z-index:1}
+.callNick{font-size:28px;font-weight:800;margin-top:2px;z-index:1;letter-spacing:-.5px;color:#1a2a3a}
+.callTimer{font-size:17px;color:rgba(44,62,80,.45);font-variant-numeric:tabular-nums;min-height:22px;z-index:1;font-weight:600}
+.callAvatarWrap{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;margin-bottom:8px}
 .callVisualizerCanvas{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;z-index:0}
-.callAvatar{width:100px;height:100px;border-radius:50%;background:linear-gradient(135deg,#22c55e 0%,#059669 100%);display:flex;align-items:center;justify-content:center;font-size:40px;box-shadow:0 0 0 0 rgba(34,197,94,.4);z-index:1;position:relative}
-.callOverlay:not(.callConnected) .callAvatar{animation:callAvatarPulse 2s ease-in-out infinite}
-@keyframes callAvatarPulse{0%{box-shadow:0 0 0 0 rgba(34,197,94,.4)}50%{box-shadow:0 0 0 20px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,.4)}}
-.callAvatarText{font-size:36px;line-height:1}
-.callBtnRow{display:flex;gap:28px;margin-top:24px;z-index:1}
-.callActionBtn{width:62px;height:62px;border-radius:50%;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:24px;transition:transform .15s,box-shadow .2s;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.callAvatar{width:110px;height:110px;border-radius:50%;background:linear-gradient(135deg,#f0f4f8 0%,#dce6f0 100%);display:flex;align-items:center;justify-content:center;font-size:44px;box-shadow:0 8px 32px rgba(107,149,196,.25),0 0 0 4px rgba(255,255,255,.5);z-index:1;position:relative}
+.callOverlay:not(.callConnected) .callAvatar{animation:callAvatarPulse 2.5s ease-in-out infinite}
+@keyframes callAvatarPulse{0%{box-shadow:0 8px 32px rgba(107,149,196,.25),0 0 0 4px rgba(255,255,255,.5)}50%{box-shadow:0 8px 32px rgba(107,149,196,.25),0 0 0 18px rgba(255,255,255,0)}100%{box-shadow:0 8px 32px rgba(107,149,196,.25),0 0 0 4px rgba(255,255,255,.5)}}
+.callAvatarText{font-size:42px;line-height:1}
+.callBtnRow{display:flex;gap:32px;margin-top:28px;z-index:1;align-items:flex-end}
+.callActionBtn{width:64px;height:64px;border-radius:50%;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:24px;transition:transform .15s,box-shadow .2s}
 .callActionBtn:active{transform:scale(.88)}
-.callActionBtn.hangup{background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;box-shadow:0 4px 24px rgba(239,68,68,.5)}
-.callActionBtn.accept{background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;box-shadow:0 4px 24px rgba(34,197,94,.5)}
-.callActionBtn.mute{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.15)}
-.callActionBtn.mute.on{background:rgba(245,158,11,.85);color:#fff;border-color:transparent}
-.callActionBtn.reject{background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;box-shadow:0 4px 24px rgba(239,68,68,.5)}
-.callActionLabel{font-size:11px;color:rgba(255,255,255,.55);font-weight:500;margin-top:6px}
-.callIncoming .callAvatar{animation:callIncomingBounce 1.2s ease-in-out infinite}
-@keyframes callIncomingBounce{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(34,197,94,.4)}30%{transform:scale(1.06);box-shadow:0 0 0 15px rgba(34,197,94,.15)}60%{transform:scale(.98);box-shadow:0 0 0 0 rgba(34,197,94,0)}}
-.callSecBadge{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;background:rgba(255,255,255,.08);font-size:11px;color:rgba(255,255,255,.4);margin-top:8px;z-index:1;backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.06)}
-.callConnected .callAvatar{animation:none;box-shadow:0 0 30px rgba(34,197,94,.2)}
-.callPickerOverlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:490;display:none;align-items:center;justify-content:center;padding:16px}
+.callActionBtn.hangup{background:linear-gradient(135deg,#e74c3c,#c0392b);color:#fff;box-shadow:0 6px 20px rgba(231,76,60,.4)}
+.callActionBtn.accept{background:linear-gradient(135deg,#2ecc71,#27ae60);color:#fff;box-shadow:0 6px 20px rgba(46,204,113,.4);width:72px;height:72px}
+.callActionBtn.mute{background:rgba(255,255,255,.65);color:#3a5a7c;border:2px solid rgba(255,255,255,.8);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.callActionBtn.mute.on{background:rgba(241,196,15,.85);color:#fff;border-color:transparent}
+.callActionBtn.reject{background:linear-gradient(135deg,#e74c3c,#c0392b);color:#fff;box-shadow:0 6px 20px rgba(231,76,60,.4);width:72px;height:72px}
+.callActionLabel{font-size:11px;color:rgba(44,62,80,.45);font-weight:600;margin-top:7px}
+.callIncoming .callAvatar{animation:callIncomingPulse 1.8s ease-in-out infinite}
+@keyframes callIncomingPulse{0%,100%{box-shadow:0 8px 32px rgba(107,149,196,.25),0 0 0 4px rgba(255,255,255,.5)}40%{box-shadow:0 8px 32px rgba(107,149,196,.35),0 0 0 22px rgba(46,204,113,.12)}70%{box-shadow:0 8px 32px rgba(107,149,196,.25),0 0 0 4px rgba(255,255,255,.3)}}
+.callSecBadge{display:flex;align-items:center;gap:6px;padding:5px 14px;border-radius:999px;background:rgba(255,255,255,.35);font-size:11px;color:rgba(44,62,80,.4);margin-top:6px;z-index:1;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.4)}
+.callConnected .callAvatar{animation:none;box-shadow:0 8px 32px rgba(107,149,196,.3),0 0 0 4px rgba(255,255,255,.5)}
+.callPickerOverlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:490;display:none;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
 .callPickerOverlay.open{display:flex}
-.callPickerCard{width:100%;max-width:340px;background:#fff;border-radius:18px;padding:20px;box-shadow:var(--shadow2)}
+.callPickerCard{width:100%;max-width:340px;background:#fff;border-radius:20px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.15)}
 .callPickerTitle{font-size:16px;font-weight:900;margin-bottom:14px;text-align:center}
 .callPickerList{display:flex;flex-direction:column;gap:8px;max-height:50vh;overflow-y:auto}
 .callPickerItem{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:14px;cursor:pointer;transition:background .15s}
-.callPickerItem:hover{background:#f0fdf4;border-color:var(--accent)}
-.callPickerDot{width:10px;height:10px;border-radius:50%;background:#22c55e;flex-shrink:0}
+.callPickerItem:hover{background:#eef4fb;border-color:#8fb1d4}
+.callPickerDot{width:10px;height:10px;border-radius:50%;background:#2ecc71;flex-shrink:0}
 .callPickerNick{font-size:14px;font-weight:700;flex:1}
 .callPickerCallIcon{font-size:18px;flex-shrink:0;opacity:.5}
 .callPickerItem:hover .callPickerCallIcon{opacity:1}
@@ -820,15 +820,16 @@ OneSignalDeferred.push(async function(OneSignal) {
 
 <div class="callOverlay" id="callOverlay">
   <div class="callAvatarWrap">
-    <canvas class="callVisualizerCanvas" id="callVisualizer" width="280" height="280"></canvas>
+    <canvas class="callVisualizerCanvas" id="callVisualizer" width="300" height="300"></canvas>
     <div class="callAvatar" id="callAvatar"><span class="callAvatarText">📞</span></div>
   </div>
   <div class="callNick" id="callNick"></div>
   <div class="callStatus" id="callStatusText">연결 중...</div>
   <div class="callTimer" id="callTimer"></div>
-  <div class="callSecBadge"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg> 종단간 암호화</div>
-  <div class="callBtnRow" id="callBtnRow">
-    <div style="display:flex;flex-direction:column;align-items:center">
+  <div class="callSecBadge"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg> 종단간 암호화</div>
+  <!-- 발신/통화중 버튼 -->
+  <div class="callBtnRow" id="callOutgoingBtns">
+    <div id="callMuteWrap" style="display:none;flex-direction:column;align-items:center">
       <button class="callActionBtn mute" id="callMuteBtn"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg></button>
       <span class="callActionLabel">음소거</span>
     </div>
@@ -836,13 +837,16 @@ OneSignalDeferred.push(async function(OneSignal) {
       <button class="callActionBtn hangup" id="callHangupBtn"><svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08a.956.956 0 01-.29-.7c0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.1-.7-.28-.79-.73-1.68-1.36-2.66-1.85a.991.991 0 01-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"/></svg></button>
       <span class="callActionLabel">종료</span>
     </div>
-    <div id="callAcceptWrap" style="display:none;flex-direction:column;align-items:center">
-      <button class="callActionBtn accept" id="callAcceptBtn"><svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.977.977 0 00-1.01.24l-1.57 1.97c-2.83-1.35-5.48-3.9-6.89-6.83l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.73 21 20.01 21c.71 0 .99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z"/></svg></button>
-      <span class="callActionLabel">수락</span>
-    </div>
-    <div id="callRejectWrap" style="display:none;flex-direction:column;align-items:center">
+  </div>
+  <!-- 수신 버튼 (수락/거절만) -->
+  <div class="callBtnRow" id="callIncomingBtns" style="display:none">
+    <div style="display:flex;flex-direction:column;align-items:center">
       <button class="callActionBtn reject" id="callRejectBtn"><svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08a.956.956 0 01-.29-.7c0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.1-.7-.28-.79-.73-1.68-1.36-2.66-1.85a.991.991 0 01-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"/></svg></button>
       <span class="callActionLabel">거절</span>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center">
+      <button class="callActionBtn accept" id="callAcceptBtn"><svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.977.977 0 00-1.01.24l-1.57 1.97c-2.83-1.35-5.48-3.9-6.89-6.83l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.73 21 20.01 21c.71 0 .99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z"/></svg></button>
+      <span class="callActionLabel">수락</span>
     </div>
   </div>
 </div>
@@ -4722,10 +4726,11 @@ firebase.auth().onAuthStateChanged(user => {
   const callTimerEl = document.getElementById('callTimer');
   const callHangupBtn = document.getElementById('callHangupBtn');
   const callAcceptBtn = document.getElementById('callAcceptBtn');
-  const callAcceptWrap = document.getElementById('callAcceptWrap');
   const callRejectBtn = document.getElementById('callRejectBtn');
-  const callRejectWrap = document.getElementById('callRejectWrap');
   const callMuteBtn = document.getElementById('callMuteBtn');
+  const callMuteWrap = document.getElementById('callMuteWrap');
+  const callOutgoingBtns = document.getElementById('callOutgoingBtns');
+  const callIncomingBtns = document.getElementById('callIncomingBtns');
   const plusCallBtn = document.getElementById('plusCall');
   const pickerOverlay = document.getElementById('callPickerOverlay');
   const pickerList = document.getElementById('callPickerList');
@@ -4869,10 +4874,10 @@ firebase.auth().onAuthStateChanged(user => {
     var ctx = canvas.getContext('2d');
     var W = canvas.width, H = canvas.height;
     var cx = W / 2, cy = H / 2;
-    var innerR = 56;
+    var innerR = 62;
     var bufLen = _vizAnalyser.frequencyBinCount;
     var dataArr = new Uint8Array(bufLen);
-    var barCount = 64;
+    var barCount = 72;
     var smoothed = new Float32Array(barCount);
 
     function render() {
@@ -4883,23 +4888,24 @@ firebase.auth().onAuthStateChanged(user => {
       for (var i = 0; i < barCount; i++) {
         var idx = Math.floor(i * bufLen / barCount);
         var val = dataArr[idx] / 255;
-        smoothed[i] += (val - smoothed[i]) * 0.35;
+        smoothed[i] += (val - smoothed[i]) * 0.3;
         var v = smoothed[i];
 
         var angle = (i / barCount) * Math.PI * 2 - Math.PI / 2;
-        var barMaxH = 52;
-        var barH = Math.max(3, v * barMaxH);
-        var barW = 2.5;
+        var barMaxH = 55;
+        var barH = Math.max(2, v * barMaxH);
+        var barW = 2.2;
 
         var x1 = cx + Math.cos(angle) * innerR;
         var y1 = cy + Math.sin(angle) * innerR;
         var x2 = cx + Math.cos(angle) * (innerR + barH);
         var y2 = cy + Math.sin(angle) * (innerR + barH);
 
-        // 시안~블루 그라데이션, 강도에 따라 밝기 변화
-        var alpha = 0.4 + v * 0.6;
-        var hue = 195 + v * 20;
-        ctx.strokeStyle = 'hsla(' + hue + ',100%,' + (55 + v * 25) + '%,' + alpha + ')';
+        // 파스텔 블루~스카이 톤 (로고 톤앤매너)
+        var alpha = 0.35 + v * 0.55;
+        var hue = 205 + v * 15;
+        var light = 60 + v * 20;
+        ctx.strokeStyle = 'hsla(' + hue + ',55%,' + light + '%,' + alpha + ')';
         ctx.lineWidth = barW;
         ctx.lineCap = 'round';
         ctx.beginPath();
@@ -4907,10 +4913,10 @@ firebase.auth().onAuthStateChanged(user => {
         ctx.lineTo(x2, y2);
         ctx.stroke();
 
-        // 글로우 레이어
-        if (v > 0.3) {
-          ctx.strokeStyle = 'hsla(' + hue + ',100%,70%,' + (v * 0.25) + ')';
-          ctx.lineWidth = barW + 3;
+        // 소프트 글로우 레이어
+        if (v > 0.25) {
+          ctx.strokeStyle = 'hsla(' + hue + ',50%,75%,' + (v * 0.2) + ')';
+          ctx.lineWidth = barW + 4;
           ctx.beginPath();
           ctx.moveTo(x1, y1);
           ctx.lineTo(x2, y2);
@@ -4922,17 +4928,17 @@ firebase.auth().onAuthStateChanged(user => {
       var avgBass = 0;
       for (var b = 0; b < 8; b++) avgBass += dataArr[b];
       avgBass = avgBass / (8 * 255);
-      if (avgBass > 0.15) {
+      if (avgBass > 0.12) {
         ctx.beginPath();
         ctx.arc(cx, cy, innerR - 1, 0, Math.PI * 2);
-        ctx.strokeStyle = 'hsla(200,100%,65%,' + (avgBass * 0.35) + ')';
+        ctx.strokeStyle = 'hsla(210,50%,70%,' + (avgBass * 0.3) + ')';
         ctx.lineWidth = 2;
         ctx.stroke();
         // 외곽 소프트 글로우
         ctx.beginPath();
         ctx.arc(cx, cy, innerR + avgBass * 50, 0, Math.PI * 2);
-        ctx.strokeStyle = 'hsla(200,100%,60%,' + (avgBass * 0.12) + ')';
-        ctx.lineWidth = 8;
+        ctx.strokeStyle = 'hsla(210,45%,68%,' + (avgBass * 0.1) + ')';
+        ctx.lineWidth = 10;
         ctx.stroke();
       }
     }
@@ -4990,18 +4996,34 @@ firebase.auth().onAuthStateChanged(user => {
     callTimerEl.textContent = '';
   }
 
-  function showCallUI(nick, status, showAccept) {
+  // mode: 'incoming' (수신=수락/거절), 'outgoing' (발신=종료만), 'connected' (통화중=음소거/종료)
+  function showCallUI(nick, status, mode) {
     callNickEl.textContent = nick || '상대방';
     callStatusEl.textContent = status;
-    callAcceptWrap.style.display = showAccept ? 'flex' : 'none';
-    callRejectWrap.style.display = showAccept ? 'flex' : 'none';
-    if (showAccept) {
-      callOverlayEl.classList.add('callIncoming');
-      callOverlayEl.classList.remove('callConnected');
-    } else {
-      callOverlayEl.classList.remove('callIncoming');
-      callOverlayEl.classList.remove('callConnected');
+    // 아바타에 닉네임 이니셜 표시
+    var avatarText = document.querySelector('.callAvatarText');
+    if (avatarText) {
+      var initial = (nick || '?').charAt(0).toUpperCase();
+      avatarText.textContent = initial;
     }
+    callOverlayEl.classList.remove('callIncoming', 'callConnected');
+
+    if (mode === 'incoming') {
+      callOutgoingBtns.style.display = 'none';
+      callIncomingBtns.style.display = 'flex';
+      callOverlayEl.classList.add('callIncoming');
+    } else if (mode === 'connected') {
+      callIncomingBtns.style.display = 'none';
+      callOutgoingBtns.style.display = 'flex';
+      callMuteWrap.style.display = 'flex';
+      callOverlayEl.classList.add('callConnected');
+    } else {
+      // outgoing (발신 중)
+      callIncomingBtns.style.display = 'none';
+      callOutgoingBtns.style.display = 'flex';
+      callMuteWrap.style.display = 'none';
+    }
+
     callOverlayEl.classList.add('open');
     _isMuted = false;
     callMuteBtn.classList.remove('on');
@@ -5078,10 +5100,8 @@ firebase.auth().onAuthStateChanged(user => {
         if (_callState !== 'connected') {
           _callState = 'connected';
           window._voiceCallActive = true;
-          callStatusEl.textContent = '통화 중';
-          callOverlayEl.classList.add('callConnected');
-          callOverlayEl.classList.remove('callIncoming');
           stopRingtone();
+          showCallUI(_remoteNick, '통화 중', 'connected');
           startCallTimer();
           acquireWakeLock();
         } else {
@@ -5135,7 +5155,7 @@ firebase.auth().onAuthStateChanged(user => {
     _callState = 'calling';
     _remoteUid = targetUid;
     _remoteNick = targetNick || '상대방';
-    showCallUI(_remoteNick, '전화 거는 중...', false);
+    showCallUI(_remoteNick, '전화 거는 중...', 'outgoing');
     playRingtone(false);
 
     // roomMembers 갱신 (fire-and-forget, calls 쓰기 권한 보장)
@@ -5212,10 +5232,7 @@ firebase.auth().onAuthStateChanged(user => {
     if (!_localStream) { endCall(); return; }
 
     stopRingtone();
-    callStatusEl.textContent = '연결 중...';
-    callAcceptWrap.style.display = 'none';
-    callRejectWrap.style.display = 'none';
-    callOverlayEl.classList.remove('callIncoming');
+    showCallUI(_remoteNick, '연결 중...', 'outgoing');
 
     _pc = createPeerConnection();
     _localStream.getTracks().forEach(function(track) { _pc.addTrack(track, _localStream); });
@@ -5303,7 +5320,7 @@ firebase.auth().onAuthStateChanged(user => {
         _remoteNick = data.callerNick || '상대방';
         _callRef = db.ref('calls/' + roomId + '/' + key);
 
-        showCallUI(_remoteNick, '수신 전화', true);
+        showCallUI(_remoteNick, '수신 전화', 'incoming');
         playRingtone(true);
 
         _callRef.child('status').on('value', function(sSnap) {
