@@ -2138,6 +2138,32 @@ function rebuildBubble(bubble, m) {
     const sp=document.createElement('div');sp.className='imgUploadSpinner';
     const tx=document.createElement('span');tx.textContent='업로드 중...';
     d.appendChild(sp);d.appendChild(tx);bubble.appendChild(d);
+  } else if (m.hasImage) {
+    // 새 포맷: 이미지 데이터를 별도 DB 경로에서 로드
+    const a=document.createElement('a');a.className='imgMsg';a.href='#';
+    const img=document.createElement('img');img.alt='사진';img.loading='lazy';
+    img.style.cssText='min-width:80px;min-height:80px;background:#e5e7eb;border-radius:12px';
+    a.appendChild(img);bubble.appendChild(a);
+    if (m.text){bubble.appendChild(document.createElement('br'));bubble.appendChild(linkifyText(String(m.text)));}
+    loadStoredImg(m.messageId, img, a);
+  } else if (m.imageBundleLen > 0) {
+    // 새 포맷: 묶음 이미지
+    const len=m.imageBundleLen;
+    const maxShow=4; const showCount=Math.min(len,maxShow);
+    const grid=document.createElement('div');grid.className='imgBundle cnt-'+showCount;
+    const imgEls=[];
+    for (let bi=0;bi<showCount;bi++){
+      const cell=document.createElement('div');cell.className='imgBundleItem';
+      const img=document.createElement('img');img.alt='사진';img.loading='lazy';
+      img.style.cssText='min-width:60px;min-height:60px;background:#e5e7eb';
+      imgEls.push(img);cell.appendChild(img);
+      if (bi===showCount-1&&len>maxShow){const more=document.createElement('div');more.className='imgBundleMore';more.textContent='+'+(len-maxShow);cell.appendChild(more);}
+      ((idx)=>{cell.addEventListener('click',e=>{e.preventDefault();const obj=seen.get(m.messageId);const rb=obj&&obj.resolvedBundle;if(rb&&rb[idx])openImageViewer(rb[idx],rb.filter(Boolean),img);});})(bi);
+      grid.appendChild(cell);
+    }
+    bubble.appendChild(grid);
+    if (m.text){bubble.appendChild(document.createElement('br'));bubble.appendChild(linkifyText(String(m.text)));}
+    loadStoredBundle(m.messageId, len, imgEls);
   } else if (m.imageBundle) {
     const urls = toArr(m.imageBundle);
     if (!urls || !urls.length) { /* skip */ }
@@ -2189,7 +2215,7 @@ function renderMessage(m, isPending) {
   const bubble=document.createElement('div'); rebuildBubble(bubble,m);
 
   row.appendChild(bubble); wrap.appendChild(row);
-  if (!isPending && !m.deleted && !m.imageUrl && !m.imageBundle) {
+  if (!isPending && !m.deleted && !m.imageUrl && !m.imageBundle && !m.hasImage && !m.imageBundleLen) {
     const url=extractUrl(String(m.text||''));
     if(url){
       const lpWrap=document.createElement('div');
@@ -2218,12 +2244,17 @@ function renderMessage(m, isPending) {
   }
 
   logEl.appendChild(wrap);
-  seen.set(m.messageId, {seq:Number(m.seq||0),metaEl:meta,senderId:m.senderId,wrapEl:wrap,bubbleEl:bubble,text:String(m.text||''),replyTo:m.replyTo||null,imageUrl:m.imageUrl||null,imageBundle:toArr(m.imageBundle),letter:!!m.letter,letterDeliverAt:Number(m.letterDeliverAt||0),senderNick:m.senderNick||'',ts:m.ts||0,spoiler:!!m.spoiler});
+  seen.set(m.messageId, {seq:Number(m.seq||0),metaEl:meta,senderId:m.senderId,wrapEl:wrap,bubbleEl:bubble,text:String(m.text||''),replyTo:m.replyTo||null,imageUrl:m.imageUrl||null,imageBundle:toArr(m.imageBundle),hasImage:!!m.hasImage,imageBundleLen:Number(m.imageBundleLen||0),resolvedUrl:null,resolvedBundle:null,letter:!!m.letter,letterDeliverAt:Number(m.letterDeliverAt||0),senderNick:m.senderNick||'',ts:m.ts||0,spoiler:!!m.spoiler});
 }
 
 function applyMsgUpdate(m) {
   const obj=seen.get(m.messageId); if(!obj) return;
-  rebuildBubble(obj.bubbleEl, {text:String(m.text||''),deleted:!!m.deleted,edited:!!m.edited,replyTo:obj.replyTo||null,imageUrl:obj.imageUrl||null,imageBundle:obj.imageBundle||null,letter:!!obj.letter,letterDeliverAt:obj.letterDeliverAt||0,senderNick:obj.senderNick||'',ts:obj.ts||0,spoiler:!!obj.spoiler});
+  // migration 후 포맷 변경 반영
+  if (m.imageUrl !== undefined) obj.imageUrl = m.imageUrl||null;
+  if (m.imageBundle !== undefined) { const nb=toArr(m.imageBundle); obj.imageBundle=nb; }
+  if (m.hasImage !== undefined) obj.hasImage = !!m.hasImage;
+  if (m.imageBundleLen !== undefined) obj.imageBundleLen = Number(m.imageBundleLen||0);
+  rebuildBubble(obj.bubbleEl, {text:String(m.text||''),deleted:!!m.deleted,edited:!!m.edited,replyTo:obj.replyTo||null,imageUrl:obj.imageUrl||null,imageBundle:obj.imageBundle||null,hasImage:!!obj.hasImage,imageBundleLen:obj.imageBundleLen||0,letter:!!obj.letter,letterDeliverAt:obj.letterDeliverAt||0,senderNick:obj.senderNick||'',ts:obj.ts||0,spoiler:!!obj.spoiler});
   obj.text=String(m.text||'');
 }
 
@@ -2248,6 +2279,8 @@ function mergeServerMsg(m) {
     if (m.replyTo!==undefined) obj.replyTo=m.replyTo||null;
     if (m.imageUrl!==undefined) obj.imageUrl=m.imageUrl||null;
     if (m.imageBundle!==undefined) obj.imageBundle=toArr(m.imageBundle);
+    if (m.hasImage!==undefined) obj.hasImage=!!m.hasImage;
+    if (m.imageBundleLen!==undefined) obj.imageBundleLen=Number(m.imageBundleLen||0);
   }
   updateBadges(); updateReadBadges();
 }
@@ -2326,26 +2359,30 @@ function subscribeMessages(rid) {
     const m = snap.val(); if (!m) return;
 
     const msg = {
-      messageId: String(m.messageId||snap.key||''),
-      senderId:  String(m.senderId||''),
-      senderNick:String(m.senderNick||''),
-      text:      String(m.text||''),
-      ts:        Number(m.ts||0),
-      seq:       Number(m.seq||0),
-      deleted:   !!m.deleted,
-      edited:    !!m.edited,
-      replyTo:   m.replyTo||null,
-      imageUrl:  m.imageUrl||null,
-      imageBundle: m.imageBundle||null,
-      letter:    !!m.letter,
-      letterDeliverAt: Number(m.letterDeliverAt||0),
-      spoiler:   !!m.spoiler
+      messageId:      String(m.messageId||snap.key||''),
+      senderId:       String(m.senderId||''),
+      senderNick:     String(m.senderNick||''),
+      text:           String(m.text||''),
+      ts:             Number(m.ts||0),
+      seq:            Number(m.seq||0),
+      deleted:        !!m.deleted,
+      edited:         !!m.edited,
+      replyTo:        m.replyTo||null,
+      imageUrl:       m.imageUrl||null,
+      imageBundle:    m.imageBundle||null,
+      hasImage:       !!m.hasImage,
+      imageBundleLen: Number(m.imageBundleLen||0),
+      letter:         !!m.letter,
+      letterDeliverAt:Number(m.letterDeliverAt||0),
+      spoiler:        !!m.spoiler
     };
 
     afterSeq = Math.max(afterSeq, msg.seq);
     if (msg.seq > 0) _earliestSeq = Math.min(_earliestSeq, msg.seq);
     const isNew = !seen.has(msg.messageId);
     mergeServerMsg(msg);
+    // 기존 base64 이미지 → Storage lazy migration
+    tryMigrateMsg(msg);
 
     if (initialBatchDone && isNew && msg.senderId !== myUid && (Date.now()-msg.ts) < 60000) {
       if (shouldNotify()) {
@@ -2363,10 +2400,14 @@ function subscribeMessages(rid) {
     if (!token.alive) return;
     const m = snap.val(); if (!m) return;
     applyMsgUpdate({
-      messageId: String(m.messageId||snap.key||''),
-      text:      String(m.text||''),
-      deleted:   !!m.deleted,
-      edited:    !!m.edited
+      messageId:      String(m.messageId||snap.key||''),
+      text:           String(m.text||''),
+      deleted:        !!m.deleted,
+      edited:         !!m.edited,
+      imageUrl:       m.imageUrl||null,
+      imageBundle:    m.imageBundle||null,
+      hasImage:       !!m.hasImage,
+      imageBundleLen: Number(m.imageBundleLen||0),
     });
   });
 
@@ -2423,20 +2464,22 @@ async function loadOlderMessages() {
       const m = child.val();
       if (!m) return;
       messages.push({
-        messageId: String(m.messageId||child.key||''),
-        senderId:  String(m.senderId||''),
-        senderNick:String(m.senderNick||''),
-        text:      String(m.text||''),
-        ts:        Number(m.ts||0),
-        seq:       Number(m.seq||0),
-        deleted:   !!m.deleted,
-        edited:    !!m.edited,
-        replyTo:   m.replyTo||null,
-        imageUrl:  m.imageUrl||null,
-        imageBundle: m.imageBundle||null,
-        letter:    !!m.letter,
-        letterDeliverAt: Number(m.letterDeliverAt||0),
-        spoiler:   !!m.spoiler
+        messageId:      String(m.messageId||child.key||''),
+        senderId:       String(m.senderId||''),
+        senderNick:     String(m.senderNick||''),
+        text:           String(m.text||''),
+        ts:             Number(m.ts||0),
+        seq:            Number(m.seq||0),
+        deleted:        !!m.deleted,
+        edited:         !!m.edited,
+        replyTo:        m.replyTo||null,
+        imageUrl:       m.imageUrl||null,
+        imageBundle:    m.imageBundle||null,
+        hasImage:       !!m.hasImage,
+        imageBundleLen: Number(m.imageBundleLen||0),
+        letter:         !!m.letter,
+        letterDeliverAt:Number(m.letterDeliverAt||0),
+        spoiler:        !!m.spoiler
       });
     });
 
@@ -2450,13 +2493,14 @@ async function loadOlderMessages() {
     for (const m of messages) {
       if (seen.has(m.messageId)) continue;
       if (m.seq > 0) _earliestSeq = Math.min(_earliestSeq, m.seq);
+      tryMigrateMsg(m);
 
       const mine = m.senderId === myUid;
       const wrap = document.createElement('div'); wrap.className = 'msg'; wrap.dataset.mid = m.messageId;
       const row = document.createElement('div'); row.className = 'row '+(mine?'me':'other');
       const bubble = document.createElement('div'); rebuildBubble(bubble, m);
 
-      if (!m.deleted && !m.imageUrl && !m.imageBundle) {
+      if (!m.deleted && !m.imageUrl && !m.imageBundle && !m.hasImage && !m.imageBundleLen) {
         const url = extractUrl(String(m.text||'')); if(url) renderLinkPreview(url, wrap);
       }
       row.appendChild(bubble); wrap.appendChild(row);
@@ -2481,7 +2525,7 @@ async function loadOlderMessages() {
       if (firstMsg) logEl.insertBefore(wrap, firstMsg);
       else logEl.appendChild(wrap);
 
-      seen.set(m.messageId, {seq:Number(m.seq||0),metaEl:meta,senderId:m.senderId,wrapEl:wrap,bubbleEl:bubble,text:String(m.text||''),replyTo:m.replyTo||null,imageUrl:m.imageUrl||null,imageBundle:toArr(m.imageBundle),letter:!!m.letter,letterDeliverAt:Number(m.letterDeliverAt||0),senderNick:m.senderNick||'',ts:m.ts||0,spoiler:!!m.spoiler});
+      seen.set(m.messageId, {seq:Number(m.seq||0),metaEl:meta,senderId:m.senderId,wrapEl:wrap,bubbleEl:bubble,text:String(m.text||''),replyTo:m.replyTo||null,imageUrl:m.imageUrl||null,imageBundle:toArr(m.imageBundle),hasImage:!!m.hasImage,imageBundleLen:Number(m.imageBundleLen||0),resolvedUrl:null,resolvedBundle:null,letter:!!m.letter,letterDeliverAt:Number(m.letterDeliverAt||0),senderNick:m.senderNick||'',ts:m.ts||0,spoiler:!!m.spoiler});
     }
 
     if (messages.length >= LOAD_MORE_LIMIT && _earliestSeq > 1) {
@@ -2723,8 +2767,10 @@ async function loadMessagesAroundSeq(targetSeq) {
         deleted: !!m.deleted,
         edited: !!m.edited,
         replyTo: m.replyTo || null,
-        imageUrl: m.imageUrl || null,
-        imageBundle: m.imageBundle || null
+        imageUrl:       m.imageUrl || null,
+        imageBundle:    m.imageBundle || null,
+        hasImage:       !!m.hasImage,
+        imageBundleLen: Number(m.imageBundleLen||0),
       });
     });
 
@@ -2739,7 +2785,7 @@ async function loadMessagesAroundSeq(targetSeq) {
       const row = document.createElement('div'); row.className = 'row ' + (mine ? 'me' : 'other');
       const bubble = document.createElement('div'); rebuildBubble(bubble, m);
 
-      if (!m.deleted && !m.imageUrl && !m.imageBundle) {
+      if (!m.deleted && !m.imageUrl && !m.imageBundle && !m.hasImage && !m.imageBundleLen) {
         const url = extractUrl(String(m.text || '')); if (url) renderLinkPreview(url, wrap);
       }
       row.appendChild(bubble); wrap.appendChild(row);
@@ -2786,7 +2832,7 @@ async function loadMessagesAroundSeq(targetSeq) {
         if (!inserted) logEl.appendChild(wrap);
       }
 
-      seen.set(m.messageId, { seq: Number(m.seq || 0), metaEl: meta, senderId: m.senderId, wrapEl: wrap, bubbleEl: bubble, text: String(m.text || ''), replyTo: m.replyTo || null, imageUrl: m.imageUrl || null, imageBundle: m.imageBundle || null });
+      seen.set(m.messageId, { seq:Number(m.seq||0),metaEl:meta,senderId:m.senderId,wrapEl:wrap,bubbleEl:bubble,text:String(m.text||''),replyTo:m.replyTo||null,imageUrl:m.imageUrl||null,imageBundle:m.imageBundle||null,hasImage:!!m.hasImage,imageBundleLen:Number(m.imageBundleLen||0),resolvedUrl:null,resolvedBundle:null });
     }
 
     if (_earliestSeq > 1) {
@@ -3392,7 +3438,7 @@ inputEl.addEventListener('blur',()=>{setTimeout(updateKb,60);setTimeout(updateKb
 
 ['touchend','mouseup'].forEach(evt=>logEl.addEventListener(evt,()=>{if(document.activeElement===inputEl){updateKb();setTimeout(updateKb,200);}},{passive:true}));
 
-async function sendToFirebase(mid, text, replyToData, imageUrl) {
+async function sendToFirebase(mid, text, replyToData, imageUrl, hasImage) {
   if(!roomId) return;
   try {
     const tx=await db.ref('rooms/'+roomId+'/lastSeq').transaction(v=>(Number(v||0)+1));
@@ -3400,6 +3446,7 @@ async function sendToFirebase(mid, text, replyToData, imageUrl) {
     const msg={messageId:mid,senderId:myUid,senderNick:myNick,text:String(text||'').slice(0,4000),ts:SV.TIMESTAMP,seq};
     if(replyToData) msg.replyTo=replyToData;
     if(imageUrl) msg.imageUrl=imageUrl;
+    if(hasImage) msg.hasImage=true;
     await db.ref('messages/'+roomId).push(msg);
     await db.ref('rooms/'+roomId).update({updatedAt:SV.TIMESTAMP,lastMsgTs:SV.TIMESTAMP});
     const notifyText=imageUrl?'📷 사진':String(text||'').slice(0,120);
@@ -3407,6 +3454,39 @@ async function sendToFirebase(mid, text, replyToData, imageUrl) {
   }catch(e){updateBadges();}
 }
 
+// ================================================================
+// IMAGE CACHE (IndexedDB) — base64 이미지를 로컬에 캐싱해 Firebase 대역폭 절감
+// ================================================================
+let _imgCacheDb = null;
+async function _openImgCache() {
+  if (_imgCacheDb) return _imgCacheDb;
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('msgImgCache', 1);
+    req.onupgradeneeded = e => e.target.result.createObjectStore('images');
+    req.onsuccess = e => { _imgCacheDb = e.target.result; resolve(_imgCacheDb); };
+    req.onerror = () => reject(req.error);
+  });
+}
+async function getCachedImg(key) {
+  try {
+    const idb = await _openImgCache();
+    return new Promise(r => {
+      const tx = idb.transaction('images', 'readonly');
+      const req = tx.objectStore('images').get(key);
+      req.onsuccess = () => r(req.result || null);
+      req.onerror = () => r(null);
+    });
+  } catch(e) { return null; }
+}
+async function setCachedImg(key, dataUrl) {
+  try {
+    const idb = await _openImgCache();
+    const tx = idb.transaction('images', 'readwrite');
+    tx.objectStore('images').put(dataUrl, key);
+  } catch(e) {}
+}
+
+// 이미지 압축 (base64 반환)
 async function compressToBase64(file) {
   return new Promise(resolve => {
     const img=new Image(), url=URL.createObjectURL(file);
@@ -3423,18 +3503,95 @@ async function compressToBase64(file) {
   });
 }
 
+// DB 별도 경로에서 단일 이미지 로드 (캐시 우선)
+async function loadStoredImg(mid, imgEl, aEl) {
+  let url = await getCachedImg('s:'+mid);
+  if (!url) {
+    try {
+      const snap = await db.ref('images/'+roomId+'/'+mid).once('value');
+      const val = snap.val();
+      if (val && typeof val === 'string') { url = val; setCachedImg('s:'+mid, url); }
+    } catch(e) {}
+  }
+  if (!url || !imgEl.isConnected) return;
+  const obj = seen.get(mid);
+  if (obj) obj.resolvedUrl = url;
+  imgEl.src = url;
+  if (aEl) aEl.href = url;
+  imgEl.addEventListener('click', e => { e.preventDefault(); openImageViewer(url, null, imgEl); });
+}
+
+// DB 별도 경로에서 묶음 이미지 로드 (캐시 우선)
+async function loadStoredBundle(mid, bundleLen, imgEls) {
+  const urls = new Array(bundleLen).fill(null);
+  let needsFetch = false;
+  for (let i = 0; i < bundleLen; i++) {
+    const cached = await getCachedImg('b:'+mid+'/'+i);
+    if (cached) urls[i] = cached; else needsFetch = true;
+  }
+  if (needsFetch) {
+    try {
+      const snap = await db.ref('images/'+roomId+'/'+mid).once('value');
+      const val = snap.val();
+      if (val && typeof val === 'object') {
+        for (let i = 0; i < bundleLen; i++) {
+          if (!urls[i] && val[i]) { urls[i] = val[i]; setCachedImg('b:'+mid+'/'+i, val[i]); }
+        }
+      }
+    } catch(e) {}
+  }
+  const obj = seen.get(mid);
+  if (obj) obj.resolvedBundle = urls;
+  for (let i = 0; i < Math.min(bundleLen, imgEls.length); i++) {
+    if (urls[i] && imgEls[i] && imgEls[i].isConnected) imgEls[i].src = urls[i];
+  }
+}
+
+// 기존 base64 메시지 → DB 별도 경로로 lazy migration (보낸 사람만 실행)
+const _migratingMsgs = new Set();
+async function tryMigrateMsg(m) {
+  if (!m || !m.messageId || !roomId || m.senderId !== myUid) return;
+  const mid = m.messageId;
+  if (_migratingMsgs.has(mid)) return;
+  const urls = toArr(m.imageBundle);
+  const hasOldUrl = m.imageUrl && m.imageUrl.startsWith('data:');
+  const hasOldBundle = urls && urls.some(u => u && u.startsWith('data:'));
+  if (!hasOldUrl && !hasOldBundle) return;
+  _migratingMsgs.add(mid);
+  try {
+    const update = {};
+    if (hasOldUrl) {
+      await setCachedImg('s:'+mid, m.imageUrl);
+      await db.ref('images/'+roomId+'/'+mid).set(m.imageUrl);
+      update.imageUrl = null;
+      update.hasImage = true;
+    }
+    if (hasOldBundle) {
+      const bundleObj = {};
+      for (let i = 0; i < urls.length; i++) { await setCachedImg('b:'+mid+'/'+i, urls[i]); bundleObj[i] = urls[i]; }
+      await db.ref('images/'+roomId+'/'+mid).set(bundleObj);
+      update.imageBundle = null;
+      update.imageBundleLen = urls.length;
+    }
+    const snap = await db.ref('messages/'+roomId).orderByChild('messageId').equalTo(mid).once('value');
+    snap.forEach(child => { child.ref.update(update); });
+  } catch(e) {
+    _migratingMsgs.delete(mid);
+  }
+}
+
 // ================================================================
 // IMAGE VIEWER (핀치줌 + 슬라이드 네비게이션)
 // ================================================================
 function getAllChatImages() {
   const imgs = [];
   for (const [mid, obj] of seen) {
-    if (obj.imageUrl && obj.imageUrl !== '__uploading__') {
-      imgs.push({ mid, url: obj.imageUrl, ts: obj.ts || 0 });
-    }
-    if (obj.imageBundle && obj.imageBundle.length) {
-      obj.imageBundle.forEach((u, bi) => imgs.push({ mid: mid + '-b' + bi, url: u, ts: (obj.ts || 0) + bi * 0.001 }));
-    }
+    const url = obj.resolvedUrl || (obj.imageUrl && obj.imageUrl !== '__uploading__' ? obj.imageUrl : null);
+    if (url) imgs.push({ mid, url, ts: obj.ts || 0 });
+    const bundle = obj.imageBundle && obj.imageBundle.length ? obj.imageBundle : null;
+    const resolved = obj.resolvedBundle && obj.resolvedBundle.length ? obj.resolvedBundle : null;
+    if (bundle) bundle.forEach((u, bi) => imgs.push({ mid: mid+'-b'+bi, url: u, ts: (obj.ts||0)+bi*0.001 }));
+    else if (resolved) resolved.forEach((u, bi) => { if (u) imgs.push({ mid: mid+'-b'+bi, url: u, ts: (obj.ts||0)+bi*0.001 }); });
   }
   imgs.sort((a, b) => a.ts - b.ts);
   return imgs;
@@ -3714,9 +3871,11 @@ async function sendImage(file) {
   scrollToBottom(true);
   pending.set(mid,{text:'',createdAt:Date.now()}); updateBadges();
   try {
-    const imageUrl=await compressToBase64(file);
-    if(!imageUrl) throw new Error('변환 실패');
-    await sendToFirebase(mid,'',null,imageUrl);
+    const dataUrl=await compressToBase64(file);
+    if(!dataUrl) throw new Error('변환 실패');
+    await setCachedImg('s:'+mid, dataUrl);
+    await db.ref('images/'+roomId+'/'+mid).set(dataUrl);
+    await sendToFirebase(mid,'',null,null,true);
   } catch(e) {
     pending.delete(mid);
     const obj=seen.get(mid);
@@ -3990,7 +4149,9 @@ function attachSwipeReply(wrap, mid, senderId) {
       const obj = seen.get(mid);
       if (obj) {
         const nick = obj.wrapEl ? (obj.wrapEl.querySelector('.meta span')?.textContent || '') : '';
-        setReply(mid, nick, obj.text || '', obj.imageUrl || null);
+        const imgUrl = obj.imageUrl || null;
+        const imgText = (!obj.text && (obj.hasImage || obj.imageBundleLen || obj.imageBundle)) ? '📷 사진' : (obj.text || '');
+        setReply(mid, nick, imgText, imgUrl);
       }
     }
 
@@ -4015,7 +4176,8 @@ replyCloseBtn.addEventListener('click',clearReply);
 ctxReply.addEventListener('click',()=>{
   if(!ctxMid)return;const obj=seen.get(ctxMid);if(!obj)return;
   const nick=obj.wrapEl?(obj.wrapEl.querySelector('.meta span')?.textContent||''):'';
-  setReply(ctxMid,nick,obj.text||'',obj.imageUrl||null);closeCtx();
+  const imgText=(!obj.text&&(obj.hasImage||obj.imageBundleLen||obj.imageBundle))?'📷 사진':(obj.text||'');
+  setReply(ctxMid,nick,imgText,obj.imageUrl||null);closeCtx();
 });
 
 let _toastT=null;
@@ -4334,12 +4496,15 @@ async function sendImageBundle(files) {
   scrollToBottom(true);
   pending.set(mid,{text:'',createdAt:Date.now()}); updateBadges();
   try {
-    for (const file of files) {
-      const url = await compressToBase64(file);
-      if (!url) throw new Error('변환 실패');
-      imageUrls.push(url);
+    const bundleObj = {};
+    for (let i = 0; i < files.length; i++) {
+      const dataUrl = await compressToBase64(files[i]);
+      if (!dataUrl) throw new Error('변환 실패');
+      await setCachedImg('b:'+mid+'/'+i, dataUrl);
+      bundleObj[i] = dataUrl;
     }
-    await sendBundleToFirebase(mid, imageUrls);
+    await db.ref('images/'+roomId+'/'+mid).set(bundleObj);
+    await sendBundleToFirebase(mid, files.length);
   } catch(e) {
     pending.delete(mid);
     const obj = seen.get(mid);
@@ -4348,15 +4513,15 @@ async function sendImageBundle(files) {
   }
 }
 
-async function sendBundleToFirebase(mid, imageUrls) {
+async function sendBundleToFirebase(mid, imageBundleLen) {
   if (!roomId) return;
   try {
     const tx = await db.ref('rooms/'+roomId+'/lastSeq').transaction(v=>(Number(v||0)+1));
     const seq = Number((tx&&tx.snapshot&&tx.snapshot.val())||0);
-    const msg = {messageId:mid,senderId:myUid,senderNick:myNick,text:'',ts:SV.TIMESTAMP,seq,imageBundle:imageUrls};
+    const msg = {messageId:mid,senderId:myUid,senderNick:myNick,text:'',ts:SV.TIMESTAMP,seq,imageBundleLen};
     await db.ref('messages/'+roomId).push(msg);
     await db.ref('rooms/'+roomId).update({updatedAt:SV.TIMESTAMP,lastMsgTs:SV.TIMESTAMP});
-    try{const ids=await collectSubIds(roomId);if(ids.length)pushToSubs(ids,roomName||'Chat','📷 사진 '+imageUrls.length+'장',roomId,1);}catch(e){}
+    try{const ids=await collectSubIds(roomId);if(ids.length)pushToSubs(ids,roomName||'Chat','📷 사진 '+imageBundleLen+'장',roomId,1);}catch(e){}
   } catch(e) { updateBadges(); }
 }
 

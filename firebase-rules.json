@@ -103,6 +103,13 @@
       }
     },
 
+    "images": {
+      "$roomId": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
+
     ".read": false,
     ".write": false
   }
