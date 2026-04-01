@@ -2254,7 +2254,7 @@ function applyMsgUpdate(m) {
   if (m.imageBundle !== undefined) { const nb=toArr(m.imageBundle); obj.imageBundle=nb; }
   if (m.hasImage !== undefined) obj.hasImage = !!m.hasImage;
   if (m.imageBundleLen !== undefined) obj.imageBundleLen = Number(m.imageBundleLen||0);
-  rebuildBubble(obj.bubbleEl, {text:String(m.text||''),deleted:!!m.deleted,edited:!!m.edited,replyTo:obj.replyTo||null,imageUrl:obj.imageUrl||null,imageBundle:obj.imageBundle||null,hasImage:!!obj.hasImage,imageBundleLen:obj.imageBundleLen||0,letter:!!obj.letter,letterDeliverAt:obj.letterDeliverAt||0,senderNick:obj.senderNick||'',ts:obj.ts||0,spoiler:!!obj.spoiler});
+  rebuildBubble(obj.bubbleEl, {messageId:m.messageId,text:String(m.text||''),deleted:!!m.deleted,edited:!!m.edited,replyTo:obj.replyTo||null,imageUrl:obj.imageUrl||null,imageBundle:obj.imageBundle||null,hasImage:!!obj.hasImage,imageBundleLen:obj.imageBundleLen||0,letter:!!obj.letter,letterDeliverAt:obj.letterDeliverAt||0,senderNick:obj.senderNick||'',ts:obj.ts||0,spoiler:!!obj.spoiler});
   obj.text=String(m.text||'');
 }
 
@@ -3449,7 +3449,7 @@ async function sendToFirebase(mid, text, replyToData, imageUrl, hasImage) {
     if(hasImage) msg.hasImage=true;
     await db.ref('messages/'+roomId).push(msg);
     await db.ref('rooms/'+roomId).update({updatedAt:SV.TIMESTAMP,lastMsgTs:SV.TIMESTAMP});
-    const notifyText=imageUrl?'📷 사진':String(text||'').slice(0,120);
+    const notifyText=(imageUrl||hasImage)?'📷 사진':String(text||'').slice(0,120);
     try{const ids=await collectSubIds(roomId);if(ids.length)pushToSubs(ids,roomName||'Chat',notifyText,roomId,1);}catch(e){}
   }catch(e){updateBadges();}
 }
@@ -3511,7 +3511,7 @@ async function loadStoredImg(mid, imgEl, aEl) {
       const snap = await db.ref('images/'+roomId+'/'+mid).once('value');
       const val = snap.val();
       if (val && typeof val === 'string') { url = val; setCachedImg('s:'+mid, url); }
-    } catch(e) {}
+    } catch(e) { console.warn('[loadStoredImg]', mid, e); }
   }
   if (!url || !imgEl.isConnected) return;
   const obj = seen.get(mid);
@@ -3538,7 +3538,7 @@ async function loadStoredBundle(mid, bundleLen, imgEls) {
           if (!urls[i] && val[i]) { urls[i] = val[i]; setCachedImg('b:'+mid+'/'+i, val[i]); }
         }
       }
-    } catch(e) {}
+    } catch(e) { console.warn('[loadStoredBundle]', mid, e); }
   }
   const obj = seen.get(mid);
   if (obj) obj.resolvedBundle = urls;
