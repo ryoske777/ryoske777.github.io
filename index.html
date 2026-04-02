@@ -2266,7 +2266,11 @@ function mergeServerMsg(m) {
     renderMessage(m,false);
   } else if (wasPending) {
     const obj=seen.get(m.messageId);
-    console.log('[mergeServerMsg] rebuild pending', m.messageId, 'obj=', !!obj, 'bubbleEl=', !!(obj&&obj.bubbleEl), 'deleted=', m.deleted);
+    // 로컬에서 이미지 업로드 중이었으면 hasImage 보존
+    if (obj && (obj.hasImage || obj.imageUrl==='__uploading__') && !m.hasImage) {
+      m.hasImage = true;
+    }
+    console.log('[mergeServerMsg] rebuild pending', m.messageId, 'obj=', !!obj, 'bubbleEl=', !!(obj&&obj.bubbleEl), 'deleted=', m.deleted, 'hasImage=', m.hasImage);
     if (obj&&obj.bubbleEl&&!m.deleted) {
       rebuildBubble(obj.bubbleEl,m);
       const url=extractUrl(String(m.text||'')); if(url) renderLinkPreview(url,obj.wrapEl);
@@ -3450,6 +3454,7 @@ async function sendToFirebase(mid, text, replyToData, imageUrl, hasImage) {
     if(replyToData) msg.replyTo=replyToData;
     if(imageUrl) msg.imageUrl=imageUrl;
     if(hasImage) msg.hasImage=true;
+    console.log('[sendToFirebase] pushing msg:', JSON.stringify({messageId:msg.messageId, hasImage:msg.hasImage, seq:msg.seq}));
     await db.ref('messages/'+roomId).push(msg);
     await db.ref('rooms/'+roomId).update({updatedAt:SV.TIMESTAMP,lastMsgTs:SV.TIMESTAMP});
     const notifyText=(imageUrl||hasImage)?'📷 사진':String(text||'').slice(0,120);
@@ -3876,7 +3881,7 @@ async function sendImage(file) {
   if(!file.type.startsWith('image/'))return showToast('이미지 파일만 전송할 수 있어요');
   if(file.size>15*1024*1024)return showToast('15MB 이하 이미지만 전송 가능해요');
   const mid=uuid();
-  renderMessage({messageId:mid,senderId:myUid,senderNick:myNick,text:'',ts:Date.now(),seq:0,replyTo:null,imageUrl:'__uploading__'},true);
+  renderMessage({messageId:mid,senderId:myUid,senderNick:myNick,text:'',ts:Date.now(),seq:0,replyTo:null,imageUrl:'__uploading__',hasImage:true},true);
   scrollToBottom(true);
   pending.set(mid,{text:'',createdAt:Date.now()}); updateBadges();
   try {
@@ -4506,7 +4511,7 @@ async function sendImageBundle(files) {
   const mid = uuid();
   const imageUrls = [];
   // 로딩 표시
-  renderMessage({messageId:mid,senderId:myUid,senderNick:myNick,text:'',ts:Date.now(),seq:0,replyTo:null,imageUrl:'__uploading__'},true);
+  renderMessage({messageId:mid,senderId:myUid,senderNick:myNick,text:'',ts:Date.now(),seq:0,replyTo:null,imageUrl:'__uploading__',hasImage:true},true);
   scrollToBottom(true);
   pending.set(mid,{text:'',createdAt:Date.now()}); updateBadges();
   try {
@@ -4631,7 +4636,7 @@ document.getElementById('drawSend').addEventListener('click', () => {
   if (!_drawHasContent || !roomId) { closeDrawPanel(); return; }
   const dataUrl = drawCanvasEl.toDataURL('image/png');
   const mid = uuid();
-  renderMessage({ messageId: mid, senderId: myUid, senderNick: myNick, text: '', ts: Date.now(), seq: 0, replyTo: null, imageUrl: '__uploading__' }, true);
+  renderMessage({ messageId: mid, senderId: myUid, senderNick: myNick, text: '', ts: Date.now(), seq: 0, replyTo: null, imageUrl: '__uploading__', hasImage: true }, true);
   scrollToBottom(true);
   pending.set(mid, { text: '', createdAt: Date.now() });
   updateBadges();
