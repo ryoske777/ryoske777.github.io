@@ -2253,8 +2253,9 @@ function applyMsgUpdate(m) {
   // migration 후 포맷 변경 반영
   if (m.imageUrl !== undefined) obj.imageUrl = m.imageUrl||null;
   if (m.imageBundle !== undefined) { const nb=toArr(m.imageBundle); obj.imageBundle=nb; }
-  if (m.hasImage !== undefined) obj.hasImage = !!m.hasImage;
-  if (m.imageBundleLen !== undefined) obj.imageBundleLen = Number(m.imageBundleLen||0);
+  // hasImage: 한번 true가 되면 서버 응답이 false여도 유지 (ServerValue.TIMESTAMP 확인 시 hasImage 유실 방지)
+  if (m.hasImage !== undefined) obj.hasImage = obj.hasImage || !!m.hasImage;
+  if (m.imageBundleLen !== undefined) obj.imageBundleLen = obj.imageBundleLen || Number(m.imageBundleLen||0);
   rebuildBubble(obj.bubbleEl, {messageId:m.messageId,text:String(m.text||''),deleted:!!m.deleted,edited:!!m.edited,replyTo:obj.replyTo||null,imageUrl:obj.imageUrl||null,imageBundle:obj.imageBundle||null,hasImage:!!obj.hasImage,imageBundleLen:obj.imageBundleLen||0,letter:!!obj.letter,letterDeliverAt:obj.letterDeliverAt||0,senderNick:obj.senderNick||'',ts:obj.ts||0,spoiler:!!obj.spoiler});
   obj.text=String(m.text||'');
 }
@@ -3454,7 +3455,7 @@ async function sendToFirebase(mid, text, replyToData, imageUrl, hasImage) {
     if(replyToData) msg.replyTo=replyToData;
     if(imageUrl) msg.imageUrl=imageUrl;
     if(hasImage) msg.hasImage=true;
-    console.log('[sendToFirebase] pushing msg:', JSON.stringify({messageId:msg.messageId, hasImage:msg.hasImage, seq:msg.seq}));
+    console.log('[sendToFirebase] hasImage param=', hasImage, 'msg.hasImage=', msg.hasImage, 'seq=', msg.seq);
     await db.ref('messages/'+roomId).push(msg);
     await db.ref('rooms/'+roomId).update({updatedAt:SV.TIMESTAMP,lastMsgTs:SV.TIMESTAMP});
     const notifyText=(imageUrl||hasImage)?'📷 사진':String(text||'').slice(0,120);
