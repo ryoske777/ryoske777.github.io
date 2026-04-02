@@ -2133,6 +2133,7 @@ function rebuildBubble(bubble, m) {
   if (m.deleted){bubble.className='bubble deletedBubble';bubble.textContent='삭제된 메시지입니다.';return;}
   bubble.className='bubble';
   if (m.replyTo&&(m.replyTo.text||m.replyTo.imageUrl)) bubble.appendChild(buildQuoteEl(m.replyTo));
+  console.log('[rebuildBubble]', 'imageUrl=', m.imageUrl, 'hasImage=', m.hasImage, 'imageBundleLen=', m.imageBundleLen, 'messageId=', m.messageId);
   if (m.imageUrl==='__uploading__') {
     const d=document.createElement('div');d.className='imgUploading';
     const sp=document.createElement('div');sp.className='imgUploadSpinner';
@@ -2260,10 +2261,12 @@ function applyMsgUpdate(m) {
 
 function mergeServerMsg(m) {
   const wasPending=pending.has(m.messageId);
+  console.log('[mergeServerMsg]', m.messageId, 'wasPending=', wasPending, 'seen=', seen.has(m.messageId), 'hasImage=', m.hasImage, 'imageUrl=', m.imageUrl);
   if (!seen.has(m.messageId)) {
     renderMessage(m,false);
   } else if (wasPending) {
     const obj=seen.get(m.messageId);
+    console.log('[mergeServerMsg] rebuild pending', m.messageId, 'obj=', !!obj, 'bubbleEl=', !!(obj&&obj.bubbleEl), 'deleted=', m.deleted);
     if (obj&&obj.bubbleEl&&!m.deleted) {
       rebuildBubble(obj.bubbleEl,m);
       const url=extractUrl(String(m.text||'')); if(url) renderLinkPreview(url,obj.wrapEl);
