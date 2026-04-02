@@ -3505,15 +3505,18 @@ async function compressToBase64(file) {
 
 // DB 별도 경로에서 단일 이미지 로드 (캐시 우선)
 async function loadStoredImg(mid, imgEl, aEl) {
+  console.log('[loadStoredImg] start', mid, 'roomId=', roomId);
   let url = await getCachedImg('s:'+mid);
+  console.log('[loadStoredImg] cache result:', mid, url ? 'HIT ('+url.length+'chars)' : 'MISS');
   if (!url) {
     try {
       const snap = await db.ref('images/'+roomId+'/'+mid).once('value');
       const val = snap.val();
+      console.log('[loadStoredImg] firebase result:', mid, val ? typeof val + ' (' + String(val).length + 'chars)' : 'NULL');
       if (val && typeof val === 'string') { url = val; setCachedImg('s:'+mid, url); }
-    } catch(e) { console.warn('[loadStoredImg]', mid, e); }
+    } catch(e) { console.warn('[loadStoredImg] ERROR', mid, e); }
   }
-  if (!url || !imgEl.isConnected) return;
+  if (!url || !imgEl.isConnected) { console.warn('[loadStoredImg] BAIL', mid, 'url=', !!url, 'connected=', imgEl.isConnected); return; }
   const obj = seen.get(mid);
   if (obj) obj.resolvedUrl = url;
   imgEl.src = url;
@@ -3523,22 +3526,25 @@ async function loadStoredImg(mid, imgEl, aEl) {
 
 // DB 별도 경로에서 묶음 이미지 로드 (캐시 우선)
 async function loadStoredBundle(mid, bundleLen, imgEls) {
+  console.log('[loadStoredBundle] start', mid, 'len=', bundleLen, 'roomId=', roomId);
   const urls = new Array(bundleLen).fill(null);
   let needsFetch = false;
   for (let i = 0; i < bundleLen; i++) {
     const cached = await getCachedImg('b:'+mid+'/'+i);
     if (cached) urls[i] = cached; else needsFetch = true;
   }
+  console.log('[loadStoredBundle] cache:', mid, urls.map((u,i)=>u?'HIT':'MISS').join(','));
   if (needsFetch) {
     try {
       const snap = await db.ref('images/'+roomId+'/'+mid).once('value');
       const val = snap.val();
+      console.log('[loadStoredBundle] firebase:', mid, val ? typeof val : 'NULL');
       if (val && typeof val === 'object') {
         for (let i = 0; i < bundleLen; i++) {
           if (!urls[i] && val[i]) { urls[i] = val[i]; setCachedImg('b:'+mid+'/'+i, val[i]); }
         }
       }
-    } catch(e) { console.warn('[loadStoredBundle]', mid, e); }
+    } catch(e) { console.warn('[loadStoredBundle] ERROR', mid, e); }
   }
   const obj = seen.get(mid);
   if (obj) obj.resolvedBundle = urls;
@@ -3872,11 +3878,16 @@ async function sendImage(file) {
   pending.set(mid,{text:'',createdAt:Date.now()}); updateBadges();
   try {
     const dataUrl=await compressToBase64(file);
+    console.log('[sendImage] compressed:', mid, dataUrl ? dataUrl.length + 'chars' : 'NULL');
     if(!dataUrl) throw new Error('변환 실패');
     await setCachedImg('s:'+mid, dataUrl);
+    console.log('[sendImage] cached to IndexedDB:', mid);
     await db.ref('images/'+roomId+'/'+mid).set(dataUrl);
+    console.log('[sendImage] saved to Firebase:', mid, 'path=images/'+roomId+'/'+mid);
     await sendToFirebase(mid,'',null,null,true);
+    console.log('[sendImage] message created:', mid);
   } catch(e) {
+    console.error('[sendImage] FAILED:', mid, e);
     pending.delete(mid);
     const obj=seen.get(mid);
     if(obj&&obj.bubbleEl){obj.bubbleEl.innerHTML='';obj.bubbleEl.className='bubble deletedBubble';obj.bubbleEl.textContent='전송 실패';}
