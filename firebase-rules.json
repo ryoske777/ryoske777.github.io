@@ -19,6 +19,7 @@
 
     "messages": {
       "$roomId": {
+        ".indexOn": ["seq"],
         ".read": "auth != null",
         ".write": "auth != null && (root.child('rooms').child($roomId).child('ownerUid').val() === auth.uid || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2' || !data.exists())",
         "$messageKey": {
@@ -29,6 +30,7 @@
 
     "presence": {
       "$roomId": {
+        ".indexOn": ["lastActive"],
         ".read": "auth != null",
         ".write": "auth != null && (root.child('rooms').child($roomId).child('ownerUid').val() === auth.uid || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')",
         "$uid": {
@@ -104,6 +106,20 @@
     },
 
     "images": {
+      "$roomId": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
+
+    "tamagotchi": {
+      "$uid": {
+        ".read": "auth != null && $uid === auth.uid",
+        ".write": "auth != null && $uid === auth.uid"
+      }
+    },
+
+    "tamaMate": {
       "$roomId": {
         ".read": "auth != null",
         ".write": "auth != null"
