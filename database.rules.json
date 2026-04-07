@@ -1,0 +1,19 @@
+{
+  "rules": {
+    ".read": "auth != null",
+    ".write": "auth != null",
+    "messages": {
+      "$roomId": {
+        ".indexOn": ["seq", "messageId"]
+      }
+    },
+    "rooms": {
+      ".indexOn": ["updatedAt"]
+    },
+    "presence": {
+      "$roomId": {
+        ".indexOn": ["lastActive"]
+      }
+    }
+  }
+}

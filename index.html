@@ -1447,7 +1447,7 @@ document.addEventListener('visibilitychange', () => {
     if (roomId && _presRef && !_presInterval) {
       const write = () => _presRef.set({nick:myNick,lastActive:SV.TIMESTAMP,status:_myStatus||''}).catch(()=>{});
       write();
-      _presInterval = setInterval(write, 30000);
+      _presInterval = setInterval(write, 60000);
     }
     if (roomId && _typRef && !_typInterval) {
       _typInterval = setInterval(() => {
@@ -1463,7 +1463,7 @@ document.addEventListener('visibilitychange', () => {
     }
     if (roomId && !_readsInterval) {
       markRead();
-      _readsInterval = setInterval(markRead, 5000);
+      _readsInterval = setInterval(markRead, 30000);
     }
   }
 });
@@ -2884,13 +2884,13 @@ function startPresence(rid) {
   const write = () => _presRef.set({nick:myNick,lastActive:SV.TIMESTAMP,status:_myStatus||''}).catch(()=>{});
   _presRef.onDisconnect().remove();
   write();
-  _presInterval = setInterval(write, 30000);
+  _presInterval = setInterval(write, 60000);
   _presListenRef = db.ref('presence/'+rid).orderByChild('lastActive').limitToLast(30);
   _presListenRef.on('value', snap => {
     const v=snap.val()||{}, now=Date.now(), online=[];
     _onlineStatusCache = {};
     _onlineUidNickCache = {};
-    Object.keys(v).forEach(u=>{ const p=v[u]||{},ts=Number(p.lastActive||0); if(ts&&(now-ts)<=75000&&p.nick){ online.push(p.nick); _onlineUidNickCache[u]=p.nick; if(p.status) _onlineStatusCache[p.nick]=p.status; } });
+    Object.keys(v).forEach(u=>{ const p=v[u]||{},ts=Number(p.lastActive||0); if(ts&&(now-ts)<=120000&&p.nick){ online.push(p.nick); _onlineUidNickCache[u]=p.nick; if(p.status) _onlineStatusCache[p.nick]=p.status; } });
     const uniq=[],s=new Set(); for(const n of online){const t=(n||'').trim();if(!t||s.has(t))continue;s.add(t);uniq.push(t);}
     const nicks=uniq.slice(0,12);
     (typeof requestIdleCallback==='function'?requestIdleCallback:function(cb){setTimeout(cb,60);})(()=>setHeader(nicks));
@@ -2969,7 +2969,7 @@ function startReads(rid) {
   _readsRef.on('value',snap=>{_readsCache=snap.val()||{};updateReadBadges();});
   _membersRef=db.ref('roomMembers/'+rid);
   _membersRef.on('value',snap=>{_membersCache=snap.val()||{};updateReadBadges();});
-  _readsInterval=setInterval(markRead,5000);
+  _readsInterval=setInterval(markRead,30000);
   let _scrollReadTimer=null;
   _readsScrollHandler=()=>{if(_scrollReadTimer)clearTimeout(_scrollReadTimer);_scrollReadTimer=setTimeout(()=>{_scrollReadTimer=null;markRead();if(canRead())clearUnread();},300);};
   _readsVisHandler=()=>{if(!document.hidden)markRead();};
@@ -4900,12 +4900,16 @@ function setMyStatus(status) {
   closeMenu();
 }
 
+let _lastVisResync = 0;
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) {
     if (appEl) { appEl.style.display='none'; void appEl.offsetHeight; appEl.style.display='flex'; }
     refreshLayout();
     setTimeout(refreshLayout, 300);
-    if (roomId && afterSeq > 0) {
+    // 최소 10초 간격으로만 재쿼리 (잦은 앱전환 시 다운로드 폭증 방지)
+    const now = Date.now();
+    if (roomId && afterSeq > 0 && (now - _lastVisResync) > 10000) {
+      _lastVisResync = now;
       db.ref('messages/'+roomId).orderByChild('seq').startAt(afterSeq+1).limitToLast(30).once('value').then(snap => {
         if (!snap.exists()) return;
         let added = false;
