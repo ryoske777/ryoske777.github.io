@@ -3554,18 +3554,45 @@ async function _loadStoredImgInner(mid, imgEl, aEl) {
   console.log('[loadStoredImg] cache result:', mid, url ? 'HIT ('+url.length+'chars)' : 'MISS');
   if (!url) {
     // 최대 3회 재시도 (Firebase 읽기 지연/일시적 실패 대응)
+    let lastErr = null;
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
         const snap = await db.ref('images/'+rid+'/'+mid).once('value');
         const val = snap.val();
-        console.log('[loadStoredImg] firebase result:', mid, 'attempt=', attempt, val ? typeof val + ' (' + String(val).length + 'chars)' : 'NULL');
+        console.log('[loadStoredImg] firebase result:', mid, 'attempt=', attempt, val ? typeof val + ' (' + String(val).length + 'chars)' : 'NULL', 'path=images/'+rid+'/'+mid);
         if (val && typeof val === 'string') { url = val; setCachedImg('s:'+mid, url); break; }
-      } catch(e) { console.warn('[loadStoredImg] ERROR', mid, 'attempt=', attempt, e); }
+        if (val && typeof val !== 'string') { console.error('[loadStoredImg] unexpected type:', mid, typeof val, JSON.stringify(val).slice(0,200)); }
+      } catch(e) { lastErr = e; console.warn('[loadStoredImg] ERROR', mid, 'attempt=', attempt, e.code||'', e.message||e); }
       if (attempt < 2) await new Promise(r => setTimeout(r, 1500 * (attempt + 1)));
     }
+    if (!url) console.error('[loadStoredImg] ALL RETRIES FAILED:', mid, 'rid='+rid, lastErr);
   }
   // resolvedUrl은 항상 저장 (다른 rebuildBubble 호출에서 재사용)
   if (url) { const obj = seen.get(mid); if (obj) obj.resolvedUrl = url; }
+  if (!url && imgEl.isConnected) {
+    // 로드 실패 시 에러 표시 + 탭하면 재시도
+    console.warn('[loadStoredImg] SHOWING ERROR UI', mid);
+    imgEl.style.cssText='min-width:80px;min-height:60px;background:#fee2e2;border-radius:12px;display:flex;align-items:center;justify-content:center';
+    imgEl.alt='사진 로드 실패';
+    imgEl.title='탭하여 다시 로드';
+    const errDiv=document.createElement('div');
+    errDiv.style.cssText='text-align:center;padding:12px;font-size:12px;color:#991b1b;cursor:pointer';
+    errDiv.innerHTML='사진 로드 실패<br><span style="font-size:11px;color:#6b7280">탭하여 다시 시도</span>';
+    if(aEl&&aEl.isConnected){aEl.innerHTML='';aEl.appendChild(errDiv);aEl.style.cssText='display:block;max-width:240px;border-radius:12px;overflow:hidden;cursor:pointer;margin:2px 0;border:1px solid #fca5a5;background:#fee2e2';}
+    const retryHandler=()=>{
+      if(!aEl||!aEl.isConnected)return;
+      aEl.removeEventListener('click',retryHandler);
+      aEl.innerHTML='';aEl.style.cssText='display:block;max-width:240px;border-radius:12px;overflow:hidden;cursor:pointer;margin:2px 0;border:1px solid var(--line)';
+      const newImg=document.createElement('img');newImg.alt='사진';newImg.loading='lazy';
+      newImg.style.cssText='min-width:80px;min-height:80px;background:#e5e7eb;border-radius:12px';
+      aEl.appendChild(newImg);
+      _imgLoadingPromises.delete(mid);
+      const obj=seen.get(mid);if(obj)obj.resolvedUrl=null;
+      loadStoredImg(mid,newImg,aEl);
+    };
+    if(aEl)aEl.addEventListener('click',e=>{e.preventDefault();retryHandler();});
+    return null;
+  }
   if (!url || !imgEl.isConnected) { console.warn('[loadStoredImg] BAIL', mid, 'url=', !!url, 'connected=', imgEl.isConnected); return url; }
   imgEl.src = url;
   if (aEl) aEl.href = url;
@@ -3609,6 +3636,34 @@ async function loadStoredBundle(mid, bundleLen, imgEls) {
     if (urls[i] && imgEls[i] && imgEls[i].isConnected) imgEls[i].src = urls[i];
   }
 }
+
+// 디버그: 콘솔에서 debugImages() 실행하면 이미지 로딩 상태 확인 가능
+window.debugImages = async function() {
+  console.log('=== IMAGE DEBUG ===');
+  console.log('roomId:', roomId);
+  console.log('auth uid:', myUid);
+  let imgCount=0, loadedCount=0, failedCount=0;
+  for (const [mid, obj] of seen) {
+    if (!obj.hasImage && !obj.imageBundleLen) continue;
+    imgCount++;
+    const hasResolved = !!obj.resolvedUrl || (obj.resolvedBundle && obj.resolvedBundle.some(Boolean));
+    if (hasResolved) loadedCount++; else failedCount++;
+    if (!hasResolved) {
+      console.log('FAILED mid='+mid, 'hasImage='+obj.hasImage, 'bundleLen='+obj.imageBundleLen);
+      try {
+        const snap = await db.ref('images/'+roomId+'/'+mid).once('value');
+        const val = snap.val();
+        console.log('  Firebase check:', val ? typeof val+' '+String(val).length+'chars' : 'NULL ❌');
+      } catch(e) { console.log('  Firebase error:', e.code, e.message); }
+      try {
+        const cached = await getCachedImg('s:'+mid);
+        console.log('  IndexedDB check:', cached ? cached.length+'chars' : 'NULL');
+      } catch(e) { console.log('  IndexedDB error:', e); }
+    }
+  }
+  console.log('Total image msgs:', imgCount, 'Loaded:', loadedCount, 'Failed:', failedCount);
+  console.log('=== END DEBUG ===');
+};
 
 // 기존 base64 메시지 → DB 별도 경로로 lazy migration (보낸 사람만 실행)
 const _migratingMsgs = new Set();
@@ -3937,10 +3992,20 @@ async function sendImage(file) {
     const dataUrl=await compressToBase64(file);
     console.log('[sendImage] compressed:', mid, dataUrl ? dataUrl.length + 'chars' : 'NULL');
     if(!dataUrl) throw new Error('변환 실패');
+    // sender는 즉시 resolvedUrl 설정 → rebuild 시 Firebase 조회 없이 바로 표시
+    const sObj=seen.get(mid);
+    if(sObj) sObj.resolvedUrl=dataUrl;
     await setCachedImg('s:'+mid, dataUrl);
     console.log('[sendImage] cached to IndexedDB:', mid);
     await db.ref('images/'+roomId+'/'+mid).set(dataUrl);
     console.log('[sendImage] saved to Firebase:', mid, 'path=images/'+roomId+'/'+mid);
+    // Firebase 기록 검증
+    try {
+      const vSnap=await db.ref('images/'+roomId+'/'+mid).once('value');
+      const vVal=vSnap.val();
+      console.log('[sendImage] VERIFY:', mid, vVal ? typeof vVal+' '+String(vVal).length+'chars' : 'NULL ⚠️');
+      if(!vVal) console.error('[sendImage] ⚠️ Firebase 이미지 저장 확인 실패!', mid);
+    } catch(ve) { console.error('[sendImage] VERIFY ERROR:', mid, ve); }
     await sendToFirebase(mid,'',null,null,true);
     console.log('[sendImage] message created:', mid);
   } catch(e) {
@@ -4565,12 +4630,17 @@ async function sendImageBundle(files) {
   pending.set(mid,{text:'',createdAt:Date.now()}); updateBadges();
   try {
     const bundleObj = {};
+    const bundleUrls = [];
     for (let i = 0; i < files.length; i++) {
       const dataUrl = await compressToBase64(files[i]);
       if (!dataUrl) throw new Error('변환 실패');
       await setCachedImg('b:'+mid+'/'+i, dataUrl);
       bundleObj[i] = dataUrl;
+      bundleUrls.push(dataUrl);
     }
+    // sender는 즉시 resolvedBundle 설정
+    const sObj = seen.get(mid);
+    if (sObj) sObj.resolvedBundle = bundleUrls;
     await db.ref('images/'+roomId+'/'+mid).set(bundleObj);
     await sendBundleToFirebase(mid, files.length);
   } catch(e) {
