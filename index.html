@@ -2146,7 +2146,14 @@ function rebuildBubble(bubble, m) {
     img.style.cssText='min-width:80px;min-height:80px;background:#e5e7eb;border-radius:12px';
     a.appendChild(img);bubble.appendChild(a);
     if (m.text){bubble.appendChild(document.createElement('br'));bubble.appendChild(linkifyText(String(m.text)));}
-    loadStoredImg(m.messageId, img, a);
+    // 이미 로드된 이미지가 있으면 재사용 (child_changed rebuild 시 재로딩 방지)
+    const _obj=seen.get(m.messageId);
+    if (_obj&&_obj.resolvedUrl) {
+      img.src=_obj.resolvedUrl; a.href=_obj.resolvedUrl;
+      img.addEventListener('click',e=>{e.preventDefault();openImageViewer(_obj.resolvedUrl,null,img);});
+    } else {
+      loadStoredImg(m.messageId, img, a);
+    }
   } else if (m.imageBundleLen > 0) {
     // 새 포맷: 묶음 이미지
     const len=m.imageBundleLen;
@@ -2164,7 +2171,13 @@ function rebuildBubble(bubble, m) {
     }
     bubble.appendChild(grid);
     if (m.text){bubble.appendChild(document.createElement('br'));bubble.appendChild(linkifyText(String(m.text)));}
-    loadStoredBundle(m.messageId, len, imgEls);
+    // 이미 로드된 번들이 있으면 재사용
+    const _bobj=seen.get(m.messageId);
+    if (_bobj&&_bobj.resolvedBundle&&_bobj.resolvedBundle.some(Boolean)) {
+      for (let i=0;i<Math.min(len,imgEls.length);i++){if(_bobj.resolvedBundle[i]&&imgEls[i])imgEls[i].src=_bobj.resolvedBundle[i];}
+    } else {
+      loadStoredBundle(m.messageId, len, imgEls);
+    }
   } else if (m.imageBundle) {
     const urls = toArr(m.imageBundle);
     if (!urls || !urls.length) { /* skip */ }
@@ -3512,30 +3525,58 @@ async function compressToBase64(file) {
   });
 }
 
+// 이미지 로딩 중복 방지 (같은 messageId에 대해 동시에 여러 loadStoredImg 실행 방지)
+const _imgLoadingPromises = new Map();
+
 // DB 별도 경로에서 단일 이미지 로드 (캐시 우선)
 async function loadStoredImg(mid, imgEl, aEl) {
+  // 이미 로딩 중인 프로미스가 있으면 그 결과를 대기
+  if (_imgLoadingPromises.has(mid)) {
+    try {
+      const url = await _imgLoadingPromises.get(mid);
+      if (url && imgEl.isConnected) {
+        const obj = seen.get(mid); if (obj) obj.resolvedUrl = url;
+        imgEl.src = url; if (aEl) aEl.href = url;
+        imgEl.addEventListener('click', e => { e.preventDefault(); openImageViewer(url, null, imgEl); });
+      }
+    } catch(e) {}
+    return;
+  }
+  const loadPromise = _loadStoredImgInner(mid, imgEl, aEl);
+  _imgLoadingPromises.set(mid, loadPromise);
+  try { await loadPromise; } finally { _imgLoadingPromises.delete(mid); }
+}
+
+async function _loadStoredImgInner(mid, imgEl, aEl) {
   console.log('[loadStoredImg] start', mid, 'roomId=', roomId);
+  const rid = roomId; // 비동기 중 roomId 변경 방지
   let url = await getCachedImg('s:'+mid);
   console.log('[loadStoredImg] cache result:', mid, url ? 'HIT ('+url.length+'chars)' : 'MISS');
   if (!url) {
-    try {
-      const snap = await db.ref('images/'+roomId+'/'+mid).once('value');
-      const val = snap.val();
-      console.log('[loadStoredImg] firebase result:', mid, val ? typeof val + ' (' + String(val).length + 'chars)' : 'NULL');
-      if (val && typeof val === 'string') { url = val; setCachedImg('s:'+mid, url); }
-    } catch(e) { console.warn('[loadStoredImg] ERROR', mid, e); }
+    // 최대 3회 재시도 (Firebase 읽기 지연/일시적 실패 대응)
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const snap = await db.ref('images/'+rid+'/'+mid).once('value');
+        const val = snap.val();
+        console.log('[loadStoredImg] firebase result:', mid, 'attempt=', attempt, val ? typeof val + ' (' + String(val).length + 'chars)' : 'NULL');
+        if (val && typeof val === 'string') { url = val; setCachedImg('s:'+mid, url); break; }
+      } catch(e) { console.warn('[loadStoredImg] ERROR', mid, 'attempt=', attempt, e); }
+      if (attempt < 2) await new Promise(r => setTimeout(r, 1500 * (attempt + 1)));
+    }
   }
-  if (!url || !imgEl.isConnected) { console.warn('[loadStoredImg] BAIL', mid, 'url=', !!url, 'connected=', imgEl.isConnected); return; }
-  const obj = seen.get(mid);
-  if (obj) obj.resolvedUrl = url;
+  // resolvedUrl은 항상 저장 (다른 rebuildBubble 호출에서 재사용)
+  if (url) { const obj = seen.get(mid); if (obj) obj.resolvedUrl = url; }
+  if (!url || !imgEl.isConnected) { console.warn('[loadStoredImg] BAIL', mid, 'url=', !!url, 'connected=', imgEl.isConnected); return url; }
   imgEl.src = url;
   if (aEl) aEl.href = url;
   imgEl.addEventListener('click', e => { e.preventDefault(); openImageViewer(url, null, imgEl); });
+  return url;
 }
 
 // DB 별도 경로에서 묶음 이미지 로드 (캐시 우선)
 async function loadStoredBundle(mid, bundleLen, imgEls) {
   console.log('[loadStoredBundle] start', mid, 'len=', bundleLen, 'roomId=', roomId);
+  const rid = roomId; // 비동기 중 roomId 변경 방지
   const urls = new Array(bundleLen).fill(null);
   let needsFetch = false;
   for (let i = 0; i < bundleLen; i++) {
@@ -3544,16 +3585,23 @@ async function loadStoredBundle(mid, bundleLen, imgEls) {
   }
   console.log('[loadStoredBundle] cache:', mid, urls.map((u,i)=>u?'HIT':'MISS').join(','));
   if (needsFetch) {
-    try {
-      const snap = await db.ref('images/'+roomId+'/'+mid).once('value');
-      const val = snap.val();
-      console.log('[loadStoredBundle] firebase:', mid, val ? typeof val : 'NULL');
-      if (val && typeof val === 'object') {
-        for (let i = 0; i < bundleLen; i++) {
-          if (!urls[i] && val[i]) { urls[i] = val[i]; setCachedImg('b:'+mid+'/'+i, val[i]); }
+    // 최대 3회 재시도
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const snap = await db.ref('images/'+rid+'/'+mid).once('value');
+        const val = snap.val();
+        console.log('[loadStoredBundle] firebase:', mid, 'attempt=', attempt, val ? typeof val : 'NULL');
+        if (val && typeof val === 'object') {
+          let allFound = true;
+          for (let i = 0; i < bundleLen; i++) {
+            if (!urls[i] && val[i]) { urls[i] = val[i]; setCachedImg('b:'+mid+'/'+i, val[i]); }
+            if (!urls[i]) allFound = false;
+          }
+          if (allFound) break;
         }
-      }
-    } catch(e) { console.warn('[loadStoredBundle] ERROR', mid, e); }
+      } catch(e) { console.warn('[loadStoredBundle] ERROR', mid, 'attempt=', attempt, e); }
+      if (attempt < 2) await new Promise(r => setTimeout(r, 1500 * (attempt + 1)));
+    }
   }
   const obj = seen.get(mid);
   if (obj) obj.resolvedBundle = urls;
