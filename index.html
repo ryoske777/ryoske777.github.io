@@ -1289,6 +1289,7 @@ async function removeRoomPassword(rid) {
 function syncViewH() {}
 let _lastVvH = 0;
 let _wasNearBottomBeforeLock = false;
+let _pendingScrollRestore = false;
 function updateKb() {
   if (!window.visualViewport) { document.documentElement.style.setProperty('--kb','0px'); document.documentElement.style.setProperty('--safeBComp','env(safe-area-inset-bottom,0px)'); return; }
   const vv = window.visualViewport;
@@ -1297,6 +1298,8 @@ function updateKb() {
   const kb = Math.max(0, Math.round(window.innerHeight - vv.height));
   document.documentElement.style.setProperty('--kb', kb+'px');
   document.documentElement.style.setProperty('--safeBComp', kb>80 ? '0px' : 'env(safe-area-inset-bottom,0px)');
+  // 잠금 해제 후 키보드 재등장 감지 시 스크롤 복원
+  if (_pendingScrollRestore) { _pendingScrollRestore = false; requestAnimationFrame(() => scrollToBottom(true)); }
 }
 function refreshLayout() { updateKb(); requestAnimationFrame(updateKb); [60,140,260,420].forEach(t => setTimeout(updateKb, t)); }
 if (window.visualViewport) { window.visualViewport.addEventListener('resize', updateKb); }
@@ -1448,8 +1451,10 @@ document.addEventListener('visibilitychange', () => {
     // 포그라운드 복귀: interval 복원
     // 화면 잠금 해제 후 레이아웃 복구 (--kb 스태일 값 초기화)
     _lastVvH = 0;
+    if (_wasNearBottomBeforeLock) _pendingScrollRestore = true;
     refreshLayout();
-    [600, 1000].forEach(t => setTimeout(() => { updateKb(); if (_wasNearBottomBeforeLock) scrollToBottom(true); }, t));
+    // visualViewport.resize 가 늦거나 발생 안 할 경우를 위한 타이머 보험
+    setTimeout(() => { if (_pendingScrollRestore) { _pendingScrollRestore = false; scrollToBottom(true); } }, 1500);
     if (roomId && _presRef && !_presInterval) {
       const write = () => _presRef.set({nick:myNick,lastActive:SV.TIMESTAMP,status:_myStatus||''}).catch(()=>{});
       write();
