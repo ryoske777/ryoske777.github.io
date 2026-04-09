@@ -1288,6 +1288,7 @@ async function removeRoomPassword(rid) {
 
 function syncViewH() {}
 let _lastVvH = 0;
+let _wasNearBottomBeforeLock = false;
 function updateKb() {
   if (!window.visualViewport) { document.documentElement.style.setProperty('--kb','0px'); document.documentElement.style.setProperty('--safeBComp','env(safe-area-inset-bottom,0px)'); return; }
   const vv = window.visualViewport;
@@ -1439,16 +1440,16 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     // 백그라운드: interval 일시정지 (배터리 절약)
     // Firebase 연결은 유지하여 실시간 메시지 수신 보장
+    _wasNearBottomBeforeLock = isNearBottom(); // 잠금 전 스크롤 위치 저장
     if (_presInterval) { clearInterval(_presInterval); _presInterval = null; }
     if (_typInterval) { clearInterval(_typInterval); _typInterval = null; }
     if (_readsInterval) { clearInterval(_readsInterval); _readsInterval = null; }
   } else {
     // 포그라운드 복귀: interval 복원
     // 화면 잠금 해제 후 레이아웃 복구 (--kb 스태일 값 초기화)
-    const _wasNearBottom = isNearBottom();
     _lastVvH = 0;
     refreshLayout();
-    [600, 1000].forEach(t => setTimeout(() => { updateKb(); if (_wasNearBottom) scrollToBottom(true); }, t));
+    [600, 1000].forEach(t => setTimeout(() => { updateKb(); if (_wasNearBottomBeforeLock) scrollToBottom(true); }, t));
     if (roomId && _presRef && !_presInterval) {
       const write = () => _presRef.set({nick:myNick,lastActive:SV.TIMESTAMP,status:_myStatus||''}).catch(()=>{});
       write();
