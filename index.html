@@ -2288,7 +2288,17 @@ function mergeServerMsg(m) {
     console.log('[mergeServerMsg] rebuild pending', m.messageId, 'obj=', !!obj, 'bubbleEl=', !!(obj&&obj.bubbleEl), 'deleted=', m.deleted, 'hasImage=', m.hasImage);
     if (obj&&obj.bubbleEl&&!m.deleted) {
       rebuildBubble(obj.bubbleEl,m);
-      const url=extractUrl(String(m.text||'')); if(url) renderLinkPreview(url,obj.wrapEl);
+      if(!m.imageUrl&&!m.imageBundle&&!m.hasImage&&!m.imageBundleLen){
+        const url=extractUrl(String(m.text||''));
+        if(url){
+          const lpWrap=document.createElement('div');
+          lpWrap.style.cssText=(obj.senderId===myUid)?'display:flex;justify-content:flex-end':'display:flex;justify-content:flex-start';
+          renderLinkPreview(url,lpWrap);
+          const rowEl=obj.wrapEl.querySelector('.row');
+          if(rowEl&&rowEl.nextSibling) obj.wrapEl.insertBefore(lpWrap,rowEl.nextSibling);
+          else obj.wrapEl.appendChild(lpWrap);
+        }
+      }
       const rxBar=obj.wrapEl&&obj.wrapEl.querySelector('.reactionsBar');
       if(rxBar) watchRx(m.messageId,rxBar);
     }
@@ -2522,10 +2532,16 @@ async function loadOlderMessages() {
       const row = document.createElement('div'); row.className = 'row '+(mine?'me':'other');
       const bubble = document.createElement('div'); rebuildBubble(bubble, m);
 
-      if (!m.deleted && !m.imageUrl && !m.imageBundle && !m.hasImage && !m.imageBundleLen) {
-        const url = extractUrl(String(m.text||'')); if(url) renderLinkPreview(url, wrap);
-      }
       row.appendChild(bubble); wrap.appendChild(row);
+      if (!m.deleted && !m.imageUrl && !m.imageBundle && !m.hasImage && !m.imageBundleLen) {
+        const url = extractUrl(String(m.text||''));
+        if(url){
+          const lpWrap=document.createElement('div');
+          lpWrap.style.cssText=mine?'display:flex;justify-content:flex-end':'display:flex;justify-content:flex-start';
+          renderLinkPreview(url,lpWrap);
+          wrap.appendChild(lpWrap);
+        }
+      }
 
       const rxBar = document.createElement('div'); rxBar.className = 'reactionsBar';
       const rxAlign = document.createElement('div');
@@ -2807,10 +2823,16 @@ async function loadMessagesAroundSeq(targetSeq) {
       const row = document.createElement('div'); row.className = 'row ' + (mine ? 'me' : 'other');
       const bubble = document.createElement('div'); rebuildBubble(bubble, m);
 
-      if (!m.deleted && !m.imageUrl && !m.imageBundle && !m.hasImage && !m.imageBundleLen) {
-        const url = extractUrl(String(m.text || '')); if (url) renderLinkPreview(url, wrap);
-      }
       row.appendChild(bubble); wrap.appendChild(row);
+      if (!m.deleted && !m.imageUrl && !m.imageBundle && !m.hasImage && !m.imageBundleLen) {
+        const url = extractUrl(String(m.text || ''));
+        if(url){
+          const lpWrap=document.createElement('div');
+          lpWrap.style.cssText=mine?'display:flex;justify-content:flex-end':'display:flex;justify-content:flex-start';
+          renderLinkPreview(url,lpWrap);
+          wrap.appendChild(lpWrap);
+        }
+      }
 
       const rxBar = document.createElement('div'); rxBar.className = 'reactionsBar';
       const rxAlign = document.createElement('div');
