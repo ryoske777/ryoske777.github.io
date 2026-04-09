@@ -1444,6 +1444,11 @@ document.addEventListener('visibilitychange', () => {
     if (_readsInterval) { clearInterval(_readsInterval); _readsInterval = null; }
   } else {
     // 포그라운드 복귀: interval 복원
+    // 화면 잠금 해제 후 레이아웃 복구 (--kb 스태일 값 초기화)
+    const _wasNearBottom = isNearBottom();
+    _lastVvH = 0;
+    refreshLayout();
+    [600, 1000].forEach(t => setTimeout(() => { updateKb(); if (_wasNearBottom) scrollToBottom(true); }, t));
     if (roomId && _presRef && !_presInterval) {
       const write = () => _presRef.set({nick:myNick,lastActive:SV.TIMESTAMP,status:_myStatus||''}).catch(()=>{});
       write();
