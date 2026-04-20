@@ -1482,10 +1482,12 @@ document.addEventListener('visibilitychange', () => {
 function notifyMsg(msg) {
   try {
     if (!notifyEnabled || !('Notification' in window) || Notification.permission!=='granted') return;
+    const bodyText = String(msg.text||'').slice(0,140) || (msg.imageUrl||msg.hasImage ? '📷 사진' : msg.spoiler ? '🙈 스포일러 메시지' : '메시지');
     const n = new Notification(roomName||'채팅', {
-      body: `${msg.senderNick||'상대'}: ${String(msg.text||'').slice(0,140)}`,
+      body: `${msg.senderNick||'상대'}: ${bodyText}`,
       tag: 'room_'+(roomId||''), renotify: true,
-      badge: '/icon-badge.png' // PWA 배지 아이콘 (있을 경우)
+      icon: '/icon-192x192.png',
+      badge: '/icon-192x192.png'
     });
     n.onclick = () => { try { window.focus(); } catch(e) {} };
   } catch(e) {}
