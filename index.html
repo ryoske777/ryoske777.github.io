@@ -3042,7 +3042,7 @@ async function collectSubIds(rid) {
     const pres    = pSnap.val() || {};
     const now     = Date.now();
 
-    const ACTIVE_MS = 45_000;           // 45초 (하트비트 30초 + 여유 15초)
+    const ACTIVE_MS = 90_000;           // 90초 (하트비트 60초 + 여유 30초)
     const STALE_MS  = 30 * 86400_000;  // 30일 이상 된 구독은 stale로 무시
 
     const uids = Object.keys(members).filter(u => {
