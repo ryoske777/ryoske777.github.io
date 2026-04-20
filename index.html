@@ -3556,6 +3556,7 @@ async function doLogin() {
   }
   const access = await checkAccess(myUid);
   if (access !== 'allowed' && access !== 'admin') {
+    registerPendingUser(myUid, username);
     showApprovalScreen();
     return;
   }
@@ -5389,6 +5390,8 @@ async function init() {
 
   const access = await checkAccess(myUid);
   if (access !== 'allowed' && access !== 'admin') {
+    const uname = (localStorage.getItem(LS_ACCOUNT) || myNick || '').trim();
+    registerPendingUser(myUid, uname);
     showApprovalScreen();
     return;
   }
