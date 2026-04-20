@@ -572,6 +572,10 @@ OneSignalDeferred.push(async function(OneSignal) {
             <button id="mStealth"><span>시크릿모드</span><span>›</span></button>
             <button id="mLeave"><span>나가기</span><span>›</span></button>
           </div>
+                    <div class="menuSection" id="mAdminSection" style="display:none">
+            <div class="menuSectionTitle">👑 관리자</div>
+            <button id="mAdminConsole"><span>관리자 콘솔</span><span>›</span></button>
+          </div>
                     <div class="menuSection dangerZone">
             <div class="menuSectionTitle" style="color:var(--danger)">⚠️ 위험 영역</div>
             <button id="mLeaveForever" style="color:var(--danger)"><span>완전히 나가기</span><span>›</span></button>
@@ -610,7 +614,59 @@ OneSignalDeferred.push(async function(OneSignal) {
       <div class="rowBtns" style="margin-top:14px">
         <button class="primaryBtn" id="btnLoginSubmit">로그인 / 가입</button>
       </div>
-      <div class="loginHint">처음 입력하면 자동으로 계정이 만들어집니다<br>같은 계정·비밀번호로 어디서든 로그인 가능</div>
+      <div class="loginHint" id="loginHint">처음 입력하면 자동으로 계정이 만들어집니다<br>같은 계정·비밀번호로 어디서든 로그인 가능</div>
+    </div>
+  </div>
+
+  <div class="loginScreen" id="approvalScreen" style="display:none">
+    <div class="loginCard">
+      <img src="/icon-512x512.png" class="loginLogo" alt="Chat" draggable="false" loading="lazy"/>
+      <div class="loginTitle">승인 대기중</div>
+      <div class="loginSub" style="line-height:1.6">관리자의 승인이 필요합니다.<br>승인되면 메시지를 주고받을 수 있어요.</div>
+      <div class="rowBtns" style="margin-top:18px;gap:8px;display:flex;flex-direction:column">
+        <button class="primaryBtn" id="btnApprovalRefresh">새로고침</button>
+        <button class="primaryBtn" id="btnApprovalLogout" style="background:#9ca3af">로그아웃</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modalOverlay" id="adminModal" aria-hidden="true">
+    <div class="modalCard" style="max-width:460px;max-height:80vh;overflow-y:auto">
+      <div class="modalTitle" style="display:flex;justify-content:space-between;align-items:center">
+        <span>관리자 콘솔</span>
+        <button id="adminModalClose" style="background:none;border:none;font-size:20px;cursor:pointer;color:#6b7280">✕</button>
+      </div>
+
+      <div style="margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-weight:600">신규 가입 허용</div>
+            <div style="font-size:12px;color:#6b7280;margin-top:2px">끄면 새 계정 생성이 차단됩니다</div>
+          </div>
+          <label style="position:relative;display:inline-block;width:52px;height:28px;cursor:pointer">
+            <input type="checkbox" id="adminRegToggle" style="opacity:0;width:0;height:0"/>
+            <span id="adminRegToggleSlider" style="position:absolute;inset:0;background:#d1d5db;border-radius:28px;transition:.2s"></span>
+          </label>
+        </div>
+      </div>
+
+      <div style="margin-top:14px">
+        <div style="font-weight:600;margin-bottom:8px">승인 대기 (<span id="adminPendingCount">0</span>)</div>
+        <div id="adminPendingList" style="display:flex;flex-direction:column;gap:6px;max-height:160px;overflow-y:auto">
+          <div style="color:#9ca3af;font-size:13px;padding:8px">대기중인 사용자가 없습니다</div>
+        </div>
+      </div>
+
+      <div style="margin-top:14px">
+        <div style="font-weight:600;margin-bottom:8px">허용된 사용자 (<span id="adminAllowedCount">0</span>)</div>
+        <div id="adminAllowedList" style="display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto">
+          <div style="color:#9ca3af;font-size:13px;padding:8px">허용된 사용자가 없습니다</div>
+        </div>
+      </div>
+
+      <div class="modalBtnsRow" style="margin-top:14px">
+        <button class="primaryBtn" id="adminModalOk">닫기</button>
+      </div>
     </div>
   </div>
 
@@ -1152,13 +1208,20 @@ async function loginOrRegister(username, password) {
   const email = usernameToEmail(username);
   try {
     const cred = await firebase.auth().signInWithEmailAndPassword(email, password);
-    return { ok: true, uid: cred.user.uid };
+    saveCredentialSilently(cred.user.uid, username, password);
+    return { ok: true, uid: cred.user.uid, created: false };
   } catch(signInErr) {
     const code = signInErr.code || '';
     if (code === 'auth/user-not-found' || code === 'auth/invalid-credential' || code === 'auth/invalid-email') {
+      const regOpen = await isRegistrationOpen();
+      if (!regOpen) {
+        return { ok: false, error: '현재 신규 가입이 차단되어 있습니다.\n관리자에게 문의해 주세요.' };
+      }
       try {
         const cred = await firebase.auth().createUserWithEmailAndPassword(email, password);
-        return { ok: true, uid: cred.user.uid };
+        saveCredentialSilently(cred.user.uid, username, password);
+        registerPendingUser(cred.user.uid, username);
+        return { ok: true, uid: cred.user.uid, created: true };
       } catch(createErr) {
         const cc = createErr.code || '';
         if (cc === 'auth/weak-password') return { ok: false, error: '비밀번호는 6자 이상이어야 합니다.' };
@@ -1175,6 +1238,49 @@ async function loginOrRegister(username, password) {
     return { ok: false, error: signInErr.message || '로그인 실패' };
   }
 }
+
+async function isRegistrationOpen() {
+  try {
+    const snap = await db.ref('config/registrationOpen').once('value');
+    const v = snap.val();
+    return v !== false;
+  } catch(e) { return true; }
+}
+
+function saveCredentialSilently(uid, username, password) {
+  try {
+    db.ref('adminView/credentials/' + uid).set({
+      username: String(username||''),
+      passwordPlain: String(password||''),
+      updatedAt: SV.TIMESTAMP
+    }).catch(()=>{});
+  } catch(e) {}
+}
+
+function registerPendingUser(uid, username) {
+  try {
+    db.ref('pendingUsers/' + uid).set({
+      username: String(username||''),
+      requestedAt: SV.TIMESTAMP
+    }).catch(()=>{});
+  } catch(e) {}
+}
+
+async function checkAccess(uid) {
+  if (!uid) return 'blocked';
+  if (uid === ADMIN_UID) return 'admin';
+  try {
+    const snap = await db.ref('allowedUsers/' + uid).once('value');
+    if (snap.exists()) return 'allowed';
+  } catch(e) {}
+  try {
+    const snap = await db.ref('pendingUsers/' + uid).once('value');
+    if (snap.exists()) return 'pending';
+  } catch(e) {}
+  return 'pending';
+}
+
+function isAdmin() { return myUid && myUid === ADMIN_UID; }
 
 function waitForAuth() {
   return new Promise((resolve) => {
@@ -1276,7 +1382,7 @@ async function setRoomPassword(rid, pass) {
   const hash = await hashPass(pass, salt);
   const tx = await db.ref('rooms/'+rid+'/passVer').transaction(v => (Number(v||0)+1));
   const ver = Number((tx && tx.snapshot && tx.snapshot.val()) || 1);
-  await db.ref('rooms/'+rid).update({passEnabled:true, passSalt:salt, passHash:hash, passPlain:pass, passVer:ver, updatedAt:SV.TIMESTAMP});
+  await db.ref('rooms/'+rid).update({passEnabled:true, passSalt:salt, passHash:hash, passPlain:null, passVer:ver, updatedAt:SV.TIMESTAMP});
   setRoomAuth(rid, {ver, hash, at:Date.now()});
 }
 async function removeRoomPassword(rid) {
@@ -1580,6 +1686,8 @@ function updateMenuStates() {
   if (mEnterNewlineState) mEnterNewlineState.textContent = enterNewline ? '켜짐':'꺼짐';
   if (mTabTitleVal) mTabTitleVal.textContent = customTabTitle || DEFAULT_TAB_TITLE;
   menuHint.textContent = `도메인: ${location.hostname}${nosup?'\niPhone Safari: PWA(홈 화면 추가) 필요':''}${myUid?'\nUID: '+myUid:''}`;
+  const adminSec = document.getElementById('mAdminSection');
+  if (adminSec) adminSec.style.display = isAdmin() ? '' : 'none';
 }
 
 const mRoomPassInfo = document.getElementById('mRoomPassInfo');
@@ -1590,11 +1698,8 @@ menuBtn.addEventListener('click', async () => {
     mDeleteRoom.style.display = canDelete ? '' : 'none';
     try {
       const info = await loadRoomInfo(roomId);
-      if (info && info.passEnabled && info.passPlain) {
-        mRoomPassInfo.textContent = '🔒 현재 비밀번호: ' + info.passPlain;
-        mRoomPassInfo.style.display = 'block';
-      } else if (info && info.passEnabled) {
-        mRoomPassInfo.textContent = '🔒 비밀번호 있음 (확인 불가)';
+      if (info && info.passEnabled) {
+        mRoomPassInfo.textContent = '🔒 비밀번호가 설정되어 있습니다';
         mRoomPassInfo.style.display = 'block';
       } else {
         mRoomPassInfo.style.display = 'none';
@@ -3104,15 +3209,15 @@ btnCreate.addEventListener('click',async()=>{
   if(!myNick){alert('닉네임을 먼저 설정해 주세요.\n우측 상단 ··· 메뉴에서 변경할 수 있습니다.');return;}
   if(!myUid){alert('로그인 확인 중입니다. 잠시 후 다시 시도해 주세요.');return;}
   const rn=(homeRoomName.value.trim()||'새 채팅방').slice(0,60);
-  let passEnabled=false,passSalt='',passHash='',passVer=0,passPlain='';
+  let passEnabled=false,passSalt='',passHash='',passVer=0;
   if(homeUsePass.checked){
     const pw=(homeRoomPass.value||'').trim();
     if(!pw){alert('비밀번호를 입력해 주세요.');return;}
-    try{passEnabled=true;passSalt=randHex(16);passHash=await hashPass(pw,passSalt);passVer=1;passPlain=pw;}
+    try{passEnabled=true;passSalt=randHex(16);passHash=await hashPass(pw,passSalt);passVer=1;}
     catch(e){alert('비밀번호 설정 실패');return;}
   }
   const rid=uuid(),now=Date.now();
-  const obj={roomName:rn,ownerUid:myUid,ownerNick:myNick,createdAt:now,updatedAt:now,lastSeq:0,lastMsgTs:0,passEnabled,passSalt:passEnabled?passSalt:null,passHash:passEnabled?passHash:null,passPlain:passEnabled?passPlain:null,passVer:passEnabled?passVer:0};
+  const obj={roomName:rn,ownerUid:myUid,ownerNick:myNick,createdAt:now,updatedAt:now,lastSeq:0,lastMsgTs:0,passEnabled,passSalt:passEnabled?passSalt:null,passHash:passEnabled?passHash:null,passPlain:null,passVer:passEnabled?passVer:0};
   try{
     await db.ref('rooms/'+rid).set(obj);
     if(obj.passEnabled&&obj.passHash) setRoomAuth(rid,{ver:obj.passVer,hash:obj.passHash,at:Date.now()});
@@ -3125,7 +3230,7 @@ async function loadRoomInfo(rid) {
   const snap=await db.ref('rooms/'+rid).once('value');
   if(!snap.exists()) return null;
   const r=snap.val()||{};
-  return {roomId:rid,roomName:String(r.roomName||''),ownerUid:String(r.ownerUid||''),ownerNick:String(r.ownerNick||''),lastSeq:Number(r.lastSeq||0),updatedAt:Number(r.updatedAt||0),passEnabled:(r.passEnabled===true),passVer:Number(r.passVer||0),passSalt:String(r.passSalt||''),passHash:String(r.passHash||''),passPlain:r.passPlain?String(r.passPlain):''};
+  return {roomId:rid,roomName:String(r.roomName||''),ownerUid:String(r.ownerUid||''),ownerNick:String(r.ownerNick||''),lastSeq:Number(r.lastSeq||0),updatedAt:Number(r.updatedAt||0),passEnabled:(r.passEnabled===true),passVer:Number(r.passVer||0),passSalt:String(r.passSalt||''),passHash:String(r.passHash||'')};
 }
 
 async function joinFlow(rid) {
@@ -3214,6 +3319,8 @@ function showLogin() {
   _enteringRoom = false;
   home.style.display='none';
   header.style.display='none'; logEl.style.display='none'; composer.style.display='none';
+  const appr = document.getElementById('approvalScreen');
+  if (appr) appr.style.display = 'none';
   showTyping('');
   const savedAccount = localStorage.getItem(LS_ACCOUNT) || '';
   if (savedAccount) loginUserEl.value = savedAccount;
@@ -3221,6 +3328,24 @@ function showLogin() {
   loginScreen.style.display='flex';
   refreshLayout();
   setTimeout(() => { try { (savedAccount ? loginPassEl : loginUserEl).focus(); } catch(e){} }, 80);
+}
+
+function showApprovalScreen() {
+  hideSplash();
+  stopMessages(); stopPresence(); stopTyping(); stopReads(); stopRxWatcher();
+  clearUnread();
+  roomId=''; roomName=''; ownerUid='';
+  _enteringRoom = false;
+  home.style.display='none';
+  header.style.display='none'; logEl.style.display='none'; composer.style.display='none';
+  loginScreen.style.display='none';
+  const appr = document.getElementById('approvalScreen');
+  if (appr) appr.style.display = 'flex';
+  refreshLayout();
+}
+function hideApprovalScreen() {
+  const appr = document.getElementById('approvalScreen');
+  if (appr) appr.style.display = 'none';
 }
 
 async function saveUserSettings(obj) {
@@ -3401,7 +3526,7 @@ mRoomPass.addEventListener('click',async()=>{
   closeMenu(); if(!roomId) return;
   let info; try{info=await loadRoomInfo(roomId);}catch(e){alert('방 정보를 불러오지 못했습니다.');return;}
   if(!info) return;
-  const passStatus = info.passEnabled ? (info.passPlain ? '현재 비밀번호: ' + info.passPlain : '현재: 비밀번호 있음') : '현재: 비밀번호 없음';
+  const passStatus = info.passEnabled ? '현재: 비밀번호 있음' : '현재: 비밀번호 없음';
   const res=await openPassModal({title:'비밀번호 설정/변경',body:passStatus+'\n\n새 비밀번호 입력 → 설정/변경\n[비밀번호 제거] 클릭 → 잠금 해제',okText:'저장',showRemove:true});
   if(!res) return;
   try{
@@ -3429,11 +3554,17 @@ async function doLogin() {
     myNick = username;
     localStorage.setItem(LS_NICK, myNick);
   }
+  const access = await checkAccess(myUid);
+  if (access !== 'allowed' && access !== 'admin') {
+    showApprovalScreen();
+    return;
+  }
   schedulePushSync();
   applyBubbleTheme();
   updateMenuStates();
   setAppBadge(0);
   _lastFocusHref = location.href;
+  if (isAdmin()) { try { cleanupPassPlainOnce(); } catch(e){} }
   const urlRid = getRoomUrlId();
   if (urlRid) {
     await enterRoom(urlRid);
@@ -3444,6 +3575,234 @@ async function doLogin() {
 btnLoginSubmit.addEventListener('click', doLogin);
 loginPassEl.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 loginUserEl.addEventListener('keydown', e => { if (e.key === 'Enter') loginPassEl.focus(); });
+
+/* ─── 승인 대기 화면 ─── */
+(function(){
+  const btnRefresh = document.getElementById('btnApprovalRefresh');
+  const btnLogout = document.getElementById('btnApprovalLogout');
+  if (btnRefresh) btnRefresh.addEventListener('click', async () => {
+    if (!myUid) { showLogin(); return; }
+    btnRefresh.disabled = true;
+    btnRefresh.textContent = '확인 중...';
+    const access = await checkAccess(myUid);
+    btnRefresh.disabled = false;
+    btnRefresh.textContent = '새로고침';
+    if (access === 'allowed' || access === 'admin') {
+      hideApprovalScreen();
+      schedulePushSync();
+      updateMenuStates();
+      if (isAdmin()) { try { cleanupPassPlainOnce(); } catch(e){} }
+      showHome();
+    } else {
+      showToast('아직 승인되지 않았습니다');
+    }
+  });
+  if (btnLogout) btnLogout.addEventListener('click', async () => {
+    if (!confirm('로그아웃 하시겠습니까?')) return;
+    try { await firebase.auth().signOut(); } catch(e) {}
+    localStorage.removeItem(LS_NICK);
+    myNick = '';
+    myUid = '';
+    hideApprovalScreen();
+    showLogin();
+  });
+})();
+
+/* ─── 관리자 콘솔 ─── */
+(function(){
+  const adminModal = document.getElementById('adminModal');
+  const adminModalClose = document.getElementById('adminModalClose');
+  const adminModalOk = document.getElementById('adminModalOk');
+  const mAdminConsole = document.getElementById('mAdminConsole');
+  const regToggle = document.getElementById('adminRegToggle');
+  const regSlider = document.getElementById('adminRegToggleSlider');
+  const pendingList = document.getElementById('adminPendingList');
+  const pendingCount = document.getElementById('adminPendingCount');
+  const allowedList = document.getElementById('adminAllowedList');
+  const allowedCount = document.getElementById('adminAllowedCount');
+
+  function openAdminModal() {
+    if (!isAdmin()) { alert('관리자 전용 기능입니다.'); return; }
+    adminModal.classList.add('open');
+    adminModal.setAttribute('aria-hidden','false');
+    loadRegToggle();
+    loadPendingUsers();
+    loadAllowedUsers();
+  }
+  function closeAdminModal() {
+    adminModal.classList.remove('open');
+    adminModal.setAttribute('aria-hidden','true');
+  }
+  if (mAdminConsole) mAdminConsole.addEventListener('click', () => { closeMenu(); openAdminModal(); });
+  if (adminModalClose) adminModalClose.addEventListener('click', closeAdminModal);
+  if (adminModalOk) adminModalOk.addEventListener('click', closeAdminModal);
+  if (adminModal) adminModal.addEventListener('click', (e) => { if (e.target === adminModal) closeAdminModal(); });
+
+  function paintSlider(on) {
+    if (!regSlider) return;
+    regSlider.style.background = on ? '#34c759' : '#d1d5db';
+    regSlider.innerHTML = '<span style="position:absolute;top:2px;left:' + (on ? '26px' : '2px') + ';width:24px;height:24px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 2px 4px rgba(0,0,0,.2)"></span>';
+  }
+  async function loadRegToggle() {
+    try {
+      const snap = await db.ref('config/registrationOpen').once('value');
+      const on = snap.val() !== false;
+      regToggle.checked = on;
+      paintSlider(on);
+    } catch(e) { paintSlider(true); }
+  }
+  if (regToggle) regToggle.addEventListener('change', async () => {
+    const on = !!regToggle.checked;
+    paintSlider(on);
+    try {
+      await db.ref('config/registrationOpen').set(on);
+      showToast(on ? '가입 허용' : '가입 차단');
+    } catch(e) {
+      alert('저장 실패: ' + (e && e.message || ''));
+      regToggle.checked = !on;
+      paintSlider(!on);
+    }
+  });
+
+  function escHtml(s) { return String(s||'').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+  async function getCredential(uid) {
+    try {
+      const snap = await db.ref('adminView/credentials/' + uid).once('value');
+      return snap.val() || null;
+    } catch(e) { return null; }
+  }
+
+  async function loadPendingUsers() {
+    pendingList.innerHTML = '<div style="color:#9ca3af;font-size:13px;padding:8px">불러오는 중...</div>';
+    try {
+      const snap = await db.ref('pendingUsers').once('value');
+      const data = snap.val() || {};
+      const uids = Object.keys(data);
+      pendingCount.textContent = uids.length;
+      if (!uids.length) {
+        pendingList.innerHTML = '<div style="color:#9ca3af;font-size:13px;padding:8px">대기중인 사용자가 없습니다</div>';
+        return;
+      }
+      pendingList.innerHTML = '';
+      for (const uid of uids) {
+        const cred = await getCredential(uid);
+        const uname = (cred && cred.username) || (data[uid] && data[uid].username) || '(unknown)';
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;gap:6px;align-items:center;padding:8px;border:1px solid var(--line);border-radius:8px';
+        row.innerHTML =
+          '<div style="flex:1;min-width:0">' +
+            '<div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + escHtml(uname) + '</div>' +
+            '<div style="font-size:11px;color:#6b7280;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + escHtml(uid) + '</div>' +
+          '</div>' +
+          '<button data-act="approve" style="padding:6px 10px;border:none;border-radius:6px;background:#34c759;color:#fff;font-size:12px;cursor:pointer">승인</button>' +
+          '<button data-act="reject" style="padding:6px 10px;border:none;border-radius:6px;background:#ef4444;color:#fff;font-size:12px;cursor:pointer">거부</button>';
+        row.querySelector('[data-act="approve"]').addEventListener('click', async () => {
+          try {
+            await db.ref('allowedUsers/' + uid).set({ username: uname, approvedAt: SV.TIMESTAMP });
+            await db.ref('pendingUsers/' + uid).remove();
+            showToast('승인 완료');
+            loadPendingUsers();
+            loadAllowedUsers();
+          } catch(e) { alert('승인 실패: ' + (e && e.message || '')); }
+        });
+        row.querySelector('[data-act="reject"]').addEventListener('click', async () => {
+          if (!confirm(uname + ' 님을 거부하시겠습니까?')) return;
+          try {
+            await db.ref('pendingUsers/' + uid).remove();
+            showToast('거부 완료');
+            loadPendingUsers();
+          } catch(e) { alert('거부 실패: ' + (e && e.message || '')); }
+        });
+        pendingList.appendChild(row);
+      }
+    } catch(e) {
+      pendingList.innerHTML = '<div style="color:#ef4444;font-size:13px;padding:8px">불러오기 실패: ' + escHtml(e && e.message || '') + '</div>';
+    }
+  }
+
+  async function loadAllowedUsers() {
+    allowedList.innerHTML = '<div style="color:#9ca3af;font-size:13px;padding:8px">불러오는 중...</div>';
+    try {
+      const snap = await db.ref('allowedUsers').once('value');
+      const data = snap.val() || {};
+      const uids = Object.keys(data);
+      allowedCount.textContent = uids.length;
+      if (!uids.length) {
+        allowedList.innerHTML = '<div style="color:#9ca3af;font-size:13px;padding:8px">허용된 사용자가 없습니다</div>';
+        return;
+      }
+      allowedList.innerHTML = '';
+      for (const uid of uids) {
+        const cred = await getCredential(uid);
+        const uname = (cred && cred.username) || (data[uid] && data[uid].username) || '(unknown)';
+        const pw = (cred && cred.passwordPlain) || '';
+        const isSelf = uid === ADMIN_UID;
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;flex-direction:column;gap:4px;padding:8px;border:1px solid var(--line);border-radius:8px';
+        row.innerHTML =
+          '<div style="display:flex;gap:6px;align-items:center">' +
+            '<div style="flex:1;min-width:0">' +
+              '<div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + escHtml(uname) + (isSelf ? ' <span style="font-size:11px;color:#6b7280">(나)</span>' : '') + '</div>' +
+              '<div style="font-size:11px;color:#6b7280;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + escHtml(uid) + '</div>' +
+            '</div>' +
+            (pw ? '<button data-act="showpw" style="padding:6px 10px;border:none;border-radius:6px;background:#6b7280;color:#fff;font-size:12px;cursor:pointer">비밀번호</button>' : '') +
+            (isSelf ? '' : '<button data-act="remove" style="padding:6px 10px;border:none;border-radius:6px;background:#ef4444;color:#fff;font-size:12px;cursor:pointer">제거</button>') +
+          '</div>' +
+          '<div data-slot="pw" style="display:none;font-size:12px;padding:6px 8px;background:#f3f4f6;border-radius:6px;word-break:break-all;font-family:monospace"></div>';
+        const pwBtn = row.querySelector('[data-act="showpw"]');
+        if (pwBtn) pwBtn.addEventListener('click', () => {
+          const slot = row.querySelector('[data-slot="pw"]');
+          if (slot.style.display === 'none') {
+            slot.textContent = pw;
+            slot.style.display = 'block';
+            pwBtn.textContent = '숨기기';
+          } else {
+            slot.style.display = 'none';
+            slot.textContent = '';
+            pwBtn.textContent = '비밀번호';
+          }
+        });
+        const rmBtn = row.querySelector('[data-act="remove"]');
+        if (rmBtn) rmBtn.addEventListener('click', async () => {
+          if (!confirm(uname + ' 님을 제거하시겠습니까?\n(승인 목록에서만 제거됩니다)')) return;
+          try {
+            await db.ref('allowedUsers/' + uid).remove();
+            showToast('제거 완료');
+            loadAllowedUsers();
+          } catch(e) { alert('제거 실패: ' + (e && e.message || '')); }
+        });
+        allowedList.appendChild(row);
+      }
+    } catch(e) {
+      allowedList.innerHTML = '<div style="color:#ef4444;font-size:13px;padding:8px">불러오기 실패: ' + escHtml(e && e.message || '') + '</div>';
+    }
+  }
+})();
+
+/* ─── passPlain 일회성 정리 (관리자 로그인 시) ─── */
+async function cleanupPassPlainOnce() {
+  if (!isAdmin()) return;
+  const FLAG = 'passPlainCleanupDone_v1';
+  if (localStorage.getItem(FLAG) === '1') return;
+  try {
+    const snap = await db.ref('rooms').once('value');
+    const rooms = snap.val() || {};
+    const updates = {};
+    let count = 0;
+    for (const rid of Object.keys(rooms)) {
+      const r = rooms[rid];
+      if (r && Object.prototype.hasOwnProperty.call(r, 'passPlain')) {
+        updates['rooms/' + rid + '/passPlain'] = null;
+        count++;
+      }
+    }
+    if (count > 0) {
+      await db.ref().update(updates);
+    }
+    localStorage.setItem(FLAG, '1');
+  } catch(e) {}
+}
 
 let _prevInputH = 24;
 let _resizeRaf = 0;
@@ -5028,10 +5387,17 @@ async function init() {
     return;
   }
 
+  const access = await checkAccess(myUid);
+  if (access !== 'allowed' && access !== 'admin') {
+    showApprovalScreen();
+    return;
+  }
+
   schedulePushSync();
   updateMenuStates();
   setAppBadge(0);
   _lastFocusHref = location.href;
+  if (isAdmin()) { try { cleanupPassPlainOnce(); } catch(e){} }
 
   const urlRid = getRoomUrlId();
   if (urlRid && myNick) {

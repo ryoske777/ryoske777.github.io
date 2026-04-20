@@ -1,29 +1,60 @@
 {
   "rules": {
+    ".read": false,
+    ".write": false,
+
+    "config": {
+      "registrationOpen": {
+        ".read": true,
+        ".write": "auth != null && auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2'"
+      }
+    },
+
+    "allowedUsers": {
+      ".read": "auth != null && auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2'",
+      "$uid": {
+        ".read": "auth != null && ($uid === auth.uid || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')",
+        ".write": "auth != null && auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2'"
+      }
+    },
+
+    "pendingUsers": {
+      ".read": "auth != null && auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2'",
+      "$uid": {
+        ".read": "auth != null && ($uid === auth.uid || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')",
+        ".write": "auth != null && ($uid === auth.uid || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')"
+      }
+    },
+
+    "adminView": {
+      ".read": "auth != null && auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2'",
+      "credentials": {
+        "$uid": {
+          ".read": "auth != null && auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2'",
+          ".write": "auth != null && ($uid === auth.uid || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')"
+        }
+      }
+    },
 
     "rooms": {
-      ".read": "auth != null",
+      ".read": "auth != null && (root.child('allowedUsers').child(auth.uid).exists() || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')",
+      ".indexOn": ["updatedAt"],
       "$roomId": {
-        ".read": "auth != null",
-        ".write": "auth != null && (!data.exists() || data.child('ownerUid').val() === auth.uid || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')",
-        "updatedAt": { ".write": "auth != null" },
-        "lastSeq": { ".write": "auth != null" },
-        "lastMsgTs": { ".write": "auth != null" },
-        "passEnabled": { ".write": "auth != null && (root.child('rooms').child($roomId).child('ownerUid').val() === auth.uid || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')" },
-        "passSalt": { ".write": "auth != null && (root.child('rooms').child($roomId).child('ownerUid').val() === auth.uid || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')" },
-        "passHash": { ".write": "auth != null && (root.child('rooms').child($roomId).child('ownerUid').val() === auth.uid || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')" },
-        "passVer": { ".write": "auth != null && (root.child('rooms').child($roomId).child('ownerUid').val() === auth.uid || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')" },
-        "roomName": { ".write": "auth != null && (root.child('rooms').child($roomId).child('ownerUid').val() === auth.uid || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')" }
+        ".read": "auth != null && (root.child('allowedUsers').child(auth.uid).exists() || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')",
+        ".write": "auth != null && (root.child('allowedUsers').child(auth.uid).exists() || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2') && (!data.exists() || data.child('ownerUid').val() === auth.uid || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')",
+        "updatedAt":  { ".write": "auth != null && (root.child('allowedUsers').child(auth.uid).exists() || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')" },
+        "lastSeq":    { ".write": "auth != null && (root.child('allowedUsers').child(auth.uid).exists() || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')" },
+        "lastMsgTs":  { ".write": "auth != null && (root.child('allowedUsers').child(auth.uid).exists() || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')" }
       }
     },
 
     "messages": {
       "$roomId": {
-        ".indexOn": ["seq"],
-        ".read": "auth != null",
-        ".write": "auth != null && (root.child('rooms').child($roomId).child('ownerUid').val() === auth.uid || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2' || !data.exists())",
+        ".indexOn": ["seq", "messageId"],
+        ".read": "auth != null && (root.child('allowedUsers').child(auth.uid).exists() || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')",
+        ".write": "auth != null && (root.child('allowedUsers').child(auth.uid).exists() || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')",
         "$messageKey": {
-          ".write": "auth != null && (!data.exists() || data.child('senderId').val() === auth.uid)"
+          ".write": "auth != null && (!data.exists() || data.child('senderId').val() === auth.uid || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')"
         }
       }
     },
@@ -31,41 +62,37 @@
     "presence": {
       "$roomId": {
         ".indexOn": ["lastActive"],
-        ".read": "auth != null",
-        ".write": "auth != null && (root.child('rooms').child($roomId).child('ownerUid').val() === auth.uid || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')",
+        ".read": "auth != null && (root.child('allowedUsers').child(auth.uid).exists() || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')",
         "$uid": {
-          ".write": "auth != null && $uid === auth.uid"
+          ".write": "auth != null && ($uid === auth.uid || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')"
         }
       }
     },
 
     "typing": {
       "$roomId": {
-        ".read": "auth != null",
-        ".write": "auth != null && (root.child('rooms').child($roomId).child('ownerUid').val() === auth.uid || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')",
+        ".read": "auth != null && (root.child('allowedUsers').child(auth.uid).exists() || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')",
         "$uid": {
-          ".write": "auth != null && $uid === auth.uid"
+          ".write": "auth != null && ($uid === auth.uid || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')"
         }
       }
     },
 
     "reads": {
       "$roomId": {
-        ".read": "auth != null",
-        ".write": "auth != null && (root.child('rooms').child($roomId).child('ownerUid').val() === auth.uid || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')",
+        ".read": "auth != null && (root.child('allowedUsers').child(auth.uid).exists() || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')",
         "$uid": {
-          ".write": "auth != null && $uid === auth.uid"
+          ".write": "auth != null && ($uid === auth.uid || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')"
         }
       }
     },
 
     "reactions": {
       "$roomId": {
-        ".read": "auth != null",
-        ".write": "auth != null && (root.child('rooms').child($roomId).child('ownerUid').val() === auth.uid || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')",
+        ".read": "auth != null && (root.child('allowedUsers').child(auth.uid).exists() || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')",
         "$messageId": {
           "$uid": {
-            ".write": "auth != null && $uid === auth.uid"
+            ".write": "auth != null && ($uid === auth.uid || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')"
           }
         }
       }
@@ -73,60 +100,53 @@
 
     "roomMembers": {
       "$roomId": {
-        ".read": "auth != null",
-        ".write": "auth != null && (root.child('rooms').child($roomId).child('ownerUid').val() === auth.uid || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')",
+        ".read": "auth != null && (root.child('allowedUsers').child(auth.uid).exists() || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')",
         "$uid": {
-          ".write": "auth != null && $uid === auth.uid"
+          ".write": "auth != null && ($uid === auth.uid || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')"
         }
       }
     },
 
     "calls": {
       "$roomId": {
-        ".read": "auth != null",
-        ".write": "auth != null",
-        "$callId": {
-          ".write": "auth != null"
-        }
+        ".read": "auth != null && (root.child('allowedUsers').child(auth.uid).exists() || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')",
+        ".write": "auth != null && (root.child('allowedUsers').child(auth.uid).exists() || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')"
       }
     },
 
     "userSettings": {
       "$uid": {
-        ".read": "auth != null && $uid === auth.uid",
-        ".write": "auth != null && $uid === auth.uid"
+        ".read": "auth != null && ($uid === auth.uid || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')",
+        ".write": "auth != null && ($uid === auth.uid || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')"
       }
     },
 
     "pushSubs": {
       "$uid": {
-        ".read": "auth != null",
-        ".write": "auth != null && $uid === auth.uid"
+        ".read": "auth != null && (root.child('allowedUsers').child(auth.uid).exists() || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')",
+        ".write": "auth != null && ($uid === auth.uid || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')"
       }
     },
 
     "images": {
       "$roomId": {
-        ".read": "auth != null",
-        ".write": "auth != null"
+        ".read": "auth != null && (root.child('allowedUsers').child(auth.uid).exists() || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')",
+        ".write": "auth != null && (root.child('allowedUsers').child(auth.uid).exists() || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')"
       }
     },
 
     "tamagotchi": {
       "$uid": {
-        ".read": "auth != null && $uid === auth.uid",
-        ".write": "auth != null && $uid === auth.uid"
+        ".read": "auth != null && ($uid === auth.uid || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')",
+        ".write": "auth != null && ($uid === auth.uid || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')"
       }
     },
 
     "tamaMate": {
       "$roomId": {
-        ".read": "auth != null",
-        ".write": "auth != null"
+        ".read": "auth != null && (root.child('allowedUsers').child(auth.uid).exists() || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')",
+        ".write": "auth != null && (root.child('allowedUsers').child(auth.uid).exists() || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')"
       }
-    },
-
-    ".read": false,
-    ".write": false
+    }
   }
 }
