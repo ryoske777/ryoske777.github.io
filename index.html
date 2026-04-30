@@ -110,9 +110,9 @@ header{position:sticky;top:0;z-index:10;padding:8px 14px 7px;border-bottom:1px s
 .row{display:flex;gap:8px;width:100%}
 .row.me{justify-content:flex-end}
 .row.other{justify-content:flex-start}
-.bubble{max-width:82%;padding:12px;border-radius:16px;border:1px solid var(--line);background:var(--other);color:var(--otherText);white-space:pre-wrap;word-break:break-word;font-size:var(--bubbleFontSize,16px);line-height:1.35;font-family:var(--chatFontFamily,inherit);-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.bubble{max-width:82%;padding:12px;border-radius:16px;border:1px solid var(--bubbleBorder,var(--line));background:var(--other);color:var(--otherText);white-space:pre-wrap;word-break:break-word;font-size:var(--bubbleFontSize,16px);line-height:1.35;font-family:var(--chatFontFamily,inherit);-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .bubble.selectable{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
-.row.me .bubble{background:var(--me);color:var(--meText);border-color:transparent;border-bottom-right-radius:6px;box-shadow:none}
+.row.me .bubble{background:var(--me);color:var(--meText);border-bottom-right-radius:6px;box-shadow:none}
 .row.other .bubble{border-bottom-left-radius:6px}
 .meta{font-size:11px;color:var(--muted);display:flex;gap:8px;align-items:center}
 .meta.me{justify-content:flex-end}
@@ -123,7 +123,7 @@ header{position:sticky;top:0;z-index:10;padding:8px 14px 7px;border-bottom:1px s
 /* 입력 중 말풍선 (카카오톡 스타일) */
 .typingBubbleWrap{display:none;flex-direction:column;gap:4px;margin:10px 0;width:100%}
 .typingBubbleWrap.show{display:flex}
-.typingBubble{display:inline-flex;align-items:center;gap:5px;padding:12px;border-radius:16px;border:1px solid var(--line);background:var(--other);color:var(--otherText);border-bottom-left-radius:6px;max-width:82%;min-height:calc(var(--bubbleFontSize,16px) * 1.35 + 24px);box-sizing:border-box}
+.typingBubble{display:inline-flex;align-items:center;gap:5px;padding:12px;border-radius:16px;border:1px solid var(--bubbleBorder,var(--line));background:var(--other);color:var(--otherText);border-bottom-left-radius:6px;max-width:82%;min-height:calc(var(--bubbleFontSize,16px) * 1.35 + 24px);box-sizing:border-box}
 .typingDot{width:7px;height:7px;border-radius:50%;background:#a0aec0;animation:typingBounce 1.2s ease-in-out infinite}
 .typingDot:nth-child(2){animation-delay:.15s}
 .typingDot:nth-child(3){animation-delay:.3s}
@@ -538,6 +538,7 @@ OneSignalDeferred.push(async function(OneSignal) {
                 <option value="singleday">싱글데이</option>
               </select>
             </div>
+            <button id="mBubbleBorder"><span>말풍선 테두리</span><span id="mBubbleBorderState">›</span></button>
           </div>
                     <div class="menuSection">
             <div class="menuSectionTitle">채팅방</div>
@@ -987,6 +988,7 @@ const LS_FONT_FAMILY = 'chat_font_family_v1';
 const LS_CHAT_BG_COLOR = 'chat_bg_color_v1';
 const LS_CHAT_BG_IMAGE = 'chat_bg_image_v1';
 const LS_TAB_TITLE = 'chat_tab_title_v1';
+const LS_BUBBLE_BORDER = 'chat_bubble_border_v1';
 
 const appEl = document.getElementById('app');
 const loginScreen = document.getElementById('loginScreen');
@@ -1138,6 +1140,7 @@ let chatFontFamily = lsGet(LS_FONT_FAMILY) || 'system';
 let customTabTitle = lsGet(LS_TAB_TITLE) || '';
 let chatBgColor = lsGet(LS_CHAT_BG_COLOR) || '';
 let chatBgImage = lsGet(LS_CHAT_BG_IMAGE) || '';
+let bubbleBorderEnabled = (lsGet(LS_BUBBLE_BORDER) !== '0');
 const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || ('ontouchstart' in window && window.innerWidth < 768);
 let onlineNicksCache = [];
 let currentReplyTo = null;
@@ -1616,6 +1619,11 @@ function applyBubbleTheme() {
 }
 applyBubbleTheme();
 
+function applyBubbleBorder() {
+  document.documentElement.style.setProperty('--bubbleBorder', bubbleBorderEnabled ? 'var(--line)' : 'transparent');
+}
+applyBubbleBorder();
+
 const stealthFontDec = document.getElementById('stealthFontDec');
 const stealthFontInc = document.getElementById('stealthFontInc');
 const stealthFontVal = document.getElementById('stealthFontVal');
@@ -1684,6 +1692,8 @@ function updateMenuStates() {
   mEnableNotiState.textContent = notiTxt;
   mSoundState.textContent = soundEnabled ? '켜짐':'꺼짐';
   if (mEnterNewlineState) mEnterNewlineState.textContent = enterNewline ? '켜짐':'꺼짐';
+  const mBubbleBorderState = document.getElementById('mBubbleBorderState');
+  if (mBubbleBorderState) mBubbleBorderState.textContent = bubbleBorderEnabled ? '켜짐':'꺼짐';
   if (mTabTitleVal) mTabTitleVal.textContent = customTabTitle || DEFAULT_TAB_TITLE;
   menuHint.textContent = `도메인: ${location.hostname}${nosup?'\niPhone Safari: PWA(홈 화면 추가) 필요':''}${myUid?'\nUID: '+myUid:''}`;
   const adminSec = document.getElementById('mAdminSection');
@@ -1737,6 +1747,13 @@ if (mOtherBubbleColor) mOtherBubbleColor.addEventListener('input', (e) => {
 });
 if (mEnterNewline) mEnterNewline.addEventListener('click', () => {
   closeMenu(); enterNewline=!enterNewline; localStorage.setItem(LS_ENTER_NL,enterNewline?'1':'0');
+  updateMenuStates();
+});
+const mBubbleBorder = document.getElementById('mBubbleBorder');
+if (mBubbleBorder) mBubbleBorder.addEventListener('click', () => {
+  bubbleBorderEnabled = !bubbleBorderEnabled;
+  localStorage.setItem(LS_BUBBLE_BORDER, bubbleBorderEnabled ? '1' : '0');
+  applyBubbleBorder();
   updateMenuStates();
 });
 if (mTabTitle) mTabTitle.addEventListener('click', () => {
