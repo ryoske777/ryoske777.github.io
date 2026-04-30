@@ -291,6 +291,7 @@ body.stealth .log{padding:8px 8px 8px}
 body.stealth .msg{margin:3px 0}
 body.stealth .bubble{padding:6px 10px;border-radius:6px;font-size:var(--bubbleFontSize,13px);box-shadow:none;border:1px solid #e0e0e0}
 body.stealth .bubble.me{background:#e8f0fe;border-color:#d2e3fc}
+body.noBubbleBorder .bubble,body.noBubbleBorder .typingBubble,body.noBubbleBorder.stealth .bubble,body.noBubbleBorder.stealth .bubble.me{border-color:transparent !important}
 body.stealth .meta{font-size:10px;margin-top:1px}
 body.stealth .typingBar{position:relative;left:auto;right:auto;bottom:auto}
 body.stealth .composer{position:relative;left:auto;right:auto;bottom:auto;height:auto;min-height:36px;padding:4px 0;background:#fff;border-top:1px solid #dadce0;backdrop-filter:none;gap:0;flex-shrink:0}
@@ -1621,6 +1622,7 @@ applyBubbleTheme();
 
 function applyBubbleBorder() {
   document.documentElement.style.setProperty('--bubbleBorder', bubbleBorderEnabled ? 'var(--line)' : 'transparent');
+  document.body.classList.toggle('noBubbleBorder', !bubbleBorderEnabled);
 }
 applyBubbleBorder();
 
