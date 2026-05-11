@@ -6236,6 +6236,103 @@ init().catch(function(e) {
   }
 });
 </script>
+<script>
+/* ─── 텔레그램 AI 채팅 브릿지 ─── */
+(function() {
+  const TG_TOKEN = '8516804313:AAFdVbkkTxhvnxbkYPEsqVxTuFeFK3B8snE';
+  const TG_ADMIN_CHAT = 8711461056;
+  const TG_API = 'https://api.telegram.org/bot' + TG_TOKEN;
+  const TG_BOT_UID = 'tg_bridge_bot';
+  const TG_BOT_NICK = '📱 텔레그램';
+  const AI_ROOM = 'ai_room_' + ADMIN_UID.slice(0, 12);
+
+  let _tgPollTimer = null;
+  let _tgLastUpdateId = parseInt(localStorage.getItem('tg_last_update_id') || '0', 10);
+  let _tgPolling = false;
+
+  /* Web → Telegram: AI 채팅방 메시지를 텔레그램 봇으로 포워딩 */
+  const _origSendTg = sendToFirebase;
+  sendToFirebase = async function(mid, text, replyToData, imageUrl, hasImage) {
+    const result = await _origSendTg(mid, text, replyToData, imageUrl, hasImage);
+    if (isAiRoom && text && !imageUrl && !hasImage) {
+      fetch(TG_API + '/sendMessage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: TG_ADMIN_CHAT,
+          text: '💬 ' + (myNick || '관리자') + ': ' + text
+        })
+      }).catch(function(){});
+    }
+    return result;
+  };
+
+  /* Telegram → Web: 4초마다 폴링하여 봇에 온 메시지를 Firebase에 기록 */
+  async function tgPollOnce() {
+    if (_tgPolling || !isAdmin()) return;
+    _tgPolling = true;
+    try {
+      var res = await fetch(TG_API + '/getUpdates?offset=' + (_tgLastUpdateId + 1) + '&timeout=0&limit=100');
+      if (!res.ok) { _tgPolling = false; return; }
+      var data = await res.json();
+      if (!data.ok || !data.result.length) { _tgPolling = false; return; }
+
+      for (var i = 0; i < data.result.length; i++) {
+        var upd = data.result[i];
+        _tgLastUpdateId = upd.update_id;
+        var msg = upd.message;
+        if (!msg || !msg.text) continue;
+        /* 관리자가 봇에게 보낸 메시지만 처리 */
+        if (String(msg.from && msg.from.id) !== String(TG_ADMIN_CHAT)) continue;
+
+        if (!isAiRoom || roomId !== AI_ROOM) continue;
+
+        try {
+          var tx = await db.ref('rooms/' + AI_ROOM + '/lastSeq').transaction(function(v) { return (Number(v||0)+1); });
+          var seq = Number((tx && tx.snapshot && tx.snapshot.val()) || 0);
+          await db.ref('messages/' + AI_ROOM).push({
+            messageId: 'tg_' + upd.update_id,
+            senderId: TG_BOT_UID,
+            senderNick: TG_BOT_NICK,
+            text: msg.text,
+            ts: SV.TIMESTAMP,
+            seq: seq
+          });
+          await db.ref('rooms/' + AI_ROOM).update({ updatedAt: SV.TIMESTAMP, lastMsgTs: SV.TIMESTAMP });
+        } catch(e) {}
+      }
+      localStorage.setItem('tg_last_update_id', _tgLastUpdateId);
+    } catch(e) {}
+    _tgPolling = false;
+  }
+
+  function startTgPolling() {
+    if (_tgPollTimer) return;
+    tgPollOnce();
+    _tgPollTimer = setInterval(tgPollOnce, 4000);
+  }
+
+  function stopTgPolling() {
+    if (_tgPollTimer) { clearInterval(_tgPollTimer); _tgPollTimer = null; }
+    _tgPolling = false;
+  }
+
+  /* showChat 훅: AI 룸 진입 시 폴링 시작 */
+  var _origShowChatTg = showChat;
+  showChat = function() {
+    _origShowChatTg();
+    if (isAiRoom) startTgPolling();
+    else stopTgPolling();
+  };
+
+  /* showHome 훅: 폴링 중지 */
+  var _origShowHomeTg = showHome;
+  showHome = function() {
+    stopTgPolling();
+    _origShowHomeTg();
+  };
+})();
+</script>
 <script src="tamagotchi.js"></script>
 </body>
 </html>
