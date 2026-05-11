@@ -1,0 +1,7 @@
+{
+  "telegramBotToken": "1234567890:ABCdefGhIjKlMnOpQrStUvWxYz",
+  "telegramChatId": -1001234567890,
+  "firebaseServiceAccount": "./serviceAccountKey.json",
+  "firebaseDatabaseURL": "https://messenger-222df-default-rtdb.asia-southeast1.firebasedatabase.app",
+  "adminUid": "FZv13WtzGrfnlreIUtLKxMtHh2b2"
+}

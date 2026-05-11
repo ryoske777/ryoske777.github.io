@@ -1,0 +1,12 @@
+{
+  "name": "telegram-firebase-bridge",
+  "version": "1.0.0",
+  "description": "Firebase 채팅방 ↔ Telegram 봇(오픈클로) 브리지",
+  "main": "bridge.js",
+  "scripts": {
+    "start": "node bridge.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.0.0"
+  }
+}
