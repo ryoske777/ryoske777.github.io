@@ -6237,13 +6237,14 @@ init().catch(function(e) {
 });
 </script>
 <script>
-/* ─── AI 채팅 브릿지 (Gemini + 텔레그램) ─── */
+/* ─── AI 채팅 브릿지 (Claude 로컬프록시 → Gemini 폴백 + 텔레그램) ─── */
 (function() {
   const TG_TOKEN = '8516804313:AAFdVbkkTxhvnxbkYPEsqVxTuFeFK3B8snE';
   const TG_ADMIN_CHAT = 8711461056;
   const TG_API = 'https://api.telegram.org/bot' + TG_TOKEN;
   const GEMINI_KEY = 'AIzaSyA9EIIJ4tWzIar_fzyLSVdP7BTcJF6Ojxc';
-  const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + GEMINI_KEY;
+  const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + GEMINI_KEY;
+  const CLAUDE_PROXY = 'http://127.0.0.1:18790';
   const AI_UID = 'openclaw_ai';
   const AI_NICK = '🤖 오픈클로';
   const AI_ROOM = 'ai_room_' + ADMIN_UID.slice(0, 12);
@@ -6253,21 +6254,48 @@ init().catch(function(e) {
   let _tgLastUpdateId = parseInt(localStorage.getItem('tg_last_update_id') || '0', 10);
   let _tgPolling = false;
   let _aiResponding = false;
-  let _aiHistory = [];
+  let _aiHistory = []; // [{role:'user'|'assistant', content:'...'}] for Claude format
 
-  /* Gemini API 호출 → Firebase에 AI 응답 기록 */
+  /* Claude 프록시 (로컬) → 없으면 Gemini 폴백 */
   async function geminiReply(userText) {
     if (_aiResponding) return;
     _aiResponding = true;
-    _aiHistory.push({ role: 'user', parts: [{ text: userText }] });
+
+    // Claude 형식 히스토리 업데이트
+    _aiHistory.push({ role: 'user', content: userText });
     if (_aiHistory.length > 20) _aiHistory = _aiHistory.slice(-20);
+
+    /* 1) Claude 로컬 프록시 시도 */
+    try {
+      var proxyRes = await fetch(CLAUDE_PROXY + '/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: _aiHistory, system: SYSTEM_PROMPT })
+      });
+      if (proxyRes.ok) {
+        var pd = await proxyRes.json();
+        var reply = pd.content && pd.content[0] && pd.content[0].text;
+        if (reply) {
+          _aiHistory.push({ role: 'assistant', content: reply });
+          await aiWriteMsg(reply);
+          _aiResponding = false; return;
+        }
+        if (pd.error) { await aiWriteMsg('⚠️ Claude 오류: ' + pd.error); _aiResponding = false; return; }
+      }
+    } catch(e) { /* 프록시 없음 → Gemini 폴백 */ }
+
+    /* 2) Gemini 폴백 */
+    // Gemini는 별도 히스토리 형식
+    var gemHistory = _aiHistory.map(function(m) {
+      return { role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] };
+    });
     try {
       var res = await fetch(GEMINI_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-          contents: _aiHistory
+          contents: gemHistory
         })
       });
       if (!res.ok) {
@@ -6281,11 +6309,11 @@ init().catch(function(e) {
                   data.candidates[0].content.parts && data.candidates[0].content.parts[0] &&
                   data.candidates[0].content.parts[0].text;
       if (!reply) {
-        console.error('[Gemini] no reply in response', JSON.stringify(data).slice(0, 300));
+        console.error('[Gemini] no reply', JSON.stringify(data).slice(0, 300));
         await aiWriteMsg('⚠️ AI 응답 없음: ' + JSON.stringify(data).slice(0, 200));
         _aiResponding = false; return;
       }
-      _aiHistory.push({ role: 'model', parts: [{ text: reply }] });
+      _aiHistory.push({ role: 'assistant', content: reply });
       await aiWriteMsg(reply);
     } catch(e) {
       console.error('[Gemini] fetch error', e);
