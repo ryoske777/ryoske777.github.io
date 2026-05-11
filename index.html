@@ -6270,28 +6270,42 @@ init().catch(function(e) {
           contents: _aiHistory
         })
       });
-      if (!res.ok) { _aiResponding = false; return; }
+      if (!res.ok) {
+        var errBody = await res.text().catch(function(){return '';});
+        console.error('[Gemini] HTTP ' + res.status, errBody);
+        await aiWriteMsg('⚠️ AI 오류 (HTTP ' + res.status + '): ' + errBody.slice(0, 200));
+        _aiResponding = false; return;
+      }
       var data = await res.json();
       var reply = data.candidates && data.candidates[0] && data.candidates[0].content &&
                   data.candidates[0].content.parts && data.candidates[0].content.parts[0] &&
                   data.candidates[0].content.parts[0].text;
-      if (!reply) { _aiResponding = false; return; }
-      _aiHistory.push({ role: 'model', parts: [{ text: reply }] });
-      if (isAiRoom && roomId === AI_ROOM) {
-        var tx = await db.ref('rooms/' + AI_ROOM + '/lastSeq').transaction(function(v) { return (Number(v||0)+1); });
-        var seq = Number((tx && tx.snapshot && tx.snapshot.val()) || 0);
-        await db.ref('messages/' + AI_ROOM).push({
-          messageId: 'ai_' + Date.now(),
-          senderId: AI_UID,
-          senderNick: AI_NICK,
-          text: reply,
-          ts: SV.TIMESTAMP,
-          seq: seq
-        });
-        await db.ref('rooms/' + AI_ROOM).update({ updatedAt: SV.TIMESTAMP, lastMsgTs: SV.TIMESTAMP });
+      if (!reply) {
+        console.error('[Gemini] no reply in response', JSON.stringify(data).slice(0, 300));
+        await aiWriteMsg('⚠️ AI 응답 없음: ' + JSON.stringify(data).slice(0, 200));
+        _aiResponding = false; return;
       }
-    } catch(e) {}
+      _aiHistory.push({ role: 'model', parts: [{ text: reply }] });
+      await aiWriteMsg(reply);
+    } catch(e) {
+      console.error('[Gemini] fetch error', e);
+      await aiWriteMsg('⚠️ AI 연결 오류: ' + (e && e.message || String(e)));
+    }
     _aiResponding = false;
+  }
+
+  async function aiWriteMsg(text) {
+    if (!isAiRoom || roomId !== AI_ROOM) return;
+    try {
+      var tx = await db.ref('rooms/' + AI_ROOM + '/lastSeq').transaction(function(v) { return (Number(v||0)+1); });
+      var seq = Number((tx && tx.snapshot && tx.snapshot.val()) || 0);
+      await db.ref('messages/' + AI_ROOM).push({
+        messageId: 'ai_' + Date.now(),
+        senderId: AI_UID, senderNick: AI_NICK,
+        text: text, ts: SV.TIMESTAMP, seq: seq
+      });
+      await db.ref('rooms/' + AI_ROOM).update({ updatedAt: SV.TIMESTAMP, lastMsgTs: SV.TIMESTAMP });
+    } catch(e) { console.error('[aiWriteMsg]', e); }
   }
 
   /* Web → Telegram 알림 */
