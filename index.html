@@ -6242,8 +6242,6 @@ init().catch(function(e) {
   const TG_TOKEN = '8516804313:AAFdVbkkTxhvnxbkYPEsqVxTuFeFK3B8snE';
   const TG_ADMIN_CHAT = 8711461056;
   const TG_API = 'https://api.telegram.org/bot' + TG_TOKEN;
-  const GEMINI_KEY = 'AIzaSyA9EIIJ4tWzIar_fzyLSVdP7BTcJF6Ojxc';
-  const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + GEMINI_KEY;
   const CLAUDE_PROXY = 'http://127.0.0.1:18790';
   const AI_UID = 'openclaw_ai';
   const AI_NICK = '🤖 오픈클로';
@@ -6284,41 +6282,8 @@ init().catch(function(e) {
       }
     } catch(e) { /* 프록시 없음 → Gemini 폴백 */ }
 
-    /* 2) Gemini 폴백 */
-    // Gemini는 별도 히스토리 형식
-    var gemHistory = _aiHistory.map(function(m) {
-      return { role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] };
-    });
-    try {
-      var res = await fetch(GEMINI_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-          contents: gemHistory
-        })
-      });
-      if (!res.ok) {
-        var errBody = await res.text().catch(function(){return '';});
-        console.error('[Gemini] HTTP ' + res.status, errBody);
-        await aiWriteMsg('⚠️ AI 오류 (HTTP ' + res.status + '): ' + errBody.slice(0, 200));
-        _aiResponding = false; return;
-      }
-      var data = await res.json();
-      var reply = data.candidates && data.candidates[0] && data.candidates[0].content &&
-                  data.candidates[0].content.parts && data.candidates[0].content.parts[0] &&
-                  data.candidates[0].content.parts[0].text;
-      if (!reply) {
-        console.error('[Gemini] no reply', JSON.stringify(data).slice(0, 300));
-        await aiWriteMsg('⚠️ AI 응답 없음: ' + JSON.stringify(data).slice(0, 200));
-        _aiResponding = false; return;
-      }
-      _aiHistory.push({ role: 'assistant', content: reply });
-      await aiWriteMsg(reply);
-    } catch(e) {
-      console.error('[Gemini] fetch error', e);
-      await aiWriteMsg('⚠️ AI 연결 오류: ' + (e && e.message || String(e)));
-    }
+    /* 프록시 없음 */
+    await aiWriteMsg('⚠️ Claude 프록시가 실행되지 않았어요.\n터미널에서: node claude_ai_proxy.js');
     _aiResponding = false;
   }
 
