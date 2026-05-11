@@ -6237,36 +6237,80 @@ init().catch(function(e) {
 });
 </script>
 <script>
-/* ─── 텔레그램 AI 채팅 브릿지 ─── */
+/* ─── AI 채팅 브릿지 (Gemini + 텔레그램) ─── */
 (function() {
   const TG_TOKEN = '8516804313:AAFdVbkkTxhvnxbkYPEsqVxTuFeFK3B8snE';
   const TG_ADMIN_CHAT = 8711461056;
   const TG_API = 'https://api.telegram.org/bot' + TG_TOKEN;
-  const TG_BOT_UID = 'tg_bridge_bot';
-  const TG_BOT_NICK = '📱 텔레그램';
+  const GEMINI_KEY = 'AIzaSyA9EIIJ4tWzIar_fzyLSVdP7BTcJF6Ojxc';
+  const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + GEMINI_KEY;
+  const AI_UID = 'openclaw_ai';
+  const AI_NICK = '🤖 오픈클로';
   const AI_ROOM = 'ai_room_' + ADMIN_UID.slice(0, 12);
+  const SYSTEM_PROMPT = '당신은 오픈클로(OpenClaw) AI 어시스턴트입니다. 관리자의 개인 AI 비서 역할을 합니다. 한국어로 친절하고 유능하게 대화해주세요.';
 
   let _tgPollTimer = null;
   let _tgLastUpdateId = parseInt(localStorage.getItem('tg_last_update_id') || '0', 10);
   let _tgPolling = false;
+  let _aiResponding = false;
+  let _aiHistory = [];
 
-  /* Web → Telegram: AI 채팅방 메시지를 텔레그램 봇으로 포워딩 */
-  function tgSend(text) {
-    /* GET 방식으로 CORS preflight 없이 전송 */
-    var url = TG_API + '/sendMessage?chat_id=' + TG_ADMIN_CHAT + '&text=' + encodeURIComponent(text);
-    fetch(url).catch(function(){});
+  /* Gemini API 호출 → Firebase에 AI 응답 기록 */
+  async function geminiReply(userText) {
+    if (_aiResponding) return;
+    _aiResponding = true;
+    _aiHistory.push({ role: 'user', parts: [{ text: userText }] });
+    if (_aiHistory.length > 20) _aiHistory = _aiHistory.slice(-20);
+    try {
+      var res = await fetch(GEMINI_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+          contents: _aiHistory
+        })
+      });
+      if (!res.ok) { _aiResponding = false; return; }
+      var data = await res.json();
+      var reply = data.candidates && data.candidates[0] && data.candidates[0].content &&
+                  data.candidates[0].content.parts && data.candidates[0].content.parts[0] &&
+                  data.candidates[0].content.parts[0].text;
+      if (!reply) { _aiResponding = false; return; }
+      _aiHistory.push({ role: 'model', parts: [{ text: reply }] });
+      if (isAiRoom && roomId === AI_ROOM) {
+        var tx = await db.ref('rooms/' + AI_ROOM + '/lastSeq').transaction(function(v) { return (Number(v||0)+1); });
+        var seq = Number((tx && tx.snapshot && tx.snapshot.val()) || 0);
+        await db.ref('messages/' + AI_ROOM).push({
+          messageId: 'ai_' + Date.now(),
+          senderId: AI_UID,
+          senderNick: AI_NICK,
+          text: reply,
+          ts: SV.TIMESTAMP,
+          seq: seq
+        });
+        await db.ref('rooms/' + AI_ROOM).update({ updatedAt: SV.TIMESTAMP, lastMsgTs: SV.TIMESTAMP });
+      }
+    } catch(e) {}
+    _aiResponding = false;
   }
 
-  const _origSendTg = sendToFirebase;
+  /* Web → Telegram 알림 */
+  function tgSend(text) {
+    fetch(TG_API + '/sendMessage?chat_id=' + TG_ADMIN_CHAT + '&text=' + encodeURIComponent(text)).catch(function(){});
+  }
+
+  /* sendToFirebase 래핑: AI 응답 + 텔레그램 알림 */
+  var _origSendTg = sendToFirebase;
   sendToFirebase = async function(mid, text, replyToData, imageUrl, hasImage) {
-    const result = await _origSendTg(mid, text, replyToData, imageUrl, hasImage);
+    var result = await _origSendTg(mid, text, replyToData, imageUrl, hasImage);
     if (isAiRoom && text && !imageUrl && !hasImage) {
+      geminiReply(text);
       tgSend('💬 ' + (myNick || '관리자') + ': ' + text);
     }
     return result;
   };
 
-  /* Telegram → Web: 4초마다 폴링하여 봇에 온 메시지를 Firebase에 기록 */
+  /* Telegram → Web: 텔레그램에서 보낸 메시지도 웹에 표시 + AI 응답 */
   async function tgPollOnce() {
     if (_tgPolling || !isAdmin()) return;
     _tgPolling = true;
@@ -6275,29 +6319,26 @@ init().catch(function(e) {
       if (!res.ok) { _tgPolling = false; return; }
       var data = await res.json();
       if (!data.ok || !data.result.length) { _tgPolling = false; return; }
-
       for (var i = 0; i < data.result.length; i++) {
         var upd = data.result[i];
         _tgLastUpdateId = upd.update_id;
         var msg = upd.message;
         if (!msg || !msg.text) continue;
-        /* 관리자가 봇에게 보낸 메시지만 처리 */
         if (String(msg.from && msg.from.id) !== String(TG_ADMIN_CHAT)) continue;
-
         if (!isAiRoom || roomId !== AI_ROOM) continue;
-
         try {
           var tx = await db.ref('rooms/' + AI_ROOM + '/lastSeq').transaction(function(v) { return (Number(v||0)+1); });
           var seq = Number((tx && tx.snapshot && tx.snapshot.val()) || 0);
           await db.ref('messages/' + AI_ROOM).push({
             messageId: 'tg_' + upd.update_id,
-            senderId: TG_BOT_UID,
-            senderNick: TG_BOT_NICK,
+            senderId: ADMIN_UID,
+            senderNick: (myNick || '관리자') + ' (텔레그램)',
             text: msg.text,
             ts: SV.TIMESTAMP,
             seq: seq
           });
           await db.ref('rooms/' + AI_ROOM).update({ updatedAt: SV.TIMESTAMP, lastMsgTs: SV.TIMESTAMP });
+          geminiReply(msg.text);
         } catch(e) {}
       }
       localStorage.setItem('tg_last_update_id', _tgLastUpdateId);
