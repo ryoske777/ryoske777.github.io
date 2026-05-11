@@ -6282,8 +6282,8 @@ init().catch(function(e) {
       }
     } catch(e) { /* 프록시 없음 → Gemini 폴백 */ }
 
-    /* 프록시 없음 */
-    await aiWriteMsg('⚠️ Claude 프록시가 실행되지 않았어요.\n터미널에서: node claude_ai_proxy.js');
+    /* 프록시 없음 → Firebase 브릿지가 응답 처리 */
+    console.log('[AI] 로컬 프록시 없음 — Firebase 브릿지 대기 중...');
     _aiResponding = false;
   }
 
