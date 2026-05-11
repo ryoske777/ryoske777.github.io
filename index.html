@@ -6251,18 +6251,17 @@ init().catch(function(e) {
   let _tgPolling = false;
 
   /* Web → Telegram: AI 채팅방 메시지를 텔레그램 봇으로 포워딩 */
+  function tgSend(text) {
+    /* GET 방식으로 CORS preflight 없이 전송 */
+    var url = TG_API + '/sendMessage?chat_id=' + TG_ADMIN_CHAT + '&text=' + encodeURIComponent(text);
+    fetch(url).catch(function(){});
+  }
+
   const _origSendTg = sendToFirebase;
   sendToFirebase = async function(mid, text, replyToData, imageUrl, hasImage) {
     const result = await _origSendTg(mid, text, replyToData, imageUrl, hasImage);
     if (isAiRoom && text && !imageUrl && !hasImage) {
-      fetch(TG_API + '/sendMessage', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: TG_ADMIN_CHAT,
-          text: '💬 ' + (myNick || '관리자') + ': ' + text
-        })
-      }).catch(function(){});
+      tgSend('💬 ' + (myNick || '관리자') + ': ' + text);
     }
     return result;
   };
