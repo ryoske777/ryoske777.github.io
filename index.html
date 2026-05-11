@@ -98,6 +98,14 @@ header{position:sticky;top:0;z-index:10;padding:8px 14px 7px;border-bottom:1px s
 .primaryBtn{flex:1;height:46px;border-radius:14px;border:0;background:#111827;color:#fff;font-size:15px;font-weight:900;box-shadow:0 10px 18px rgba(17,24,39,.14)}
 .ghostBtn{flex:1;height:46px;border-radius:14px;border:1px solid var(--line);background:#fff;color:#111827;font-size:15px;font-weight:800}
 .ghostBtn:hover{background:#f8fafc}
+.adminAiSection{background:linear-gradient(135deg,#0f172a,#1e3a5f);border-radius:16px;padding:14px 16px;margin-bottom:14px;display:none;cursor:pointer;border:none;width:100%;text-align:left;box-shadow:0 6px 18px rgba(15,23,42,.2)}
+.adminAiSection:hover{opacity:.9}
+.adminAiTop{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+.adminAiIcon{font-size:22px;line-height:1}
+.adminAiTitle{font-weight:900;font-size:15px;color:#fff}
+.adminAiBadge{background:#22c55e;color:#fff;border-radius:999px;font-size:10px;font-weight:800;padding:2px 7px;letter-spacing:.4px}
+.adminAiDesc{font-size:12px;color:rgba(255,255,255,.6);margin-left:32px}
+.aiBadgePill{background:#0f172a;color:#22c55e;border-radius:999px;font-size:11px;font-weight:800;padding:2px 9px;letter-spacing:.3px;border:1px solid #22c55e33}
 .roomList{display:flex;flex-direction:column;gap:10px}
 .roomItem{border:1px solid var(--line);border-radius:16px;padding:12px;background:#fff;box-shadow:0 6px 18px rgba(0,0,0,.04);display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer}
 .roomItem:hover{background:#f8fafc}
@@ -722,6 +730,14 @@ OneSignalDeferred.push(async function(OneSignal) {
         <button class="primaryBtn" id="btnCreate">방 만들기</button>
         <button class="ghostBtn" id="btnRefresh">새로고침</button>
       </div>
+      <button class="adminAiSection" id="adminAiSection" style="display:none">
+        <div class="adminAiTop">
+          <span class="adminAiIcon">🤖</span>
+          <span class="adminAiTitle">AI 채팅 (오픈클로)</span>
+          <span class="adminAiBadge">관리자 전용</span>
+        </div>
+        <div class="adminAiDesc">텔레그램을 통해 오픈클로와 대화합니다</div>
+      </button>
       <div class="sectionTitle">채팅방 목록</div>
       <div class="roomList" id="roomList"></div>
       <div class="roomCountInfo" id="roomCountInfo" style="text-align:center;font-size:12px;color:var(--muted);padding:8px 0"></div>
@@ -1088,6 +1104,7 @@ let myNick = (lsGet(LS_NICK) || '').trim();
 let roomId = '';
 let roomName = '';
 let ownerUid = '';
+let isAiRoom = false;
 
 let _msgRef = null;
 let _msgToken = null; // { alive: true/false } — 현재 활성 구독 토큰
@@ -2002,6 +2019,13 @@ function setHeader(nicks) {
   if (Array.isArray(nicks)) onlineNicksCache=nicks;
   roomTitle.textContent = roomName||'채팅방';
   roomSub.innerHTML = '';
+  if (isAiRoom) {
+    const badge = document.createElement('span');
+    badge.className = 'aiBadgePill';
+    badge.textContent = '🤖 AI 채팅';
+    roomSub.appendChild(badge);
+    return;
+  }
   const MAX_SHOW = 3;
   const list = onlineNicksCache;
   if (list.length <= MAX_SHOW) {
@@ -3202,10 +3226,14 @@ async function collectSubIds(rid) {
 
 async function refreshRooms() {
   roomList.innerHTML='';
+  const adminAiBtn = document.getElementById('adminAiSection');
+  if (adminAiBtn) adminAiBtn.style.display = isAdmin() ? '' : 'none';
   try {
     const snap=await db.ref('rooms').orderByChild('updatedAt').limitToLast(50).once('value');
     const v=snap.val()||{};
-    const items=Object.keys(v).map(id=>({roomId:id,...v[id]})).sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
+    const allItems=Object.keys(v).map(id=>({roomId:id,...v[id]})).sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
+    // AI 방은 일반 목록에서 제외 (관리자 버튼으로만 접근)
+    const items=allItems.filter(r=>!r.aiRoom);
     if(!items.length){const d=document.createElement('div');d.className='roomMeta';d.textContent='방이 없습니다.';roomList.appendChild(d);roomCountInfo.textContent='';return;}
     items.forEach(r=>{
       const item=document.createElement('div');item.className='roomItem clickable';
@@ -3249,11 +3277,48 @@ btnCreate.addEventListener('click',async()=>{
   }catch(e){alert('방 생성 실패: '+(e&&e.message||''));}
 });
 
+/* ─── 관리자 AI 채팅방 ─── */
+const AI_ROOM_ID = 'ai_room_' + ADMIN_UID.slice(0, 12);
+const adminAiSectionBtn = document.getElementById('adminAiSection');
+if (adminAiSectionBtn) {
+  adminAiSectionBtn.addEventListener('click', async () => {
+    if (!isAdmin()) return;
+    if (!myNick) { alert('닉네임을 먼저 설정해 주세요.'); return; }
+    try {
+      const snap = await db.ref('rooms/' + AI_ROOM_ID).once('value');
+      if (!snap.exists()) {
+        const now = Date.now();
+        await db.ref('rooms/' + AI_ROOM_ID).set({
+          roomName: '🤖 AI 채팅 (오픈클로)',
+          ownerUid: ADMIN_UID,
+          ownerNick: myNick,
+          createdAt: now,
+          updatedAt: now,
+          lastSeq: 0,
+          lastMsgTs: 0,
+          passEnabled: false,
+          passSalt: null,
+          passHash: null,
+          passPlain: null,
+          passVer: 0,
+          aiRoom: true,
+          aiType: 'telegram'
+        });
+      }
+      const info = await loadRoomInfo(AI_ROOM_ID);
+      if (!info) { alert('AI 방을 불러올 수 없습니다.'); return; }
+      info._ok = true;
+      history.pushState({}, '', NAV_URL + '?roomId=' + encodeURIComponent(AI_ROOM_ID));
+      await enterRoom(AI_ROOM_ID, info);
+    } catch(e) { alert('AI 채팅방 열기 실패: ' + (e && e.message || '')); }
+  });
+}
+
 async function loadRoomInfo(rid) {
   const snap=await db.ref('rooms/'+rid).once('value');
   if(!snap.exists()) return null;
   const r=snap.val()||{};
-  return {roomId:rid,roomName:String(r.roomName||''),ownerUid:String(r.ownerUid||''),ownerNick:String(r.ownerNick||''),lastSeq:Number(r.lastSeq||0),updatedAt:Number(r.updatedAt||0),passEnabled:(r.passEnabled===true),passVer:Number(r.passVer||0),passSalt:String(r.passSalt||''),passHash:String(r.passHash||'')};
+  return {roomId:rid,roomName:String(r.roomName||''),ownerUid:String(r.ownerUid||''),ownerNick:String(r.ownerNick||''),lastSeq:Number(r.lastSeq||0),updatedAt:Number(r.updatedAt||0),passEnabled:(r.passEnabled===true),passVer:Number(r.passVer||0),passSalt:String(r.passSalt||''),passHash:String(r.passHash||''),aiRoom:!!r.aiRoom};
 }
 
 async function joinFlow(rid) {
@@ -3290,6 +3355,7 @@ async function enterRoom(rid, infoOpt) {
     roomId = rid;
     roomName = info.roomName;
     ownerUid = info.ownerUid;
+    isAiRoom = !!info.aiRoom;
 
     db.ref('roomMembers/'+roomId+'/'+myUid).set({nick:myNick,joinedAt:SV.TIMESTAMP}).catch(()=>{});
     saveUserSettings({ lastRoom: { roomId: rid, roomName: info.roomName, ts: Date.now() } });
@@ -3322,7 +3388,7 @@ function showHome() {
   hideSplash();
   stopMessages(); stopPresence(); stopTyping(); stopReads(); stopRxWatcher();
   clearUnread(); try{clearReply();}catch(e){} try{closeSearch();}catch(e){}
-  roomId=''; roomName=''; ownerUid='';
+  roomId=''; roomName=''; ownerUid=''; isAiRoom=false;
   _enteringRoom = false;
   loginScreen.style.display='none';
   header.style.display='none'; logEl.style.display='none'; composer.style.display='none';
