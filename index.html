@@ -3227,7 +3227,7 @@ async function collectSubIds(rid) {
 async function refreshRooms() {
   roomList.innerHTML='';
   const adminAiBtn = document.getElementById('adminAiSection');
-  if (adminAiBtn) adminAiBtn.style.display = isAdmin() ? '' : 'none';
+  if (adminAiBtn) adminAiBtn.style.display = isAdmin() ? 'block' : 'none';
   try {
     const snap=await db.ref('rooms').orderByChild('updatedAt').limitToLast(50).once('value');
     const v=snap.val()||{};
