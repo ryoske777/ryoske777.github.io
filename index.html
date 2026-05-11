@@ -98,14 +98,6 @@ header{position:sticky;top:0;z-index:10;padding:8px 14px 7px;border-bottom:1px s
 .primaryBtn{flex:1;height:46px;border-radius:14px;border:0;background:#111827;color:#fff;font-size:15px;font-weight:900;box-shadow:0 10px 18px rgba(17,24,39,.14)}
 .ghostBtn{flex:1;height:46px;border-radius:14px;border:1px solid var(--line);background:#fff;color:#111827;font-size:15px;font-weight:800}
 .ghostBtn:hover{background:#f8fafc}
-.adminAiSection{background:linear-gradient(135deg,#0f172a,#1e3a5f);border-radius:16px;padding:14px 16px;margin-bottom:14px;display:none;cursor:pointer;border:none;width:100%;text-align:left;box-shadow:0 6px 18px rgba(15,23,42,.2)}
-.adminAiSection:hover{opacity:.9}
-.adminAiTop{display:flex;align-items:center;gap:10px;margin-bottom:4px}
-.adminAiIcon{font-size:22px;line-height:1}
-.adminAiTitle{font-weight:900;font-size:15px;color:#fff}
-.adminAiBadge{background:#22c55e;color:#fff;border-radius:999px;font-size:10px;font-weight:800;padding:2px 7px;letter-spacing:.4px}
-.adminAiDesc{font-size:12px;color:rgba(255,255,255,.6);margin-left:32px}
-.aiBadgePill{background:#0f172a;color:#22c55e;border-radius:999px;font-size:11px;font-weight:800;padding:2px 9px;letter-spacing:.3px;border:1px solid #22c55e33}
 .roomList{display:flex;flex-direction:column;gap:10px}
 .roomItem{border:1px solid var(--line);border-radius:16px;padding:12px;background:#fff;box-shadow:0 6px 18px rgba(0,0,0,.04);display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer}
 .roomItem:hover{background:#f8fafc}
@@ -730,14 +722,6 @@ OneSignalDeferred.push(async function(OneSignal) {
         <button class="primaryBtn" id="btnCreate">방 만들기</button>
         <button class="ghostBtn" id="btnRefresh">새로고침</button>
       </div>
-      <button class="adminAiSection" id="adminAiSection" style="display:none">
-        <div class="adminAiTop">
-          <span class="adminAiIcon">🤖</span>
-          <span class="adminAiTitle">AI 채팅 (오픈클로)</span>
-          <span class="adminAiBadge">관리자 전용</span>
-        </div>
-        <div class="adminAiDesc">텔레그램을 통해 오픈클로와 대화합니다</div>
-      </button>
       <div class="sectionTitle">채팅방 목록</div>
       <div class="roomList" id="roomList"></div>
       <div class="roomCountInfo" id="roomCountInfo" style="text-align:center;font-size:12px;color:var(--muted);padding:8px 0"></div>
@@ -1104,7 +1088,6 @@ let myNick = (lsGet(LS_NICK) || '').trim();
 let roomId = '';
 let roomName = '';
 let ownerUid = '';
-let isAiRoom = false;
 
 let _msgRef = null;
 let _msgToken = null; // { alive: true/false } — 현재 활성 구독 토큰
@@ -2019,13 +2002,6 @@ function setHeader(nicks) {
   if (Array.isArray(nicks)) onlineNicksCache=nicks;
   roomTitle.textContent = roomName||'채팅방';
   roomSub.innerHTML = '';
-  if (isAiRoom) {
-    const badge = document.createElement('span');
-    badge.className = 'aiBadgePill';
-    badge.textContent = '🤖 AI 채팅';
-    roomSub.appendChild(badge);
-    return;
-  }
   const MAX_SHOW = 3;
   const list = onlineNicksCache;
   if (list.length <= MAX_SHOW) {
@@ -3226,14 +3202,10 @@ async function collectSubIds(rid) {
 
 async function refreshRooms() {
   roomList.innerHTML='';
-  const adminAiBtn = document.getElementById('adminAiSection');
-  if (adminAiBtn) adminAiBtn.style.display = isAdmin() ? 'block' : 'none';
   try {
     const snap=await db.ref('rooms').orderByChild('updatedAt').limitToLast(50).once('value');
     const v=snap.val()||{};
-    const allItems=Object.keys(v).map(id=>({roomId:id,...v[id]})).sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
-    // AI 방은 일반 목록에서 제외 (관리자 버튼으로만 접근)
-    const items=allItems.filter(r=>!r.aiRoom);
+    const items=Object.keys(v).map(id=>({roomId:id,...v[id]})).sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
     if(!items.length){const d=document.createElement('div');d.className='roomMeta';d.textContent='방이 없습니다.';roomList.appendChild(d);roomCountInfo.textContent='';return;}
     items.forEach(r=>{
       const item=document.createElement('div');item.className='roomItem clickable';
@@ -3277,48 +3249,11 @@ btnCreate.addEventListener('click',async()=>{
   }catch(e){alert('방 생성 실패: '+(e&&e.message||''));}
 });
 
-/* ─── 관리자 AI 채팅방 ─── */
-const AI_ROOM_ID = 'ai_room_' + ADMIN_UID.slice(0, 12);
-const adminAiSectionBtn = document.getElementById('adminAiSection');
-if (adminAiSectionBtn) {
-  adminAiSectionBtn.addEventListener('click', async () => {
-    if (!isAdmin()) return;
-    if (!myNick) { alert('닉네임을 먼저 설정해 주세요.'); return; }
-    try {
-      const snap = await db.ref('rooms/' + AI_ROOM_ID).once('value');
-      if (!snap.exists()) {
-        const now = Date.now();
-        await db.ref('rooms/' + AI_ROOM_ID).set({
-          roomName: '🤖 AI 채팅 (오픈클로)',
-          ownerUid: ADMIN_UID,
-          ownerNick: myNick,
-          createdAt: now,
-          updatedAt: now,
-          lastSeq: 0,
-          lastMsgTs: 0,
-          passEnabled: false,
-          passSalt: null,
-          passHash: null,
-          passPlain: null,
-          passVer: 0,
-          aiRoom: true,
-          aiType: 'telegram'
-        });
-      }
-      const info = await loadRoomInfo(AI_ROOM_ID);
-      if (!info) { alert('AI 방을 불러올 수 없습니다.'); return; }
-      info._ok = true;
-      history.pushState({}, '', NAV_URL + '?roomId=' + encodeURIComponent(AI_ROOM_ID));
-      await enterRoom(AI_ROOM_ID, info);
-    } catch(e) { alert('AI 채팅방 열기 실패: ' + (e && e.message || '')); }
-  });
-}
-
 async function loadRoomInfo(rid) {
   const snap=await db.ref('rooms/'+rid).once('value');
   if(!snap.exists()) return null;
   const r=snap.val()||{};
-  return {roomId:rid,roomName:String(r.roomName||''),ownerUid:String(r.ownerUid||''),ownerNick:String(r.ownerNick||''),lastSeq:Number(r.lastSeq||0),updatedAt:Number(r.updatedAt||0),passEnabled:(r.passEnabled===true),passVer:Number(r.passVer||0),passSalt:String(r.passSalt||''),passHash:String(r.passHash||''),aiRoom:!!r.aiRoom};
+  return {roomId:rid,roomName:String(r.roomName||''),ownerUid:String(r.ownerUid||''),ownerNick:String(r.ownerNick||''),lastSeq:Number(r.lastSeq||0),updatedAt:Number(r.updatedAt||0),passEnabled:(r.passEnabled===true),passVer:Number(r.passVer||0),passSalt:String(r.passSalt||''),passHash:String(r.passHash||'')};
 }
 
 async function joinFlow(rid) {
@@ -3355,7 +3290,6 @@ async function enterRoom(rid, infoOpt) {
     roomId = rid;
     roomName = info.roomName;
     ownerUid = info.ownerUid;
-    isAiRoom = !!info.aiRoom;
 
     db.ref('roomMembers/'+roomId+'/'+myUid).set({nick:myNick,joinedAt:SV.TIMESTAMP}).catch(()=>{});
     saveUserSettings({ lastRoom: { roomId: rid, roomName: info.roomName, ts: Date.now() } });
@@ -3388,7 +3322,7 @@ function showHome() {
   hideSplash();
   stopMessages(); stopPresence(); stopTyping(); stopReads(); stopRxWatcher();
   clearUnread(); try{clearReply();}catch(e){} try{closeSearch();}catch(e){}
-  roomId=''; roomName=''; ownerUid=''; isAiRoom=false;
+  roomId=''; roomName=''; ownerUid='';
   _enteringRoom = false;
   loginScreen.style.display='none';
   header.style.display='none'; logEl.style.display='none'; composer.style.display='none';
@@ -6235,150 +6169,6 @@ init().catch(function(e) {
       + '</div>';
   }
 });
-</script>
-<script>
-/* ─── AI 채팅 브릿지 (Claude 로컬프록시 → Gemini 폴백 + 텔레그램) ─── */
-(function() {
-  const TG_TOKEN = '8516804313:AAFdVbkkTxhvnxbkYPEsqVxTuFeFK3B8snE';
-  const TG_ADMIN_CHAT = 8711461056;
-  const TG_API = 'https://api.telegram.org/bot' + TG_TOKEN;
-  const CLAUDE_PROXY = 'http://127.0.0.1:18790';
-  const AI_UID = 'openclaw_ai';
-  const AI_NICK = '🤖 오픈클로';
-  const AI_ROOM = 'ai_room_' + ADMIN_UID.slice(0, 12);
-  const SYSTEM_PROMPT = '당신은 오픈클로(OpenClaw) AI 어시스턴트입니다. 관리자의 개인 AI 비서 역할을 합니다. 한국어로 친절하고 유능하게 대화해주세요.';
-
-  let _tgPollTimer = null;
-  let _tgLastUpdateId = parseInt(localStorage.getItem('tg_last_update_id') || '0', 10);
-  let _tgPolling = false;
-  let _aiResponding = false;
-  let _aiHistory = []; // [{role:'user'|'assistant', content:'...'}] for Claude format
-
-  /* Claude 프록시 (로컬) → 없으면 Gemini 폴백 */
-  async function geminiReply(userText) {
-    if (_aiResponding) return;
-    _aiResponding = true;
-
-    // Claude 형식 히스토리 업데이트
-    _aiHistory.push({ role: 'user', content: userText });
-    if (_aiHistory.length > 20) _aiHistory = _aiHistory.slice(-20);
-
-    /* 1) Claude 로컬 프록시 시도 */
-    try {
-      var proxyRes = await fetch(CLAUDE_PROXY + '/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: _aiHistory, system: SYSTEM_PROMPT })
-      });
-      if (proxyRes.ok) {
-        var pd = await proxyRes.json();
-        var reply = pd.content && pd.content[0] && pd.content[0].text;
-        if (reply) {
-          _aiHistory.push({ role: 'assistant', content: reply });
-          await aiWriteMsg(reply);
-          _aiResponding = false; return;
-        }
-        if (pd.error) { await aiWriteMsg('⚠️ Claude 오류: ' + pd.error); _aiResponding = false; return; }
-      }
-    } catch(e) { /* 프록시 없음 → Gemini 폴백 */ }
-
-    /* 프록시 없음 → Firebase 브릿지가 응답 처리 */
-    console.log('[AI] 로컬 프록시 없음 — Firebase 브릿지 대기 중...');
-    _aiResponding = false;
-  }
-
-  async function aiWriteMsg(text) {
-    if (!isAiRoom || roomId !== AI_ROOM) return;
-    try {
-      var tx = await db.ref('rooms/' + AI_ROOM + '/lastSeq').transaction(function(v) { return (Number(v||0)+1); });
-      var seq = Number((tx && tx.snapshot && tx.snapshot.val()) || 0);
-      await db.ref('messages/' + AI_ROOM).push({
-        messageId: 'ai_' + Date.now(),
-        senderId: AI_UID, senderNick: AI_NICK,
-        text: text, ts: SV.TIMESTAMP, seq: seq
-      });
-      await db.ref('rooms/' + AI_ROOM).update({ updatedAt: SV.TIMESTAMP, lastMsgTs: SV.TIMESTAMP });
-    } catch(e) { console.error('[aiWriteMsg]', e); }
-  }
-
-  /* Web → Telegram 알림 */
-  function tgSend(text) {
-    fetch(TG_API + '/sendMessage?chat_id=' + TG_ADMIN_CHAT + '&text=' + encodeURIComponent(text)).catch(function(){});
-  }
-
-  /* sendToFirebase 래핑: AI 응답 + 텔레그램 알림 */
-  var _origSendTg = sendToFirebase;
-  sendToFirebase = async function(mid, text, replyToData, imageUrl, hasImage) {
-    var result = await _origSendTg(mid, text, replyToData, imageUrl, hasImage);
-    if (isAiRoom && text && !imageUrl && !hasImage) {
-      geminiReply(text);
-      tgSend('💬 ' + (myNick || '관리자') + ': ' + text);
-    }
-    return result;
-  };
-
-  /* Telegram → Web: 텔레그램에서 보낸 메시지도 웹에 표시 + AI 응답 */
-  async function tgPollOnce() {
-    if (_tgPolling || !isAdmin()) return;
-    _tgPolling = true;
-    try {
-      var res = await fetch(TG_API + '/getUpdates?offset=' + (_tgLastUpdateId + 1) + '&timeout=0&limit=100');
-      if (!res.ok) { _tgPolling = false; return; }
-      var data = await res.json();
-      if (!data.ok || !data.result.length) { _tgPolling = false; return; }
-      for (var i = 0; i < data.result.length; i++) {
-        var upd = data.result[i];
-        _tgLastUpdateId = upd.update_id;
-        var msg = upd.message;
-        if (!msg || !msg.text) continue;
-        if (String(msg.from && msg.from.id) !== String(TG_ADMIN_CHAT)) continue;
-        if (!isAiRoom || roomId !== AI_ROOM) continue;
-        try {
-          var tx = await db.ref('rooms/' + AI_ROOM + '/lastSeq').transaction(function(v) { return (Number(v||0)+1); });
-          var seq = Number((tx && tx.snapshot && tx.snapshot.val()) || 0);
-          await db.ref('messages/' + AI_ROOM).push({
-            messageId: 'tg_' + upd.update_id,
-            senderId: ADMIN_UID,
-            senderNick: (myNick || '관리자') + ' (텔레그램)',
-            text: msg.text,
-            ts: SV.TIMESTAMP,
-            seq: seq
-          });
-          await db.ref('rooms/' + AI_ROOM).update({ updatedAt: SV.TIMESTAMP, lastMsgTs: SV.TIMESTAMP });
-          geminiReply(msg.text);
-        } catch(e) {}
-      }
-      localStorage.setItem('tg_last_update_id', _tgLastUpdateId);
-    } catch(e) {}
-    _tgPolling = false;
-  }
-
-  function startTgPolling() {
-    if (_tgPollTimer) return;
-    tgPollOnce();
-    _tgPollTimer = setInterval(tgPollOnce, 4000);
-  }
-
-  function stopTgPolling() {
-    if (_tgPollTimer) { clearInterval(_tgPollTimer); _tgPollTimer = null; }
-    _tgPolling = false;
-  }
-
-  /* showChat 훅: AI 룸 진입 시 폴링 시작 */
-  var _origShowChatTg = showChat;
-  showChat = function() {
-    _origShowChatTg();
-    if (isAiRoom) startTgPolling();
-    else stopTgPolling();
-  };
-
-  /* showHome 훅: 폴링 중지 */
-  var _origShowHomeTg = showHome;
-  showHome = function() {
-    stopTgPolling();
-    _origShowHomeTg();
-  };
-})();
 </script>
 <script src="tamagotchi.js"></script>
 </body>
