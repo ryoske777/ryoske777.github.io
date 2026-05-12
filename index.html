@@ -2422,7 +2422,7 @@ function mergeServerMsg(m) {
   } else if (wasPending) {
     const obj=seen.get(m.messageId);
     // 로컬에서 이미지 업로드 중이었으면 hasImage 보존
-    if (obj && (obj.hasImage || obj.imageUrl==='__uploading__') && !m.hasImage) {
+    if (obj && (obj.hasImage || obj.imageUrl==='__uploading__') && !m.hasImage && !m.imageBundleLen) {
       m.hasImage = true;
     }
     console.log('[mergeServerMsg] rebuild pending', m.messageId, 'obj=', !!obj, 'bubbleEl=', !!(obj&&obj.bubbleEl), 'deleted=', m.deleted, 'hasImage=', m.hasImage);
