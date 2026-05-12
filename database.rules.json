@@ -63,6 +63,7 @@
       "$roomId": {
         ".indexOn": ["lastActive"],
         ".read": "auth != null && (root.child('allowedUsers').child(auth.uid).exists() || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')",
+        ".write": "auth != null && (auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2' || root.child('rooms').child($roomId).child('ownerUid').val() === auth.uid)",
         "$uid": {
           ".write": "auth != null && ($uid === auth.uid || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')"
         }
@@ -72,6 +73,7 @@
     "typing": {
       "$roomId": {
         ".read": "auth != null && (root.child('allowedUsers').child(auth.uid).exists() || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')",
+        ".write": "auth != null && (auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2' || root.child('rooms').child($roomId).child('ownerUid').val() === auth.uid)",
         "$uid": {
           ".write": "auth != null && ($uid === auth.uid || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')"
         }
@@ -81,6 +83,7 @@
     "reads": {
       "$roomId": {
         ".read": "auth != null && (root.child('allowedUsers').child(auth.uid).exists() || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')",
+        ".write": "auth != null && (auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2' || root.child('rooms').child($roomId).child('ownerUid').val() === auth.uid)",
         "$uid": {
           ".write": "auth != null && ($uid === auth.uid || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')"
         }
@@ -90,6 +93,7 @@
     "reactions": {
       "$roomId": {
         ".read": "auth != null && (root.child('allowedUsers').child(auth.uid).exists() || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')",
+        ".write": "auth != null && (auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2' || root.child('rooms').child($roomId).child('ownerUid').val() === auth.uid)",
         "$messageId": {
           "$uid": {
             ".write": "auth != null && ($uid === auth.uid || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')"
@@ -101,6 +105,7 @@
     "roomMembers": {
       "$roomId": {
         ".read": "auth != null && (root.child('allowedUsers').child(auth.uid).exists() || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')",
+        ".write": "auth != null && (auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2' || root.child('rooms').child($roomId).child('ownerUid').val() === auth.uid)",
         "$uid": {
           ".write": "auth != null && ($uid === auth.uid || auth.uid === 'FZv13WtzGrfnlreIUtLKxMtHh2b2')"
         }
